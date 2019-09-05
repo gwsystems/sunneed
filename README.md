@@ -1,2 +1,3 @@
 # power_mgmt_infra
-Testbed for power management
+
+We are creating a framework for tracking and managing the distribution of power consumption of individual processes in multi-tenant computing environments. In systems with uncertain reserves of power available, such as a computer powered by a solar battery, high-criticality processes could become unable to run due to lower-criticality processes using too much power, effectively killing the system. The basis of this project lies in the desire to manage the power consumption within these systems on a granular level and to establish guarantees that high-criticality processes will have sufficient power to do their work.
