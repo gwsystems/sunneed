@@ -1,0 +1,10 @@
+# Symlink this to /etc/systemd/system .
+
+[Unit]
+Description=WPA Supplicant but not broken
+
+[Service]
+ExecStart=/sbin/wpa_supplicant -d -iwlan0 -c/etc/wpa_supplicant/wpa_supplicant.conf
+
+[Install]
+WantedBy=multi-user.target
