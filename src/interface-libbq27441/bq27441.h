@@ -80,7 +80,34 @@
 #define eprintf(format, ...) \
     fprintf(stderr, "bq27441 error: " format, ##__VA_ARGS__)
 
+typedef struct {
+    unsigned int shutdown_enabled : 1;
+    unsigned int watchdog_reset : 1;
+    unsigned int sealed_state : 1;
+    unsigned int calibration_mode : 1;
+    unsigned int cc_calibration_active : 1;
+    unsigned int board_calibration_active : 1;
+    unsigned int qmax_updated : 1;
+    unsigned int resistance_updated : 1;
+
+    unsigned int init_complete : 1;
+    unsigned int hibernate_request : 1;
+    unsigned int _reserved_0 : 1;
+    unsigned int sleep_mode : 1;
+    unsigned int constant_power_model : 1;
+    unsigned int ra_table_updates_disabled : 1;
+    unsigned int voltage_updates_okay : 1;
+    unsigned int _reserved_1 : 1;
+} bq27441_status_t;
+
 int bq27441_init(unsigned int bus_id); 
+
+/* Control subcommands. */
+bq27441_status_t bq27441_status(void);
 uint16_t bq27441_device_id(void);
+uint16_t bq27441_firmware_version(void);
+uint16_t bq27441_dm_code(void);
+uint16_t bq27441_prev_macwrite(void);
+uint16_t bq27441_chem_id(void);
 
 #endif

@@ -14,8 +14,11 @@ static uint16_t form_command(uint8_t command) {
     return (((uint16_t)command) << 8) | (command + 1);
 }
 
-static uint16_t form_control(uint8_t control) {
-    return (uint16_t)control;
+static void control_command(uint8_t control) {
+    assert_initialized();
+
+    i2c_smbus_write_word_data(bq27441_file, 0x00, form_command(BQ27441_COMMAND_CONTROL));
+    i2c_smbus_write_word_data(bq27441_file, 0x00, (uint16_t)control);
 }
 
 int bq27441_init(unsigned int bus_id) {
@@ -45,11 +48,32 @@ int bq27441_init(unsigned int bus_id) {
     return 0;
 }
 
+bq27441_status_t bq27441_status(void) {
+    control_command(BQ27441_CONTROL_STATUS);
+    return (bq27441_status_t)i2c_smbus_read_word_data(bq27441_file, 0x00);
+}
+
 uint16_t bq27441_device_id(void) {
-    assert_initialized();
+    control_command(BQ27441_CONTROL_DEVICE_TYPE);
+    return i2c_smbus_read_word_data(bq27441_file, 0x00);
+}
 
-    i2c_smbus_write_word_data(bq27441_file, 0x00, form_command(BQ27441_COMMAND_CONTROL));
-    i2c_smbus_write_word_data(bq27441_file, 0x00, form_control(BQ27441_CONTROL_DEVICE_TYPE));
+uint16_t bq27441_firmware_version(void) {
+    control_command(BQ27441_CONTROL_FW_VERSION);
+    return i2c_smbus_read_word_data(bq27441_file, 0x00);
+}
 
+uint16_t bq27441_dm_code(void) {
+    control_command(BQ27441_CONTROL_DM_CODE);
+    return i2c_smbus_read_word_data(bq27441_file, 0x00);
+}
+
+uint16_t bq27441_prev_macwrite(void) {
+    control_command(BQ27441_CONTROL_PREV_MACWRITE);
+    return i2c_smbus_read_word_data(bq27441_file, 0x00);
+}
+
+uint16_t bq27441_chem_id(void) {
+    control_command(BQ27441_CONTROL_CHEM_ID);
     return i2c_smbus_read_word_data(bq27441_file, 0x00);
 }
