@@ -1,6 +1,11 @@
 #include "bq27441.h"
 #include <stdlib.h>
 
+union bq27441_status_int {
+    bq27441_status_t status;
+    uint16_t integer;
+};
+
 static int bq27441_file = -1;
 
 static void assert_initialized(void) {
@@ -50,7 +55,8 @@ int bq27441_init(unsigned int bus_id) {
 
 bq27441_status_t bq27441_status(void) {
     control_command(BQ27441_CONTROL_STATUS);
-    return (bq27441_status_t)i2c_smbus_read_word_data(bq27441_file, 0x00);
+    // TODO Make sure this works.
+    return ((union bq27441_status_int)(uint16_t)i2c_smbus_read_word_data(bq27441_file, 0x00)).status;
 }
 
 uint16_t bq27441_device_id(void) {
@@ -76,4 +82,76 @@ uint16_t bq27441_prev_macwrite(void) {
 uint16_t bq27441_chem_id(void) {
     control_command(BQ27441_CONTROL_CHEM_ID);
     return i2c_smbus_read_word_data(bq27441_file, 0x00);
+}
+
+uint16_t bq27441_temperature(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_TEMPERATURE);
+}
+
+// TODO Flags()
+
+uint16_t bq27441_voltage(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_VOLTAGE);
+}
+
+uint16_t bq27441_nominal_avail_cap(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_NOMINAL_AVAIL_CAP);
+}
+
+uint16_t bq27441_full_avail_cap(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_FULL_AVAIL_CAP);
+}
+
+uint16_t bq27441_remaining_cap(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_REMAINING_CAP);
+}
+
+uint16_t bq27441_full_charge_cap(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_FULL_CHARGE_CAP);
+}
+
+uint16_t bq27441_average_current(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_AVERAGE_CURRENT);
+}
+
+uint16_t bq27441_standby_current(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_STANDBY_CURRENT);
+}
+
+uint16_t bq27441_max_load_current(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_MAX_LOAD_CURRENT);
+}
+
+uint16_t bq27441_average_power(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_AVERAGE_POWER);
+}
+
+uint16_t bq27441_state_of_charge(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_STATE_OF_CHARGE);
+}
+
+uint16_t bq27441_internal_temperature(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_INTERNAL_TEMPERATURE);
+}
+
+// TODO StateOfHealth()
+
+uint16_t bq27441_remaning_cap_unfiltered(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_REMAINING_CAP_UNFILTERED);
+}
+
+uint16_t bq27441_remaning_cap_filtered(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_REMAINING_CAP_FILTERED);
+}
+
+uint16_t bq27441_full_charge_cap_unfiltered(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_FULL_CHARGE_CAP_UNFILTERED);
+}
+
+uint16_t bq27441_full_charge_cap_filtered(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_FULL_CHARGE_CAP_FILTERED);
+}
+
+uint16_t bq27441_soc_unfiltered(void) {
+    return i2c_smbus_read_word_data(bq27441_file, BQ27441_COMMAND_SOC_UNFILTERED);
 }

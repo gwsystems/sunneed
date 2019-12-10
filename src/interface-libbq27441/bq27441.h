@@ -38,16 +38,16 @@
 #define BQ27441_COMMAND_STATE_OF_CHARGE            0x1C
 #define BQ27441_COMMAND_INTERNAL_TEMPERATURE       0x1E
 #define BQ27441_COMMAND_STATE_OF_HEALTH            0x20
-#define BQ27441_COMMAND_REMAINIG_CAP_UNFILTERED    0x28
+#define BQ27441_COMMAND_REMAINING_CAP_UNFILTERED   0x28
 #define BQ27441_COMMAND_REMAINING_CAP_FILTERED     0x2A
 #define BQ27441_COMMAND_FULL_CHARGE_CAP_UNFILTERED 0x2C
 #define BQ27441_COMMAND_FULL_CHARGE_CAP_FILTERED   0x2E
 #define BQ27441_COMMAND_SOC_UNFILTERED             0x30
 
-/* 
+/*
  * Control commands are two bytes, but the first is alwas 0x00. Therefore when
  * writing using these constants you MUST write 0x00 before the actual command
- * value. 
+ * value.
  *
  * Furthermore, please note that many of these are not implemented. This
  * library is being written on an as-needed basis for other projects of the
@@ -100,7 +100,7 @@ typedef struct {
     unsigned int _reserved_1 : 1;
 } bq27441_status_t;
 
-int bq27441_init(unsigned int bus_id); 
+int bq27441_init(unsigned int bus_id);
 
 /* Control subcommands. */
 bq27441_status_t bq27441_status(void);
@@ -109,5 +109,24 @@ uint16_t bq27441_firmware_version(void);
 uint16_t bq27441_dm_code(void);
 uint16_t bq27441_prev_macwrite(void);
 uint16_t bq27441_chem_id(void);
+uint16_t bq27441_temperature(void);
+uint16_t bq27441_voltage(void);
+uint16_t bq27441_flags(void);
+uint16_t bq27441_nominal_avail_cap(void);
+uint16_t bq27441_full_avail_cap(void);
+uint16_t bq27441_remaining_cap(void);
+uint16_t bq27441_full_charge_cap(void);
+uint16_t bq27441_average_current(void);
+uint16_t bq27441_standby_current(void);
+uint16_t bq27441_max_load_current(void);
+uint16_t bq27441_average_power(void);
+uint16_t bq27441_state_of_charge(void);
+uint16_t bq27441_internal_temperature(void);
+uint16_t bq27441_state_of_health(void);
+uint16_t bq27441_remaining_cap_unfiltered(void);
+uint16_t bq27441_remaining_cap_filtered(void);
+uint16_t bq27441_full_charge_cap_unfiltered(void);
+uint16_t bq27441_full_charge_cap_filtered(void);
+uint16_t bq27441_soc_unfiltered(void);
 
 #endif
