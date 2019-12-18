@@ -7,7 +7,7 @@
 #define HELP_TEXT \
     APP_NAME ": enforce power usage policies\n" \
     "\nUSAGE\n" \
-    "%s OPTIONS" \
-    "where OPTIONS includes\n" \
+    "%s OPTIONS\n" \
+    "\nOPTIONS\n" \
     "\t-h --help    Show this help.\n" \
     "\n"
