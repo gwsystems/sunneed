@@ -1,3 +1,3 @@
 [submodule "src/libbq27441"]
 	path = src/libbq27441
-	url = git@github.com:zacharied/libbq27441
+	url = github.com/zacharied/libb27441
