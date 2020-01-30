@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "sunneed.h"
+#include "log.h"
 
 #define HELP_TEXT \
     APP_NAME ": enforce power usage policies\n" \

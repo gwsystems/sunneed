@@ -16,5 +16,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    LOG_I("sunneed is initializing...");
+
     return 0;
 }
