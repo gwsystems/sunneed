@@ -1,5 +1,11 @@
 #include "sunneed_core.h"
 
+struct sunneed_pip pip;
+
+void sunneed_init(void) {
+    pip = pip_info();
+}
+
 int main(int argc, char *argv[]) {
     int opt;
     while ((opt = getopt(argc, argv, ":h")) != -1) {
@@ -17,6 +23,10 @@ int main(int argc, char *argv[]) {
     }
 
     LOG_I("sunneed is initializing...");
+
+    sunneed_init();
+
+    LOG_I("Acquired PIP: %s", pip.name);
 
     return 0;
 }

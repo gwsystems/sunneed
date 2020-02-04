@@ -1,6 +1,11 @@
 #ifndef _LOG_H
 #define _LOG_H
 
+/* 
+ * Defines a variety of macros to be used for logging information.
+ * Assign a FILE* to `logfile` during runtime to redirect the log to that file.
+ */
+
 #include <stdio.h>
 #include <time.h>
 

@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "sunneed.h"
+#include "sunneed_pip.h"
 #include "log.h"
 
 #define HELP_TEXT \
