@@ -28,5 +28,12 @@ int main(int argc, char *argv[]) {
 
     LOG_I("Acquired PIP: %s", pip.name);
 
+    int ret;
+    
+    if ((ret = sunneed_listen()) != 0) {
+        LOG_E("sunneed listener encountered a fatal error. Exiting.");
+        return 1;
+    }
+
     return 0;
 }

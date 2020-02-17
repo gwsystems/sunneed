@@ -4,6 +4,7 @@
 
 #include "sunneed.h"
 #include "sunneed_pip.h"
+#include "sunneed_listener.h"
 #include "log.h"
 
 #define HELP_TEXT \
