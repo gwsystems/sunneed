@@ -29,7 +29,7 @@ int main(int argc, char const* argv[]) {
     printf("Sending request.\n");
 
 
-    if ((rv = nng_send(sock, "REQ", strlen("REQ") + 1, 0)) != 0) {
+    if ((rv = nng_send(sock, SUNNEED_IPC_TEST_REQ_STR, strlen(SUNNEED_IPC_TEST_REQ_STR) + 1, 0)) != 0) {
         fatal("nng_send", rv);
     }
     if ((rv = nng_recv(sock, &buf, &sz, NNG_FLAG_ALLOC)) != 0) {
@@ -37,6 +37,11 @@ int main(int argc, char const* argv[]) {
     }
 
     printf("Received reply: %s\n", buf);
+
+    if (strcmp(buf, SUNNEED_IPC_TEST_REP_STR) != 0) {
+        printf("FAILED: reply was invalid (expected \"REP\"");
+    }
+    
     nng_free(buf, sz);
     nng_close(sock);
 

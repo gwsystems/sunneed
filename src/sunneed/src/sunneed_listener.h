@@ -12,6 +12,9 @@
 
 #define SUNNEED_LISTENER_URL "ipc:///tmp/sunneed.ipc"
 
+#define SUNNEED_IPC_TEST_REQ_STR "REQ"
+#define SUNNEED_IPC_TEST_REP_STR "REP"
+
 int sunneed_listen(void);
 
 #endif
