@@ -6,7 +6,7 @@
 #include <nng/protocol/reqrep0/rep.h>
 #include <nng/protocol/reqrep0/req.h>
 
-#define SUNNEED_LISTENER_URL "ipc:///tmp/sunneed.ipc"
+#include "../sunneed_listener.h"
 
 static void fatal(const char *func, int rv) {
     fprintf(stderr, "%s: %s\n", func, nng_strerror(rv));
