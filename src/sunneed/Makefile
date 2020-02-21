@@ -22,6 +22,7 @@ pip_name = $(SUNNEED_BUILD_PIP)
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
 all: main pip util
+	@echo "My work here is done..."
 
 main:
 	$(CC) $(CFLAGS) $(sources) $(cflags_deps) $(out_dir)/$(pip_obj) -o $(out_dir)/$(bin_file)
