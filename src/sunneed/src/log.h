@@ -1,5 +1,5 @@
-#ifndef _LOG_H
-#define _LOG_H
+#ifndef _LOG_H_
+#define _LOG_H_
 
 /* 
  * Defines a variety of macros to be used for logging information.
