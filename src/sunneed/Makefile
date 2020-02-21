@@ -1,35 +1,37 @@
 # Builds the main sunneed executable.
 
+ifeq ($(origin CC),default)
 CC = gcc
-CFLAGS = -Wall
-CFLAGS_DEPS = -lnng -lpthread
+endif
 
-CFLAGS_LIB = -c
-
-SRC_DIR = src
-SOURCES = $(wildcard $(SRC_DIR)/*.c)
-
-SRC_UTIL_DIR = $(SRC_DIR)/util
-
-OUT_DIR = build
-BIN_NAME = sunneed
-PIP_NAME = pip
-
+CFLAGS ?= -Wall
 SUNNEED_BUILD_PIP ?= bq27441
+SUNNEED_BUILD_OUT_DIR ?= build
+SUNNEED_BUILD_BIN_FILE ?= sunneed
 
-UTIL_OBJS = $(patsubst %.c, %.o, $(wildcard $(SRC_UTIL_DIR)/*.c))
+cflags_deps = -lnng -lpthread
+
+src_dir = src
+sources = $(wildcard $(src_dir)/*.c)
+
+out_dir = $(SUNNEED_BUILD_OUT_DIR)
+bin_file = $(SUNNEED_BUILD_BIN_FILE)
+pip_obj = pip.o
+pip_name = $(SUNNEED_BUILD_PIP)
+
+util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
 all: main pip util
 
 main:
-	gcc $(CFLAGS) $(SOURCES) $(CFLAGS_DEPS) $(OUT_DIR)/$(PIP_NAME).o -o $(OUT_DIR)/$(BIN_NAME)
+	$(CC) $(CFLAGS) $(sources) $(cflags_deps) $(out_dir)/$(pip_obj) -o $(out_dir)/$(bin_file)
  
-pip: $(SRC_DIR)/pip/$(SUNNEED_BUILD_PIP).c
-	gcc $(CFLAGS) $(CFLAGS_LIB) $(SRC_DIR)/pip/$(SUNNEED_BUILD_PIP).c -o $(OUT_DIR)/$(PIP_NAME).o
+pip: $(src_dir)/pip/$(pip_name).c
+	$(CC) $(CFLAGS) -c $(src_dir)/pip/$(pip_name).c -o $(out_dir)/$(pip_obj)
 
-util: $(UTIL_OBJS)
+util: $(util_objs)
 
-$(SRC_UTIL_DIR)/%.o: $(SRC_UTIL_DIR)/%.c
-	$(CC) $(CFLAGS) -o $(patsubst $(SRC_UTIL_DIR)/%.o, build/%, $@) $^ $(CFLAGS_DEPS)
+$(src_dir)/util/%.o: $(src_dir)/util/%.c
+	$(CC) $(CFLAGS) -o $(patsubst $(src_dir)/util/%.o, $(out_dir)/%, $@) $^ $(cflags_deps)
 
 .PHONY: all main pip util
