@@ -31,10 +31,12 @@ int sunneed_listen(void) {
         }
 
         LOG_I("Received message: %s", buf);
-        
-        if ((rv = nng_send(sock, "REP", strlen("REP") + 1, 0)) != 0) {
-            report_nng_error("nng_send", rv);
-            return 1;
+
+        if (strcmp(SUNNEED_IPC_TEST_REQ_STR, buf) == 0) {
+            if ((rv = nng_send(sock, SUNNEED_IPC_TEST_REP_STR, strlen(SUNNEED_IPC_TEST_REP_STR) + 1, 0)) != 0) {
+                report_nng_error("nng_send", rv);
+                return 1;
+            }
         }
 
         nng_free(buf, sz);
