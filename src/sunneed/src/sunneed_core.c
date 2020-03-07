@@ -8,6 +8,8 @@ void sunneed_init(void) {
 
 int main(int argc, char *argv[]) {
     int opt;
+    extern char optopt;
+
     while ((opt = getopt(argc, argv, ":h")) != -1) {
         switch (opt) {
             case 'h':  
