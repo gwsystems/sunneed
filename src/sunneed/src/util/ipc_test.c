@@ -16,7 +16,6 @@ static void fatal(const char *func, int rv) {
 int main(int argc, char const* argv[]) {
     nng_socket sock;
     int rv;
-    size_t sz;
 
     if ((rv = nng_req0_open(&sock)) != 0) {
         fatal("nng_socket", rv);
