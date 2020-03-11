@@ -22,23 +22,38 @@ int sunneed_listen(void) {
 
     // Await messages.
     for (;;) {
-        char *buf = NULL;
-        size_t sz;
+        nng_msg *msg;
 
-        if ((rv = nng_recv(sock, &buf, &sz, NNG_FLAG_ALLOC)) != 0) {
-            report_nng_error("nng_recv", rv);
+        if ((rv = nng_recvmsg(sock, &msg, NNG_FLAG_ALLOC)) != 0) {
+            report_nng_error("nng_recvmsg", rv);
             return 1;
         }
 
+        char *buf = nng_msg_body(msg);
+
         LOG_I("Received message: %s", buf);
 
-        if (strcmp(SUNNEED_IPC_TEST_REQ_STR, buf) == 0) {
-            if ((rv = nng_send(sock, SUNNEED_IPC_TEST_REP_STR, strlen(SUNNEED_IPC_TEST_REP_STR) + 1, 0)) != 0) {
-                report_nng_error("nng_send", rv);
+        // Create the reply.
+        nng_msg *reply;
+
+        if (strncmp(SUNNEED_IPC_TEST_REQ_STR, buf, strlen(SUNNEED_IPC_TEST_REQ_STR)) == 0) {
+            if ((rv = nng_msg_alloc(&reply, strlen(SUNNEED_IPC_TEST_REP_STR))) != 0) {
+                report_nng_error("nng_msg_alloc", rv);
+                return 1;
+            }
+
+            if ((rv = nng_msg_insert(reply, SUNNEED_IPC_TEST_REP_STR, strlen(SUNNEED_IPC_TEST_REP_STR)) != 0)) {
+                report_nng_error("nng_msg_insert", rv);
+                return 1;
+            }
+
+            if ((rv = nng_sendmsg(sock, reply, 0)) != 0) {
+                report_nng_error("nng_sendmsg", rv);
                 return 1;
             }
         }
 
-        nng_free(buf, sz);
+        nng_msg_free(msg);
+        nng_msg_free(reply);
     }
 }

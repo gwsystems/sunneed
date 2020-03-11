@@ -17,7 +17,6 @@ int main(int argc, char const* argv[]) {
     nng_socket sock;
     int rv;
     size_t sz;
-    char *buf = NULL;
 
     if ((rv = nng_req0_open(&sock)) != 0) {
         fatal("nng_socket", rv);
@@ -28,13 +27,31 @@ int main(int argc, char const* argv[]) {
 
     printf("Sending request.\n");
 
+    nng_msg *msg;
+    if ((rv = nng_msg_alloc(&msg, strlen(SUNNEED_IPC_TEST_REQ_STR))) != 0) {
+        fatal("nng_msg_alloc", rv);
+        return 1;
+    }
 
-    if ((rv = nng_send(sock, SUNNEED_IPC_TEST_REQ_STR, strlen(SUNNEED_IPC_TEST_REQ_STR) + 1, 0)) != 0) {
-        fatal("nng_send", rv);
+    if ((rv = nng_msg_insert(msg, SUNNEED_IPC_TEST_REQ_STR, strlen(SUNNEED_IPC_TEST_REQ_STR))) != 0) {
+        fatal("nng_msg_insert", rv);
+        return 1;
     }
-    if ((rv = nng_recv(sock, &buf, &sz, NNG_FLAG_ALLOC)) != 0) {
-        fatal("nng_recv", rv);
+
+    char *txt = nng_msg_body(msg);
+    printf("text: %s\n", txt);
+
+    if ((rv = nng_sendmsg(sock, msg, 0)) != 0) {
+        fatal("nng_sendmsg", rv);
     }
+
+    nng_msg *reply;
+
+    if ((rv = nng_recvmsg(sock, &reply, 0)) != 0) {
+        fatal("nng_recvmsg", rv);
+    }
+
+    char *buf = nng_msg_body(reply);
 
     printf("Received reply: %s\n", buf);
 
@@ -42,7 +59,8 @@ int main(int argc, char const* argv[]) {
         printf("FAILED: reply was invalid (expected \"REP\"");
     }
     
-    nng_free(buf, sz);
+    nng_msg_free(msg);
+    nng_msg_free(reply);
     nng_close(sock);
 
     return 0;
