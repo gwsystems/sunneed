@@ -1,4 +1,4 @@
-#include "../sunneed_pip.h"
+#include "../shared/sunneed_pip_interface.h"
 
 struct sunneed_pip pip_info() {
     return (struct sunneed_pip) {

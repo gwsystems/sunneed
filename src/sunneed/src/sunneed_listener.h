@@ -12,18 +12,9 @@
 
 #include "sunneed.h"
 #include "sunneed_power.h"
+#include "shared/sunneed_ipc.h"
 
 #include "log.h"
-
-#define SUNNEED_LISTENER_URL "ipc:///tmp/sunneed.ipc"
-
-#define SUNNEED_IPC_TEST_REQ_STR "REQ"
-#define SUNNEED_IPC_TEST_REP_STR "REP"
-
-#define SUNNEED_IPC_REQ_GET_DEVICE_HANDLE "HANDLE"
-
-#define SUNNEED_IPC_REP_STATE_SUCCESS "YEAH"
-#define SUNNEED_IPC_REP_STATE_FAILURE "SORRY"
 
 #define SUNNEED_MESSAGE_DEFAULT_BODY_SZ 64
 #define SUNNEED_MAX_IPC_CLIENTS 512

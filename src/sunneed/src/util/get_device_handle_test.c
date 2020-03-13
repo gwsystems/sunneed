@@ -6,7 +6,7 @@
 #include <nng/protocol/reqrep0/rep.h>
 #include <nng/protocol/reqrep0/req.h>
 
-#include "../sunneed_listener.h"
+#include "../shared/sunneed_ipc.h"
 
 #define DEVICE_NAME "device"
 

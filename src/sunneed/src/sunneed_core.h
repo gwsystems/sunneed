@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 #include "sunneed.h"
-#include "sunneed_pip.h"
+#include "shared/sunneed_pip_interface.h"
 #include "sunneed_listener.h"
 #include "log.h"
 
