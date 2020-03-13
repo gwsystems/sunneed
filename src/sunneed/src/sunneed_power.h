@@ -9,6 +9,7 @@
 #include "log.h"
 #include "sunneed_proc.h"
 #include "sunneed_device.h"
+#include "shared/sunneed_pip_interface.h"
 
 #define MAX_DEVICES 64
 
