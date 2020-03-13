@@ -11,6 +11,7 @@ extern struct sunneed_device devices[];
 // The client will have to send some notification in order to unregister; I don't think we can tell if a pipe
 //  closed.
 static struct client_state {
+    int index;
     bool is_active;
     nng_pipe pipe;
     enum sunneed_client_ipc_state state;
@@ -19,28 +20,29 @@ static struct client_state {
 struct client_state client_states[SUNNEED_MAX_IPC_CLIENTS];
 
 // TODO This is probably slow -- O(n) lookup for every request made.
-static int get_client_state_by_pipe_id(int pipe_id) {
+static struct client_state *get_client_state_by_pipe_id(int pipe_id) {
     for (int i = 0; i < SUNNEED_MAX_IPC_CLIENTS; i++)
         if (nng_pipe_id(client_states[i].pipe) == pipe_id)
-            return i;
-    return -1;
+            return &client_states[i];
+    return NULL;
 }
 
-static int register_client_state(nng_pipe pipe) {
+static struct client_state *register_client_state(nng_pipe pipe) {
     int idx;
     for (idx = 0; idx < SUNNEED_MAX_IPC_CLIENTS; idx++)
         if (!client_states[idx].is_active)
             break;
     if (idx == SUNNEED_MAX_IPC_CLIENTS)
-        return -1;
+        return NULL;
 
     client_states[idx] = (struct client_state){
+        .index = idx,
         .is_active = true,
         .pipe = pipe,
         .state = STATE_NONE
     };
 
-    return idx;
+    return &client_states[idx];
 }
 
 static int serve_get_handle(const char *identifier) {
@@ -118,10 +120,13 @@ int sunneed_listen(void) {
             return 1;
         }
 
+        struct client_state *msg_client_state;
+
         if (get_client_state_by_pipe_id(pipe_id) < 0) {
             // Register this pipe ID as a client.
-            int idx = register_client_state(pipe);
-            LOG_D("Registered pipe %d as client %d", pipe_id, idx);
+            msg_client_state = register_client_state(pipe);
+            LOG_D("Registered pipe %d as client %d", pipe_id, msg_client_state->index);
+        } else {
         }
 
         char *buf = nng_msg_body(msg);
