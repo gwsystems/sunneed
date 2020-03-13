@@ -122,11 +122,10 @@ int sunneed_listen(void) {
 
         struct client_state *msg_client_state;
 
-        if (get_client_state_by_pipe_id(pipe_id) < 0) {
+        if ((msg_client_state = get_client_state_by_pipe_id(pipe_id)) == NULL) {
             // Register this pipe ID as a client.
             msg_client_state = register_client_state(pipe);
             LOG_D("Registered pipe %d as client %d", pipe_id, msg_client_state->index);
-        } else {
         }
 
         char *buf = nng_msg_body(msg);
@@ -136,7 +135,7 @@ int sunneed_listen(void) {
         // Create the reply.
         nng_msg *reply;
 
-        // Allocate the message here for convenience.
+        // Allocate the reply message here for convenience.
         // If insertions are made, nng will automatically reallocate the body pointer with more storage to fit the
         //  data.
         if ((rv = nng_msg_alloc(&reply, SUNNEED_MESSAGE_DEFAULT_BODY_SZ)) != 0) {
@@ -144,6 +143,12 @@ int sunneed_listen(void) {
             return 1;
         }
 
+        if (msg_client_state->state == STATE_GET_HANDLE) {
+            char *device = nng_msg_body(msg);
+            LOG_D("Device for get_handle: %s", device);
+        }
+
+        // Interpret command tokens.
         if (strncmp(SUNNEED_IPC_TEST_REQ_STR, buf, strlen(SUNNEED_IPC_TEST_REQ_STR)) == 0) {
             // Handle IPC test request.
             if ((rv = nng_msg_insert(reply, SUNNEED_IPC_TEST_REP_STR, strlen(SUNNEED_IPC_TEST_REP_STR)) != 0)) {
@@ -168,7 +173,17 @@ int sunneed_listen(void) {
 
             LOG_D("Pipe %d entering GET_DEVICE_HANDLE", pipe_id);
 
-            int idx = get_client_state_by_pipe_id(pipe_id);
+            msg_client_state->state = STATE_GET_HANDLE;
+
+            if ((rv = nng_msg_insert(reply, SUNNEED_IPC_REP_STATE_SUCCESS, strlen(SUNNEED_IPC_REP_STATE_SUCCESS)) != 0)) {
+                report_nng_error("nng_msg_insert", rv);
+                return 1;
+            }
+
+            if ((rv = nng_sendmsg(sock, reply, 0)) != 0) {
+                report_nng_error("nng_sendmsg", rv);
+                return 1;
+            }
         }
 
         nng_msg_free(msg);
