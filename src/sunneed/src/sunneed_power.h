@@ -8,14 +8,11 @@
 #include "sunneed.h"
 #include "log.h"
 #include "sunneed_proc.h"
-#include "sunneed_pip.h"
+#include "sunneed_device.h"
+
+#define MAX_DEVICES 64
 
 #define QUANTUMS_RINGBUF_SZ 16
-
-struct sunneed_device {
-    // TODO Implement me.
-    double power_consumption;
-};
 
 struct sunneed_power_usage_event {
     struct {
@@ -32,5 +29,7 @@ int sunneed_quantum_begin(void);
 int sunneed_quantum_end(void);
 
 struct sunneed_power_usage_event *power_usage_evs;
+
+struct sunneed_device devices[MAX_DEVICES];
 
 #endif

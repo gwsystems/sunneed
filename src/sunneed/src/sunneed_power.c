@@ -82,7 +82,7 @@ int sunneed_quantum_end(void) {
     // Add up power used in this quantum by each tenant.
     struct sunneed_power_usage_event *ev = power_usage_evs;
     while (ev != NULL) {
-        power_consumed[ev->ev.tenant->id] += ev->ev.device->power_consumption;
+        power_consumed[ev->ev.tenant->id] += ev->ev.device->power_consumption(ev->ev.args);
         ev = ev->next;
     }
 
