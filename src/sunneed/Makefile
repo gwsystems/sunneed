@@ -13,6 +13,7 @@ cflags_deps = -lnng -lpthread -ldl
 
 src_dir = src
 sources = $(wildcard $(src_dir)/*.c)
+clientlib_sources = $(wildcard $(src_dir)/client/*.c)
 
 out_dir = $(SUNNEED_BUILD_OUT_DIR)
 bin_file = $(SUNNEED_BUILD_BIN_FILE)
@@ -22,7 +23,7 @@ pip_name = $(SUNNEED_BUILD_PIP)
 device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
-all: main util
+all: main util clientlib
 	@echo "My work here is done..."
 
 main: pip devices
@@ -41,5 +42,10 @@ $(src_dir)/device/%.o: $(src_dir)/device/%.c
 	@if [ ! -d "$(out_dir)/device" ]; then mkdir "$(out_dir)/device"; fi
 	$(CC) $(CFLAGS) -c -fPIC -o $(patsubst $(src_dir)/device/%.o, $(out_dir)/device/%.o, $@) $^ $(cflags_deps)
 	$(CC) $(CFLAGS) -shared -o $(patsubst $(src_dir)/device/%.o, $(out_dir)/device/%.so, $@) $(cflags_deps)
+
+clientlib:
+	@if [ ! -d "$(out_dir)/client" ]; then mkdir "$(out_dir)/client"; fi
+	$(CC) $(CFLAGS) -c -fPIC -o $(out_dir)/client/clientlib.o $(clientlib_sources) $(cflags_deps)
+	$(CC) $(CFLAGS) -shared -o $(out_dir)/client/libsunneedclient.so $(out_dir)/client/clientlib.o
 
 .PHONY: all main pip util
