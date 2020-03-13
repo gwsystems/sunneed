@@ -16,40 +16,26 @@ static void fatal(const char *func, int rv) {
 }
 
 int main(int argc, char const* argv[]) {
-    nng_socket sock;
-    int rv;
+    SUNNEED_NNG_SET_ERROR_REPORT_FUNC(fatal);
 
-    if ((rv = nng_req0_open(&sock)) != 0) {
-        fatal("nng_socket", rv);
-    }
-    if ((rv = nng_dial(sock, SUNNEED_LISTENER_URL, NULL, 0)) != 0) {
-        fatal("nng_dial", rv);
-    }
+    nng_socket sock;
+
+    SUNNEED_NNG_TRY(nng_req0_open, !=0, &sock);
+    SUNNEED_NNG_TRY(nng_dial, !=0, sock, SUNNEED_LISTENER_URL, NULL, 0);
 
     printf("Sending request.\n");
 
     nng_msg *msg;
-    if ((rv = nng_msg_alloc(&msg, strlen(SUNNEED_IPC_TEST_REQ_STR))) != 0) {
-        fatal("nng_msg_alloc", rv);
-    }
+    SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &msg, strlen(SUNNEED_IPC_TEST_REQ_STR));
+    SUNNEED_NNG_TRY(nng_msg_insert, !=0, msg, SUNNEED_IPC_REQ_GET_DEVICE_HANDLE, strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE));
 
-    if ((rv = nng_msg_insert(msg, SUNNEED_IPC_REQ_GET_DEVICE_HANDLE, strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE))) != 0) {
-        fatal("nng_msg_insert", rv);
-    }
-
-    if ((rv = nng_sendmsg(sock, msg, 0)) != 0) {
-        fatal("nng_sendmsg", rv);
-    }
+    SUNNEED_NNG_TRY(nng_sendmsg, !=0, sock, msg, 0);
 
     nng_msg *reply;
 
-    if ((rv = nng_recvmsg(sock, &reply, 0)) != 0) {
-        fatal("nng_recvmsg", rv);
-    }
+    SUNNEED_NNG_TRY(nng_recvmsg, !=0, sock, &reply, 0);
 
     char *buf = nng_msg_body(reply);
-
-    printf("%s\n", buf);
 
     if (strcmp(buf, SUNNEED_IPC_REP_STATE_SUCCESS) != 0) {
         printf("FAILED: failed to enter get_handle state\n");
@@ -57,17 +43,11 @@ int main(int argc, char const* argv[]) {
     }
 
     // Next, send the name of the device to get the handle of .
-    if ((rv = nng_msg_alloc(&msg, strlen(DEVICE_NAME))) != 0) {
-        fatal("nng_msg_alloc", rv);
-    }
+    printf("Sending device name '%s'\n", DEVICE_NAME);
+    SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &msg, strlen(DEVICE_NAME));
+    SUNNEED_NNG_TRY(nng_msg_insert, !=0, msg, DEVICE_NAME, strlen(DEVICE_NAME));
 
-    if ((rv = nng_msg_insert(msg, DEVICE_NAME, strlen(DEVICE_NAME))) != 0) {
-        fatal("nng_msg_insert", rv);
-    }
-
-    if ((rv = nng_sendmsg(sock, msg, 0)) != 0) {
-        fatal("nng_sendmsg", rv);
-    }
+    SUNNEED_NNG_TRY(nng_sendmsg, !=0, sock, msg, 0);
 
     nng_msg_free(msg);
     nng_msg_free(reply);

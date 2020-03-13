@@ -14,44 +14,25 @@ static void fatal(const char *func, int rv) {
 }
 
 int main(int argc, char const* argv[]) {
-    nng_socket sock;
-    int rv;
+    SUNNEED_NNG_SET_ERROR_REPORT_FUNC(fatal);
 
-    if ((rv = nng_req0_open(&sock)) != 0) {
-        fatal("nng_socket", rv);
-    }
-    if ((rv = nng_dial(sock, SUNNEED_LISTENER_URL, NULL, 0)) != 0) {
-        fatal("nng_dial", rv);
-    }
+    nng_socket sock;
+
+    SUNNEED_NNG_TRY(nng_req0_open, !=0, &sock);
+    SUNNEED_NNG_TRY(nng_dial, !=0, sock, SUNNEED_LISTENER_URL, NULL, 0);
 
     printf("Sending request.\n");
 
     nng_msg *msg;
-    if ((rv = nng_msg_alloc(&msg, strlen(SUNNEED_IPC_TEST_REQ_STR))) != 0) {
-        fatal("nng_msg_alloc", rv);
-        return 1;
-    }
+    SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &msg, strlen(SUNNEED_IPC_TEST_REQ_STR));
+    SUNNEED_NNG_TRY(nng_msg_insert, !=0, msg, SUNNEED_IPC_TEST_REQ_STR, strlen(SUNNEED_IPC_TEST_REQ_STR)); 
 
-    if ((rv = nng_msg_insert(msg, SUNNEED_IPC_TEST_REQ_STR, strlen(SUNNEED_IPC_TEST_REQ_STR))) != 0) {
-        fatal("nng_msg_insert", rv);
-        return 1;
-    }
-
-    char *txt = nng_msg_body(msg);
-    printf("text: %s\n", txt);
-
-    if ((rv = nng_sendmsg(sock, msg, 0)) != 0) {
-        fatal("nng_sendmsg", rv);
-    }
+    SUNNEED_NNG_TRY(nng_sendmsg, !=0, sock, msg, 0);
 
     nng_msg *reply;
-
-    if ((rv = nng_recvmsg(sock, &reply, 0)) != 0) {
-        fatal("nng_recvmsg", rv);
-    }
+    SUNNEED_NNG_TRY(nng_recvmsg, !=0, sock, &reply, 0);
 
     char *buf = nng_msg_body(reply);
-
     printf("Received reply: %s\n", buf);
 
     if (strcmp(buf, SUNNEED_IPC_TEST_REP_STR) != 0) {

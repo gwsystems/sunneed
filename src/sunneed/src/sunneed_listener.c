@@ -76,6 +76,8 @@ static void report_nng_error(const char *func, int rv) {
 }
 
 int sunneed_listen(void) {
+    SUNNEED_NNG_SET_ERROR_REPORT_FUNC(report_nng_error);
+
     // Initialize client states.
     for (int i = 0; i < MAX_TENANTS; i++) {
         client_states[i] = (struct client_state){
@@ -87,38 +89,25 @@ int sunneed_listen(void) {
     }
 
     nng_socket sock;
-    int rv;
 
     LOG_I("Starting listener loop...");
 
     // Make a socket and attach it to the sunneed URL.
-    if ((rv = nng_rep0_open(&sock)) != 0) {
-        report_nng_error("nng_rep0_open", rv);
-        return 1;
-    }
-    if ((rv = nng_listen(sock, SUNNEED_LISTENER_URL, NULL, 0)) < 0) {
-        report_nng_error("nng_listen", rv);
-        return 1;
-    }
+    SUNNEED_NNG_TRY_RET(nng_rep0_open, !=0, &sock);
+    SUNNEED_NNG_TRY_RET(nng_listen, <0, sock, SUNNEED_LISTENER_URL, NULL, 0);
 
     // Await messages.
     for (;;) {
         nng_msg *msg;
 
-        if ((rv = nng_recvmsg(sock, &msg, NNG_FLAG_ALLOC)) != 0) {
-            report_nng_error("nng_recvmsg", rv);
-            return 1;
-        }
+        SUNNEED_NNG_TRY_RET(nng_recvmsg, !=0, sock, &msg, NNG_FLAG_ALLOC);
 
         // TODO They claim nng_msg_get_pipe() returns -1 on error, but its return type is nng_pipe, which can't 
         //  be compared to an integer.
         nng_pipe pipe = nng_msg_get_pipe(msg);
 
         int pipe_id;
-        if ((pipe_id = nng_pipe_id(pipe)) == -1) {
-            report_nng_error("nng_pipe_id", rv);
-            return 1;
-        }
+        SUNNEED_NNG_TRY_RET_SET(nng_pipe_id, pipe_id, ==-1, pipe);
 
         struct client_state *msg_client_state;
 
@@ -138,10 +127,7 @@ int sunneed_listen(void) {
         // Allocate the reply message here for convenience.
         // If insertions are made, nng will automatically reallocate the body pointer with more storage to fit the
         //  data.
-        if ((rv = nng_msg_alloc(&reply, SUNNEED_MESSAGE_DEFAULT_BODY_SZ)) != 0) {
-            report_nng_error("nng_msg_alloc", rv);
-            return 1;
-        }
+        SUNNEED_NNG_TRY_RET(nng_msg_alloc, !=0, &reply, SUNNEED_MESSAGE_DEFAULT_BODY_SZ);
 
         if (msg_client_state->state == STATE_GET_HANDLE) {
             char *device = nng_msg_body(msg);
@@ -151,39 +137,15 @@ int sunneed_listen(void) {
         // Interpret command tokens.
         if (strncmp(SUNNEED_IPC_TEST_REQ_STR, buf, strlen(SUNNEED_IPC_TEST_REQ_STR)) == 0) {
             // Handle IPC test request.
-            if ((rv = nng_msg_insert(reply, SUNNEED_IPC_TEST_REP_STR, strlen(SUNNEED_IPC_TEST_REP_STR)) != 0)) {
-                report_nng_error("nng_msg_insert", rv);
-                return 1;
-            }
-
-            if ((rv = nng_sendmsg(sock, reply, 0)) != 0) {
-                report_nng_error("nng_sendmsg", rv);
-                return 1;
-            }
+            SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, SUNNEED_IPC_TEST_REP_STR, strlen(SUNNEED_IPC_TEST_REP_STR));
+            SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
         } else if (strncmp(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE, buf, strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE)) == 0) {
-            // TODO They claim nng_msg_get_pipe() returns -1 on error, but its return type is nng_pipe, which can't 
-            //  be compared to an integer.
-            nng_pipe pipe = nng_msg_get_pipe(msg);
-
-            int pipe_id;
-            if ((pipe_id = nng_pipe_id(pipe)) == -1) {
-                report_nng_error("nng_pipe_id", rv);
-                return 1;
-            }
-
             LOG_D("Pipe %d entering GET_DEVICE_HANDLE", pipe_id);
 
             msg_client_state->state = STATE_GET_HANDLE;
 
-            if ((rv = nng_msg_insert(reply, SUNNEED_IPC_REP_STATE_SUCCESS, strlen(SUNNEED_IPC_REP_STATE_SUCCESS)) != 0)) {
-                report_nng_error("nng_msg_insert", rv);
-                return 1;
-            }
-
-            if ((rv = nng_sendmsg(sock, reply, 0)) != 0) {
-                report_nng_error("nng_sendmsg", rv);
-                return 1;
-            }
+            SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, SUNNEED_IPC_REP_STATE_SUCCESS, strlen(SUNNEED_IPC_REP_STATE_SUCCESS));
+            SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
         }
 
         nng_msg_free(msg);
