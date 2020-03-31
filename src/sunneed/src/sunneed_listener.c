@@ -4,17 +4,14 @@ extern struct sunneed_device devices[];
 
 // Control flow:
 // When a new client (identified by pipe ID) connects, we register it in the clint_states array.
-// Clients send state requests such as SUNNEED_IPC_REQ_GET_DEVICE_HANDLE, which are a single meessage 
-//  consisting of the command text. sunneed assigns the corresponding value to the `state` field.
-// The next message sent after a state request will be interpreted as the arguments for the `serve_*` function 
-//  associated with that state.
+// Once registered, clients can send requests over NNG. Requests consist of a token word that describes the request
+//  being made, optionally followed by a newline character delimiting the arguments for that command.
 // The client will have to send some notification in order to unregister; I don't think we can tell if a pipe
 //  closed.
 static struct client_state {
     int index;
     bool is_active;
     nng_pipe pipe;
-    enum sunneed_client_ipc_state state;
 };
 
 struct client_state client_states[SUNNEED_MAX_IPC_CLIENTS];
@@ -38,11 +35,20 @@ static struct client_state *register_client_state(nng_pipe pipe) {
     client_states[idx] = (struct client_state){
         .index = idx,
         .is_active = true,
-        .pipe = pipe,
-        .state = STATE_NONE
+        .pipe = pipe
     };
 
     return &client_states[idx];
+}
+
+static int unregister_client_state(nng_pipe pipe) {
+    int idx;
+    for (idx = 0; idx < SUNNEED_MAX_IPC_CLIENTS; idx++)
+        if (nng_pipe_id(pipe) != -1 && nng_pipe_id(client_states[idx].pipe) == nng_pipe_id(pipe))
+            break;
+    
+
+    // TODO Unregister.
 }
 
 static int serve_get_handle(const char *identifier) {
@@ -82,7 +88,6 @@ int sunneed_listen(void) {
     for (int i = 0; i < MAX_TENANTS; i++) {
         client_states[i] = (struct client_state){
             .is_active = false,
-            .state = STATE_NONE,
             // TODO Why do I need to cast this...
             .pipe = (nng_pipe)NNG_PIPE_INITIALIZER
         };
@@ -109,46 +114,69 @@ int sunneed_listen(void) {
         int pipe_id;
         SUNNEED_NNG_TRY_RET_SET(nng_pipe_id, pipe_id, ==-1, pipe);
 
-        struct client_state *msg_client_state;
-
-        if ((msg_client_state = get_client_state_by_pipe_id(pipe_id)) == NULL) {
-            // Register this pipe ID as a client.
-            msg_client_state = register_client_state(pipe);
-            LOG_D("Registered pipe %d as client %d", pipe_id, msg_client_state->index);
-        }
-
-        char *buf = nng_msg_body(msg);
-
-        LOG_I("From pipe %d: %s", pipe_id, buf);
-
-        // Create the reply.
-        nng_msg *reply;
-
-        // Allocate the reply message here for convenience.
+        // Create and allocate the reply message here for convenience.
         // If insertions are made, nng will automatically reallocate the body pointer with more storage to fit the
         //  data.
+        nng_msg *reply;
         SUNNEED_NNG_TRY_RET(nng_msg_alloc, !=0, &reply, SUNNEED_MESSAGE_DEFAULT_BODY_SZ);
 
-        if (msg_client_state->state == STATE_GET_HANDLE) {
-            char *device = nng_msg_body(msg);
-            LOG_D("Device for get_handle: %s", device);
+        char *buf = nng_msg_body(msg);
+        LOG_D("From pipe %d: %s", pipe_id, buf);
+
+        struct client_state *msg_client_state = NULL;
+
+        // Check for registration request.
+        if (strncmp(buf, SUNNEED_IPC_REQ_REGISTER, strlen(buf)) == 0) {
+            // Register as a new client.
+            if ((msg_client_state = register_client_state(pipe)) == NULL) {
+                LOG_W("Registration failed for pipe %d", pipe_id);
+                goto end;
+            }
+            LOG_D("Registered pipe %d as client %d", pipe_id, msg_client_state->index);
+            SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, SUNNEED_IPC_REP_SUCCESS, strlen(SUNNEED_IPC_REP_SUCCESS));
+            SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
+            goto end;
+        }
+
+        // Find the pipe's associated client state (unless we already found it as a part of registration).
+        if (!msg_client_state && (msg_client_state = get_client_state_by_pipe_id(pipe_id)) == NULL) {
+            // This client has not registered!
+            LOG_W("Received message from %d, who is not registered.", pipe_id);
+            goto end;
         }
 
         // Interpret command tokens.
-        if (strncmp(SUNNEED_IPC_TEST_REQ_STR, buf, strlen(SUNNEED_IPC_TEST_REQ_STR)) == 0) {
+        if (strncmp(SUNNEED_IPC_REQ_UNREGISTER, buf, strlen(SUNNEED_IPC_REQ_UNREGISTER)) == 0) {
+            // Unregister client.
+        } else if (strncmp(SUNNEED_IPC_TEST_REQ_STR, buf, strlen(SUNNEED_IPC_TEST_REQ_STR)) == 0) {
             // Handle IPC test request.
             SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, SUNNEED_IPC_TEST_REP_STR, strlen(SUNNEED_IPC_TEST_REP_STR));
             SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
         } else if (strncmp(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE, buf, strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE)) == 0) {
-            LOG_D("Pipe %d entering GET_DEVICE_HANDLE", pipe_id);
+            if (*(buf + strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE)) != '\n') {
+                LOG_D("Request from pipe %d missing newline argument separator.", pipe_id);
+                SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, SUNNEED_IPC_REP_FAILURE, strlen(SUNNEED_IPC_REP_FAILURE));
+                SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
+                goto end;
+            }
 
-            msg_client_state->state = STATE_GET_HANDLE;
+            char *device_name = buf + strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE) + 1;
 
-            SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, SUNNEED_IPC_REP_STATE_SUCCESS, strlen(SUNNEED_IPC_REP_STATE_SUCCESS));
+            int handle;
+            if ((handle = serve_get_handle(device_name)) < 0) {
+                LOG_E("Failed to get handle for '%s'.", device_name);
+                return 1;
+            }
+
+            // TODO No magic number for size.
+            char response[64];
+            snprintf(response, 64, "%s\n%d", SUNNEED_IPC_REP_RESULT, handle);
+            SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, response, strlen(response));
             SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
         }
 
-        nng_msg_free(msg);
+end:
         nng_msg_free(reply);
+        nng_msg_free(msg);
     }
 }

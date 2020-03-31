@@ -10,6 +10,8 @@
 
 #define DEVICE_NAME "device"
 
+#define MSG_SIZE 64
+
 static void fatal(const char *func, int rv) {
     fprintf(stderr, "%s: %s\n", func, nng_strerror(rv));
     exit(1);
@@ -26,28 +28,32 @@ int main(int argc, char const* argv[]) {
     printf("Sending request.\n");
 
     nng_msg *msg;
-    SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &msg, strlen(SUNNEED_IPC_TEST_REQ_STR));
-    SUNNEED_NNG_TRY(nng_msg_insert, !=0, msg, SUNNEED_IPC_REQ_GET_DEVICE_HANDLE, strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE));
 
+    SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &msg, strlen(SUNNEED_IPC_REQ_REGISTER));
+    SUNNEED_NNG_TRY(nng_msg_insert, !=0, msg, SUNNEED_IPC_REQ_REGISTER, strlen(SUNNEED_IPC_REQ_REGISTER));
     SUNNEED_NNG_TRY(nng_sendmsg, !=0, sock, msg, 0);
 
     nng_msg *reply;
 
     SUNNEED_NNG_TRY(nng_recvmsg, !=0, sock, &reply, 0);
-
     char *buf = nng_msg_body(reply);
-
-    if (strcmp(buf, SUNNEED_IPC_REP_STATE_SUCCESS) != 0) {
-        printf("FAILED: failed to enter get_handle state\n");
+    if (strcmp(buf, SUNNEED_IPC_REP_SUCCESS) != 0) {
+        printf("FAILED: registration failed\n");
         return 1;
     }
 
-    // Next, send the name of the device to get the handle of .
-    printf("Sending device name '%s'\n", DEVICE_NAME);
-    SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &msg, strlen(DEVICE_NAME));
-    SUNNEED_NNG_TRY(nng_msg_insert, !=0, msg, DEVICE_NAME, strlen(DEVICE_NAME));
-
+    SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &msg, MSG_SIZE);
+    char contents[MSG_SIZE];
+    snprintf(contents, MSG_SIZE, "%s\n%s", SUNNEED_IPC_REQ_GET_DEVICE_HANDLE, DEVICE_NAME);
+    SUNNEED_NNG_TRY(nng_msg_insert, !=0, msg, contents, strlen(contents));
     SUNNEED_NNG_TRY(nng_sendmsg, !=0, sock, msg, 0);
+
+    SUNNEED_NNG_TRY(nng_recvmsg, !=0, sock, &reply, 0);
+    buf = nng_msg_body(reply);
+    if (strncmp(buf, SUNNEED_IPC_REP_RESULT, strlen(SUNNEED_IPC_REP_RESULT)) != 0) {
+        printf("FAILED: call was not successful\n");
+        return 1;
+    }
 
     nng_msg_free(msg);
     nng_msg_free(reply);
