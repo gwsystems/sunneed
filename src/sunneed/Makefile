@@ -52,11 +52,11 @@ $(src_dir)/device/%.o: $(src_dir)/device/%.c
 
 protobuf: $(protobuf_out_files)
 	@rm -rf "$(protobuf_out_dir)" && mkdir "$(protobuf_out_dir)"
-	@mv $(protobuf_out_files) $(protobuf_out_dir)
+	mv $(protobuf_out_files) $(protobuf_out_dir)
 
 .ONESHELL:
 $(protobuf_out_files): $(protobuf_sources)
-	cd $(protobuf_dir)
+	@cd $(protobuf_dir)
 	$(PROTOC) --c_out=. $(patsubst $(protobuf_dir)/%,./%,$^)
 
 clientlib:
