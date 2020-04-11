@@ -8,7 +8,7 @@ extern struct sunneed_device devices[];
 //  being made, optionally followed by a newline character delimiting the arguments for that command.
 // The client will have to send some notification in order to unregister; I don't think we can tell if a pipe
 //  closed.
-static struct client_state {
+struct client_state {
     int index;
     bool is_active;
     nng_pipe pipe;
@@ -39,16 +39,6 @@ static struct client_state *register_client_state(nng_pipe pipe) {
     };
 
     return &client_states[idx];
-}
-
-static int unregister_client_state(nng_pipe pipe) {
-    int idx;
-    for (idx = 0; idx < SUNNEED_MAX_IPC_CLIENTS; idx++)
-        if (nng_pipe_id(pipe) != -1 && nng_pipe_id(client_states[idx].pipe) == nng_pipe_id(pipe))
-            break;
-    
-
-    // TODO Unregister.
 }
 
 static int serve_get_handle(const char *identifier) {
