@@ -54,10 +54,8 @@ protobuf: $(protobuf_out_files)
 	@rm -rf "$(protobuf_out_dir)" && mkdir "$(protobuf_out_dir)"
 	mv $(protobuf_out_files) $(protobuf_out_dir)
 
-.ONESHELL:
 $(protobuf_out_files): $(protobuf_sources)
-	@cd $(protobuf_dir)
-	$(PROTOC) --c_out=. $(patsubst $(protobuf_dir)/%,./%,$^)
+	@$(MAKE) --no-print-directory -C $(protobuf_dir)
 
 clientlib:
 	@if [ ! -d "$(out_dir)/client" ]; then mkdir "$(out_dir)/client"; fi
