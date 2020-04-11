@@ -64,4 +64,8 @@ clientlib:
 	$(CC) $(CFLAGS) -c -fPIC -o $(out_dir)/client/clientlib.o $(clientlib_sources) $(cflags_deps)
 	$(CC) $(CFLAGS) -shared -o $(out_dir)/client/libsunneedclient.so $(out_dir)/client/clientlib.o
 
-.PHONY: all main pip util
+clean:
+	rm -rf "$(SUNNEED_BUILD_OUT_DIR)"/*
+	rm -rf "$(protobuf_out_dir)"/*
+
+.PHONY: all main pip util clean
