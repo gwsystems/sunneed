@@ -20,11 +20,6 @@
 #define SUNNEED_MAX_IPC_CLIENTS 512
 #define SUNNEED_DEVICE_PATH_MAX_LEN 64
 
-enum sunneed_client_ipc_state {
-    STATE_NONE,
-    STATE_GET_HANDLE
-};
-
 int sunneed_listen(void);
 
 #endif

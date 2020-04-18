@@ -1,4 +1,7 @@
 #include "sunneed_listener.h"
+#include "protobuf/c/server.pb-c.h"
+
+#define SUB_RESPONSE_BUF_SZ 4096
 
 extern struct sunneed_device devices[];
 
@@ -41,16 +44,45 @@ static struct client_state *register_client_state(nng_pipe pipe) {
     return &client_states[idx];
 }
 
-static int serve_get_handle(const char *identifier) {
+static int serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe, struct client_state **state) {
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC; 
+
+    GenericResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (GenericResponse) GENERIC_RESPONSE__INIT;
+    resp->generic = sub_resp;
+
+    // If the caller doesn't specify `state` we set it to this helper variable.
+    struct client_state *s;
+    if (state == NULL) {
+        state = &s;
+    }
+
+    if ((*state = get_client_state_by_pipe_id(pipe.id)) != NULL) {
+        LOG_W("Registration request for already-registered pipe %d", pipe.id);
+        return 1;
+    }
+
+    // Register as a new client.
+    if ((*state = register_client_state(pipe)) == NULL) {
+        LOG_W("Registration failed for pipe %d", pipe.id);
+        return 1;
+    }
+
+    LOG_D("Registered pipe %d as client %d", pipe.id, (*state)->index);
+
+    return 0;
+}
+
+static int serve_get_handle(SunneedResponse *resp, void *sub_resp_buf, struct client_state *client_state, GetDeviceHandleRequest *request) {
     static int handle_cur = 0;
 
     char filename[SUNNEED_DEVICE_PATH_MAX_LEN];
 
     int len;
-    if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/devices/%s.so", identifier) 
+    if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/devices/%s.so", request->name) 
                 > SUNNEED_DEVICE_PATH_MAX_LEN)) {
-        LOG_E("sunneed error: device name '%s' is too long", identifier);
-        return -1;
+        LOG_E("sunneed error: device name '%s' is too long", request->name);
+        return 1;
     }
 
     void *dlhandle = dlopen(filename, RTLD_LOCAL);
@@ -58,13 +90,19 @@ static int serve_get_handle(const char *identifier) {
     devices[handle_cur] = (struct sunneed_device) {
         .dlhandle = dlhandle,
         .handle = handle_cur,
-        .identifier = identifier,
+        .identifier = request->name,
         // TODO Check for dlsym error
         .get = dlsym(dlhandle, "get"),
         .power_consumption = dlsym(dlhandle, "power_consumption")
     };
 
-    return handle_cur++;  
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GET_DEVICE_HANDLE;
+    GetDeviceHandleResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (GetDeviceHandleResponse) GET_DEVICE_HANDLE_RESPONSE__INIT;
+    sub_resp->device_handle = handle_cur;
+    resp->get_device_handle = sub_resp;
+
+    return 0;
 }
 
 static void report_nng_error(const char *func, int rv) {
@@ -91,6 +129,9 @@ int sunneed_listen(void) {
     SUNNEED_NNG_TRY_RET(nng_rep0_open, !=0, &sock);
     SUNNEED_NNG_TRY_RET(nng_listen, <0, sock, SUNNEED_LISTENER_URL, NULL, 0);
 
+    // Buffer for `serve_` methods to write their sub-response to.
+    void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
+
     // Await messages.
     for (;;) {
         nng_msg *msg;
@@ -101,72 +142,57 @@ int sunneed_listen(void) {
         //  be compared to an integer.
         nng_pipe pipe = nng_msg_get_pipe(msg);
 
-        int pipe_id;
-        SUNNEED_NNG_TRY_RET_SET(nng_pipe_id, pipe_id, ==-1, pipe);
-
-        // Create and allocate the reply message here for convenience.
-        // If insertions are made, nng will automatically reallocate the body pointer with more storage to fit the
-        //  data.
-        nng_msg *reply;
-        SUNNEED_NNG_TRY_RET(nng_msg_alloc, !=0, &reply, SUNNEED_MESSAGE_DEFAULT_BODY_SZ);
-
-        char *buf = nng_msg_body(msg);
-        LOG_D("From pipe %d: %s", pipe_id, buf);
-
+        // Get contents of message.
+        SunneedRequest *request = sunneed_request__unpack(NULL, nng_msg_len(msg), nng_msg_body(msg));
+        
         struct client_state *msg_client_state = NULL;
 
-        // Check for registration request.
-        if (strncmp(buf, SUNNEED_IPC_REQ_REGISTER, strlen(buf)) == 0) {
-            // Register as a new client.
-            if ((msg_client_state = register_client_state(pipe)) == NULL) {
-                LOG_W("Registration failed for pipe %d", pipe_id);
-                goto end;
-            }
-            LOG_D("Registered pipe %d as client %d", pipe_id, msg_client_state->index);
-            SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, SUNNEED_IPC_REP_SUCCESS, strlen(SUNNEED_IPC_REP_SUCCESS));
-            SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
-            goto end;
-        }
-
-        // Find the pipe's associated client state (unless we already found it as a part of registration).
-        if (!msg_client_state && (msg_client_state = get_client_state_by_pipe_id(pipe_id)) == NULL) {
+        // Find the pipe's associated client state. If we can't find it, we error out unless the message is of type
+        //  REGISTER_CLIENT..
+        if (!msg_client_state && (msg_client_state = get_client_state_by_pipe_id(pipe.id)) == NULL
+                && request->message_type_case != SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT) {
             // This client has not registered!
-            LOG_W("Received message from %d, who is not registered.", pipe_id);
+            LOG_W("Received message from %d, who is not registered.", pipe.id);
             goto end;
         }
 
-        // Interpret command tokens.
-        if (strncmp(SUNNEED_IPC_REQ_UNREGISTER, buf, strlen(SUNNEED_IPC_REQ_UNREGISTER)) == 0) {
-            // Unregister client.
-        } else if (strncmp(SUNNEED_IPC_TEST_REQ_STR, buf, strlen(SUNNEED_IPC_TEST_REQ_STR)) == 0) {
-            // Handle IPC test request.
-            SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, SUNNEED_IPC_TEST_REP_STR, strlen(SUNNEED_IPC_TEST_REP_STR));
-            SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
-        } else if (strncmp(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE, buf, strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE)) == 0) {
-            if (*(buf + strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE)) != '\n') {
-                LOG_D("Request from pipe %d missing newline argument separator.", pipe_id);
-                SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, SUNNEED_IPC_REP_FAILURE, strlen(SUNNEED_IPC_REP_FAILURE));
-                SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
-                goto end;
-            }
+        // Begin setting up our response.
+        SunneedResponse resp = SUNNEED_RESPONSE__INIT;
+        int ret = -1;
 
-            char *device_name = buf + strlen(SUNNEED_IPC_REQ_GET_DEVICE_HANDLE) + 1;
-
-            int handle;
-            if ((handle = serve_get_handle(device_name)) < 0) {
-                LOG_E("Failed to get handle for '%s'.", device_name);
-                return 1;
-            }
-
-            // TODO No magic number for size.
-            char response[64];
-            snprintf(response, 64, "%s\n%d", SUNNEED_IPC_REP_RESULT, handle);
-            SUNNEED_NNG_TRY_RET(nng_msg_insert, !=0, reply, response, strlen(response));
-            SUNNEED_NNG_TRY_RET(nng_sendmsg, !=0, sock, reply, 0);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wswitch"
+        switch (request->message_type_case) {
+            case SUNNEED_REQUEST__MESSAGE_TYPE__NOT_SET:
+                LOG_W("Request from pipe %d has no message type set.", pipe.id);
+                ret = -1;
+                break;
+            case SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT:
+                ret = serve_register_client(&resp, sub_resp_buf, pipe, &msg_client_state);
+                break;
+            case SUNNEED_REQUEST__MESSAGE_TYPE_GET_DEVICE_HANDLE:
+                ret = serve_get_handle(&resp, sub_resp_buf, msg_client_state, request->get_device_handle);
+                break;
         }
+#pragma GCC diagnostic pop
+
+        resp.status = ret;
+
+        // Create and send the response message.
+        nng_msg *resp_msg;
+        int resp_len = sunneed_response__get_packed_size(&resp);
+        void *resp_buf = malloc(resp_len);
+        sunneed_response__pack(&resp, resp_buf);
+
+        SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &resp_msg, resp_len);
+        SUNNEED_NNG_TRY(nng_msg_insert, !=0, resp_msg, resp_buf, resp_len); 
+        SUNNEED_NNG_TRY(nng_sendmsg, !=0, sock, resp_msg, 0);
 
 end:
-        nng_msg_free(reply);
+        sunneed_request__free_unpacked(request, NULL);
+        nng_msg_free(resp_msg);
         nng_msg_free(msg);
     }
+
+    free(sub_resp_buf);
 }
