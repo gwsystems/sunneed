@@ -13,7 +13,7 @@ static void fatal(const char *func, int rv) {
     exit(1);
 }
 
-int main(int argc, char const* argv[]) {
+int main(void) {
     SUNNEED_NNG_SET_ERROR_REPORT_FUNC(fatal);
 
     nng_socket sock;

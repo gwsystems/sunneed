@@ -73,7 +73,7 @@ static int serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_
     return 0;
 }
 
-static int serve_get_handle(SunneedResponse *resp, void *sub_resp_buf, struct client_state *client_state, GetDeviceHandleRequest *request) {
+static int serve_get_handle(SunneedResponse *resp, void *sub_resp_buf, __attribute__((unused)) struct client_state *client_state, GetDeviceHandleRequest *request) {
     static int handle_cur = 0;
 
     char filename[SUNNEED_DEVICE_PATH_MAX_LEN];

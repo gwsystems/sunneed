@@ -4,7 +4,7 @@ ifeq ($(origin CC),default)
 CC = gcc
 endif
 
-CFLAGS ?= -Wall -g
+CFLAGS ?= -Wall -Wextra -g
 PROTOC ?= protoc-c
 
 SUNNEED_BUILD_PIP ?= bq27441
