@@ -11,6 +11,8 @@ SUNNEED_BUILD_PIP ?= bq27441
 SUNNEED_BUILD_OUT_DIR ?= build
 SUNNEED_BUILD_BIN_FILE ?= sunneed
 
+SOURCE_FORMATTER = clang-format -style=file -i
+
 cflags_deps = -lnng -lpthread -ldl -lprotobuf-c
 
 src_dir = src
@@ -67,4 +69,7 @@ clean:
 	rm -rf "$(SUNNEED_BUILD_OUT_DIR)"/*
 	rm -rf "$(protobuf_out_dir)"/*
 
-.PHONY: all main pip util clean
+format:
+	$(SOURCE_FORMATTER) $(shell find '$(src_dir)' -not -path '$(protobuf_dir)/*' -type f -regex '.*\.[ch]')
+
+.PHONY: all main pip util clean format
