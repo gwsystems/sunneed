@@ -1,19 +1,10 @@
 #ifndef _SUNNEED_IPC_H_
 #define _SUNNEED_IPC_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #define SUNNEED_LISTENER_URL "ipc:///tmp/sunneed.ipc"
-
-#define SUNNEED_IPC_TEST_REQ_STR "REQ"
-#define SUNNEED_IPC_TEST_REP_STR "REP"
-
-#define SUNNEED_IPC_REQ_REGISTER "HELLOTHERE"
-#define SUNNEED_IPC_REQ_UNREGISTER "SEEYA"
-
-#define SUNNEED_IPC_REQ_GET_DEVICE_HANDLE "HANDLE"
-
-#define SUNNEED_IPC_REP_SUCCESS "YEAH"
-#define SUNNEED_IPC_REP_RESULT "RESULT"
-#define SUNNEED_IPC_REP_FAILURE "SORRY"
 
 void (*_sunneed_nng_error_func)(const char *nng_call_name, int rv);
 
@@ -37,12 +28,7 @@ void (*_sunneed_nng_error_func)(const char *nng_call_name, int rv);
  * In the process of calling the function, the variable TARGET will be assigned its return value.
  */
 #define SUNNEED_NNG_TRY_RET_SET(CALL, TARGET, ERROR_COND, ARGS...) \
-    {                                                              \
-        if ((TARGET = CALL(ARGS)) ERROR_COND) {                    \
-            _sunneed_nng_error_func(#CALL, TARGET);                \
-            return 1;                                              \
-        }                                                          \
-    }
+    { _SUNNEED_NNG_TRY_CONTAINER(CALL, TARGET, ERROR_COND, return 1, ##ARGS); }
 
 /** Try to perform an NNG function. */
 #define SUNNEED_NNG_TRY(CALL, ERROR_COND, ARGS...)          \
@@ -56,10 +42,31 @@ void (*_sunneed_nng_error_func)(const char *nng_call_name, int rv);
  * In the process of calling the function, the variable TARGET will be assigned its return value.
  */
 #define SUNNEED_NNG_TRY_SET(CALL, TARGET, ERROR_COND, ARGS...) \
-    {                                                          \
-        if ((TARGET = CALL(ARGS)) ERROR_COND) {                \
-            _sunneed_nng_error_func(#CALL, TARGET);            \
-        }                                                      \
+    { _SUNNEED_NNG_TRY_CONTAINER(CALL, TARGET, ERROR_COND, , ##ARGS); }
+
+#ifdef SUNNEED_BUILD_TYPE_PRODUCTION
+#define _SUNNEED_NNG_TRY_CONTAINER(CALL, TARGET, ERROR_COND, ON_ERROR, ARGS...) \
+    {                                                                           \
+        if ((TARGET = CALL(ARGS)) ERROR_COND) {                                 \
+            _sunneed_nng_error_func(#CALL, TARGET);                             \
+            ON_ERROR;                                                           \
+        }                                                                       \
     }
+#else
+#define _SUNNEED_NNG_TRY_CONTAINER(CALL, TARGET, ERROR_COND, ON_ERROR, ARGS...)         \
+    {                                                                                   \
+        if ((TARGET = CALL(ARGS)) ERROR_COND) {                                         \
+            if (!_sunneed_nng_error_func) {                                             \
+                fprintf(stderr,                                                         \
+                        "An NNG error was encountered but there is no error handler.\n" \
+                        "Error details: " #CALL ": %s\n",                               \
+                        nng_strerror(TARGET));                                          \
+                exit(1);                                                                \
+            }                                                                           \
+            _sunneed_nng_error_func(#CALL, TARGET);                                     \
+            ON_ERROR;                                                                   \
+        }                                                                               \
+    }
+#endif
 
 #endif
