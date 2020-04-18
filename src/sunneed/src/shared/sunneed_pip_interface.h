@@ -1,9 +1,9 @@
 #ifndef _SUNNEED_PIP_H_
 #define _SUNNEED_PIP_H_
 
-/* 
- * Describes the interface for a power information provider (a PIP). 
- * A PIP is what tells sunneed statistics about the battery, such as power and 
+/*
+ * Describes the interface for a power information provider (a PIP).
+ * A PIP is what tells sunneed statistics about the battery, such as power and
  *  electrical current usage.
  * This API is unstable and new things will definitely be added as we progress
  *  in sunneed's development.
@@ -26,8 +26,10 @@ struct sunneed_pip {
     unsigned int update_interval;
 };
 
-struct sunneed_pip pip_info();
+struct sunneed_pip
+pip_info();
 
-unsigned int present_power();
+unsigned int
+present_power();
 
 #endif

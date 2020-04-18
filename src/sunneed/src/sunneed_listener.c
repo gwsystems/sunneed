@@ -1,4 +1,5 @@
 #include "sunneed_listener.h"
+
 #include "protobuf/c/server.pb-c.h"
 
 #define SUB_RESPONSE_BUF_SZ 4096
@@ -20,14 +21,16 @@ struct client_state {
 struct client_state client_states[SUNNEED_MAX_IPC_CLIENTS];
 
 // TODO This is probably slow -- O(n) lookup for every request made.
-static struct client_state *get_client_state_by_pipe_id(int pipe_id) {
+static struct client_state *
+get_client_state_by_pipe_id(int pipe_id) {
     for (int i = 0; i < SUNNEED_MAX_IPC_CLIENTS; i++)
         if (nng_pipe_id(client_states[i].pipe) == pipe_id)
             return &client_states[i];
     return NULL;
 }
 
-static struct client_state *register_client_state(nng_pipe pipe) {
+static struct client_state *
+register_client_state(nng_pipe pipe) {
     int idx;
     for (idx = 0; idx < SUNNEED_MAX_IPC_CLIENTS; idx++)
         if (!client_states[idx].is_active)
@@ -35,20 +38,17 @@ static struct client_state *register_client_state(nng_pipe pipe) {
     if (idx == SUNNEED_MAX_IPC_CLIENTS)
         return NULL;
 
-    client_states[idx] = (struct client_state){
-        .index = idx,
-        .is_active = true,
-        .pipe = pipe
-    };
+    client_states[idx] = (struct client_state){.index = idx, .is_active = true, .pipe = pipe};
 
     return &client_states[idx];
 }
 
-static int serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe, struct client_state **state) {
-    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC; 
+static int
+serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe, struct client_state **state) {
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
 
     GenericResponse *sub_resp = sub_resp_buf;
-    *sub_resp = (GenericResponse) GENERIC_RESPONSE__INIT;
+    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
     resp->generic = sub_resp;
 
     // If the caller doesn't specify `state` we set it to this helper variable.
@@ -73,52 +73,55 @@ static int serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_
     return 0;
 }
 
-static int serve_get_handle(SunneedResponse *resp, void *sub_resp_buf, __attribute__((unused)) struct client_state *client_state, GetDeviceHandleRequest *request) {
+static int
+serve_get_handle(
+        SunneedResponse *resp,
+        void *sub_resp_buf,
+        __attribute__((unused)) struct client_state *client_state,
+        GetDeviceHandleRequest *request) {
     static int handle_cur = 0;
 
     char filename[SUNNEED_DEVICE_PATH_MAX_LEN];
 
     int len;
-    if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/devices/%s.so", request->name) 
-                > SUNNEED_DEVICE_PATH_MAX_LEN)) {
+    if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/devices/%s.so", request->name)
+               > SUNNEED_DEVICE_PATH_MAX_LEN)) {
         LOG_E("sunneed error: device name '%s' is too long", request->name);
         return 1;
     }
 
     void *dlhandle = dlopen(filename, RTLD_LOCAL);
 
-    devices[handle_cur] = (struct sunneed_device) {
-        .dlhandle = dlhandle,
-        .handle = handle_cur,
-        .identifier = request->name,
-        // TODO Check for dlsym error
-        .get = dlsym(dlhandle, "get"),
-        .power_consumption = dlsym(dlhandle, "power_consumption")
-    };
+    devices[handle_cur] = (struct sunneed_device){.dlhandle = dlhandle,
+                                                  .handle = handle_cur,
+                                                  .identifier = request->name,
+                                                  // TODO Check for dlsym error
+                                                  .get = dlsym(dlhandle, "get"),
+                                                  .power_consumption = dlsym(dlhandle, "power_consumption")};
 
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GET_DEVICE_HANDLE;
     GetDeviceHandleResponse *sub_resp = sub_resp_buf;
-    *sub_resp = (GetDeviceHandleResponse) GET_DEVICE_HANDLE_RESPONSE__INIT;
+    *sub_resp = (GetDeviceHandleResponse)GET_DEVICE_HANDLE_RESPONSE__INIT;
     sub_resp->device_handle = handle_cur;
     resp->get_device_handle = sub_resp;
 
     return 0;
 }
 
-static void report_nng_error(const char *func, int rv) {
+static void
+report_nng_error(const char *func, int rv) {
     LOG_E("nng error: (%s) %s", func, nng_strerror(rv));
 }
 
-int sunneed_listen(void) {
+int
+sunneed_listen(void) {
     SUNNEED_NNG_SET_ERROR_REPORT_FUNC(report_nng_error);
 
     // Initialize client states.
     for (int i = 0; i < MAX_TENANTS; i++) {
-        client_states[i] = (struct client_state){
-            .is_active = false,
-            // TODO Why do I need to cast this...
-            .pipe = (nng_pipe)NNG_PIPE_INITIALIZER
-        };
+        client_states[i] = (struct client_state){.is_active = false,
+                                                 // TODO Why do I need to cast this...
+                                                 .pipe = (nng_pipe)NNG_PIPE_INITIALIZER};
     }
 
     nng_socket sock;
@@ -126,8 +129,8 @@ int sunneed_listen(void) {
     LOG_I("Starting listener loop...");
 
     // Make a socket and attach it to the sunneed URL.
-    SUNNEED_NNG_TRY_RET(nng_rep0_open, !=0, &sock);
-    SUNNEED_NNG_TRY_RET(nng_listen, <0, sock, SUNNEED_LISTENER_URL, NULL, 0);
+    SUNNEED_NNG_TRY_RET(nng_rep0_open, != 0, &sock);
+    SUNNEED_NNG_TRY_RET(nng_listen, < 0, sock, SUNNEED_LISTENER_URL, NULL, 0);
 
     // Buffer for `serve_` methods to write their sub-response to.
     void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
@@ -136,21 +139,21 @@ int sunneed_listen(void) {
     for (;;) {
         nng_msg *msg;
 
-        SUNNEED_NNG_TRY_RET(nng_recvmsg, !=0, sock, &msg, NNG_FLAG_ALLOC);
+        SUNNEED_NNG_TRY_RET(nng_recvmsg, != 0, sock, &msg, NNG_FLAG_ALLOC);
 
-        // TODO They claim nng_msg_get_pipe() returns -1 on error, but its return type is nng_pipe, which can't 
+        // TODO They claim nng_msg_get_pipe() returns -1 on error, but its return type is nng_pipe, which can't
         //  be compared to an integer.
         nng_pipe pipe = nng_msg_get_pipe(msg);
 
         // Get contents of message.
         SunneedRequest *request = sunneed_request__unpack(NULL, nng_msg_len(msg), nng_msg_body(msg));
-        
+
         struct client_state *msg_client_state = NULL;
 
         // Find the pipe's associated client state. If we can't find it, we error out unless the message is of type
         //  REGISTER_CLIENT..
         if (!msg_client_state && (msg_client_state = get_client_state_by_pipe_id(pipe.id)) == NULL
-                && request->message_type_case != SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT) {
+            && request->message_type_case != SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT) {
             // This client has not registered!
             LOG_W("Received message from %d, who is not registered.", pipe.id);
             goto end;
@@ -184,11 +187,11 @@ int sunneed_listen(void) {
         void *resp_buf = malloc(resp_len);
         sunneed_response__pack(&resp, resp_buf);
 
-        SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &resp_msg, resp_len);
-        SUNNEED_NNG_TRY(nng_msg_insert, !=0, resp_msg, resp_buf, resp_len); 
-        SUNNEED_NNG_TRY(nng_sendmsg, !=0, sock, resp_msg, 0);
+        SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, resp_len);
+        SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
+        SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
 
-end:
+    end:
         sunneed_request__free_unpacked(request, NULL);
         nng_msg_free(resp_msg);
         nng_msg_free(msg);

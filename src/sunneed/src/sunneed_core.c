@@ -2,17 +2,19 @@
 
 struct sunneed_pip pip;
 
-void sunneed_init(void) {
+void
+sunneed_init(void) {
     pip = pip_info();
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[]) {
     int opt;
     extern int optopt;
 
     while ((opt = getopt(argc, argv, ":h")) != -1) {
         switch (opt) {
-            case 'h':  
+            case 'h':
                 printf(HELP_TEXT, argv[0]);
                 exit(0);
             case '?':
@@ -31,7 +33,7 @@ int main(int argc, char *argv[]) {
     LOG_I("Acquired PIP: %s", pip.name);
 
     int ret;
-    
+
     if ((ret = sunneed_listen()) != 0) {
         LOG_E("sunneed listener encountered a fatal error. Exiting.");
         return 1;

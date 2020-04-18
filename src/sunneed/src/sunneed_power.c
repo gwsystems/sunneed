@@ -14,9 +14,10 @@ static struct {
 
     // Whether events can be recorded to this quantum.
     bool is_active;
-} current_quantum = { -1, 0.0, { 0 }, false };
+} current_quantum = {-1, 0.0, {0}, false};
 
-int sunneed_record_power_usage_event(struct sunneed_power_usage_event ev) {
+int
+sunneed_record_power_usage_event(struct sunneed_power_usage_event ev) {
     if (!current_quantum.is_active) {
         LOG_E("Cannot record a power event outside of an active quantum");
         return 1;
@@ -44,7 +45,8 @@ int sunneed_record_power_usage_event(struct sunneed_power_usage_event ev) {
     return 0;
 }
 
-int sunneed_quantum_begin(void) {
+int
+sunneed_quantum_begin(void) {
     LOG_D("Begin start procedure for quantum %d", current_quantum.id + 1);
 
     // Set quantum metadata.
@@ -72,9 +74,10 @@ int sunneed_quantum_begin(void) {
     return 0;
 }
 
-int sunneed_quantum_end(void) {
+int
+sunneed_quantum_end(void) {
     LOG_I("Ending quantum %d", current_quantum.id);
-    
+
     current_quantum.is_active = false;
 
     double power_consumed[MAX_TENANTS] = {0.0};
@@ -90,11 +93,11 @@ int sunneed_quantum_end(void) {
     float unscaled_sum = 0.0;
 
     // Update power proportions for tenants.
-    
+
     // First, get the percentage of their given power that each tenant used.
     for (int i = 0; i < MAX_TENANTS; i++) {
-        unscaled_proportions[i] = 
-            1.0 - power_consumed[i] / (current_quantum.present_power * tenants[i].power_proportion);
+        unscaled_proportions[i]
+                = 1.0 - power_consumed[i] / (current_quantum.present_power * tenants[i].power_proportion);
         unscaled_sum += unscaled_proportions[i];
     }
 

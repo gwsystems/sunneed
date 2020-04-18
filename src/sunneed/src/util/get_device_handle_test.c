@@ -1,3 +1,5 @@
+#include "../protobuf/c/server.pb-c.h"
+#include "../shared/sunneed_ipc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,25 +8,24 @@
 #include <nng/protocol/reqrep0/rep.h>
 #include <nng/protocol/reqrep0/req.h>
 
-#include "../shared/sunneed_ipc.h"
-#include "../protobuf/c/server.pb-c.h"
-
 #define DEVICE_NAME "device"
 
 #define MSG_SIZE 64
 
-static void fatal(const char *func, int rv) {
+static void
+fatal(const char *func, int rv) {
     fprintf(stderr, "%s: %s\n", func, nng_strerror(rv));
     exit(1);
 }
 
-int main(void) {
+int
+main(void) {
     SUNNEED_NNG_SET_ERROR_REPORT_FUNC(fatal);
 
     nng_socket sock;
 
-    SUNNEED_NNG_TRY(nng_req0_open, !=0, &sock);
-    SUNNEED_NNG_TRY(nng_dial, !=0, sock, SUNNEED_LISTENER_URL, NULL, 0);
+    SUNNEED_NNG_TRY(nng_req0_open, != 0, &sock);
+    SUNNEED_NNG_TRY(nng_dial, != 0, sock, SUNNEED_LISTENER_URL, NULL, 0);
 
     printf("Sending request.\n");
 
@@ -39,14 +40,14 @@ int main(void) {
     void *buf = malloc(req_len);
     sunneed_request__pack(&req, buf);
 
-    SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &msg, req_len);
-    SUNNEED_NNG_TRY(nng_msg_insert, !=0, msg, buf, req_len);
-    SUNNEED_NNG_TRY(nng_sendmsg, !=0, sock, msg, 0);
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);
+    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);
+    SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, msg, 0);
 
     nng_msg *reply;
 
-    SUNNEED_NNG_TRY(nng_recvmsg, !=0, sock, &reply, 0);
-    
+    SUNNEED_NNG_TRY(nng_recvmsg, != 0, sock, &reply, 0);
+
     SunneedResponse *resp = sunneed_response__unpack(NULL, nng_msg_len(reply), nng_msg_body(reply));
 
     if (resp->status != 0) {
@@ -72,11 +73,11 @@ int main(void) {
     buf = malloc(req_len);
     sunneed_request__pack(&req, buf);
 
-    SUNNEED_NNG_TRY(nng_msg_alloc, !=0, &msg, req_len);
-    SUNNEED_NNG_TRY(nng_msg_insert, !=0, msg, buf, req_len);
-    SUNNEED_NNG_TRY(nng_sendmsg, !=0, sock, msg, 0);
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);
+    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);
+    SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, msg, 0);
 
-    SUNNEED_NNG_TRY(nng_recvmsg, !=0, sock, &reply, 0);
+    SUNNEED_NNG_TRY(nng_recvmsg, != 0, sock, &reply, 0);
     resp = sunneed_response__unpack(NULL, nng_msg_len(reply), nng_msg_body(reply));
 
     if (resp->status != 0) {
