@@ -5,8 +5,9 @@ struct sunneed_device {
     void *dlhandle;
     int handle;
     const char *identifier;
-    void (**get)(void *);
+    void *(*get)(void *);
     double (*power_consumption)(void *);
+    bool is_linked;
 };
 
 #endif

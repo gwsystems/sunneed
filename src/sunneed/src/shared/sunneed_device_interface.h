@@ -2,14 +2,14 @@
 #define _SUNNEED_DEVICE_INTERFACE_H_
 
 /* Runs once when module is loaded. */
-int
+extern int
 init(void);
 
 /* Gets the data from the device. */
-void *
+extern void *
 get(void *args);
 
-double
+extern double
 power_consumption(void *args);
 
 #endif

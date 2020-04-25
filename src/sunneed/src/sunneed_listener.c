@@ -43,6 +43,18 @@ register_client_state(nng_pipe pipe) {
     return &client_states[idx];
 }
 
+// The `serve_*` methods take a `sub_resp_buf` parameter. This is a pointer to a buffer in which the client
+//  can store their sub-response (the message in the oneof field of the SunneedResponse). Example:
+//
+//    GetDeviceHandleResponse *sub_resp = sub_resp_buf;
+//    *sub_resp = (GetDeviceHandleResponse)GET_DEVICE_HANDLE_RESPONSE__INIT;
+//
+// This example writes the initializer for the `GetDeviceHandleResponse` to the address pointed to by
+//  `sub_resp_buf`.
+// The rationale for this whole process comes next: once the `serve_*` function returns, its sub-response
+//  data is contained within the buffer, to which a pointer is in scope in the main request listening
+//  loop.
+
 static int
 serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe, struct client_state **state) {
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
@@ -84,26 +96,61 @@ serve_get_handle(
     char filename[SUNNEED_DEVICE_PATH_MAX_LEN];
 
     int len;
-    if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/devices/%s.so", request->name)
+    if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/device/%s.so", request->name)
                > SUNNEED_DEVICE_PATH_MAX_LEN)) {
         LOG_E("sunneed error: device name '%s' is too long", request->name);
         return 1;
     }
 
-    void *dlhandle = dlopen(filename, RTLD_LOCAL);
+    void *dlhandle = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+    if (!dlhandle) {
+        LOG_E("Error loading device from '%s': %s", filename, dlerror());
+        return 1;
+    }
 
     devices[handle_cur] = (struct sunneed_device){.dlhandle = dlhandle,
                                                   .handle = handle_cur,
-                                                  .identifier = request->name,
-                                                  // TODO Check for dlsym error
+                                                  .identifier = malloc(strlen(request->name)),
                                                   .get = dlsym(dlhandle, "get"),
-                                                  .power_consumption = dlsym(dlhandle, "power_consumption")};
+                                                  .power_consumption = dlsym(dlhandle, "power_consumption"),
+                                                  .is_linked = false};
+    strcpy(devices[handle_cur].identifier, request->name);
+
+    if (devices[handle_cur].get == NULL || devices[handle_cur].power_consumption == NULL) {
+        LOG_E("Error linking device '%s': %s", request->name, dlerror());
+        return 1;
+    }
+
+    devices[handle_cur].is_linked = true;
 
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GET_DEVICE_HANDLE;
     GetDeviceHandleResponse *sub_resp = sub_resp_buf;
     *sub_resp = (GetDeviceHandleResponse)GET_DEVICE_HANDLE_RESPONSE__INIT;
     sub_resp->device_handle = handle_cur;
     resp->get_device_handle = sub_resp;
+
+    LOG_I("Linked device '%s' at handle %d", request->name, handle_cur);
+
+    return 0;
+}
+
+static int
+serve_generic_device_action(
+        SunneedResponse *resp,
+        void *sub_resp_buf,
+        __attribute__((unused)) struct client_state *client_state,
+        GenericDeviceActionRequest *request) {
+    // TODO SAFETY (DON'T JUST ACCEPT ANY HANDLE)!!!!!
+    if (!devices[request->device_handle].is_linked) {
+        LOG_W("Action request sent for device %d, which is not linked", request->device_handle);
+        return 1;
+    }
+
+    LOG_I("Calling '%s' function 'get'", devices[request->device_handle].identifier);
+    devices[request->device_handle].get(request->data.data);
+
+    GenericResponse *sub_resp = sub_resp_buf;
+    *sub_resp = GENERIC_RESPONSE__INIT;
 
     return 0;
 }
@@ -175,6 +222,9 @@ sunneed_listen(void) {
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_GET_DEVICE_HANDLE:
                 ret = serve_get_handle(&resp, sub_resp_buf, msg_client_state, request->get_device_handle);
+                break;
+            case SUNNEED_REQUEST__MESSAGE_TYPE_DEVICE_ACTION:
+                ret = serve_generic_device_action(&resp, sub_resp_buf, msg_client_state, request->device_action);
                 break;
         }
 #pragma GCC diagnostic pop

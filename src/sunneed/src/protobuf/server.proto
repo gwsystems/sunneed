@@ -7,6 +7,7 @@ message SunneedRequest {
     oneof message_type {
         RegisterClientRequest register_client = 1;
         GetDeviceHandleRequest get_device_handle = 2;
+        GenericDeviceActionRequest device_action = 3;
     }
 }
 
@@ -14,6 +15,11 @@ message RegisterClientRequest {}
 
 message GetDeviceHandleRequest {
     string name = 1;
+}
+
+message GenericDeviceActionRequest {
+    int32 device_handle = 1;
+    bytes data = 2;
 }
 
 // {{{1 Response
@@ -27,7 +33,9 @@ message SunneedResponse {
     }
 }
 
-message GenericResponse {}
+message GenericResponse {
+    bytes data = 1;
+}
 
 message GetDeviceHandleResponse {
     int32 device_handle = 1;

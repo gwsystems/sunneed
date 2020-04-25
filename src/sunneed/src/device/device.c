@@ -1,9 +1,8 @@
 #include "../shared/sunneed_device_interface.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 #define UNUSED(X) (void)(X)
-
-#define MAX_USAGE 20
 
 int
 init(void) {
@@ -12,9 +11,9 @@ init(void) {
 
 void *
 get(void *args) {
-    int *buf = malloc(sizeof(int));
-    *buf = *(int *)args;
-    return (void *)buf;
+    UNUSED(args);
+    printf("Hello from 'device'!\n");
+    return args;
 }
 
 double

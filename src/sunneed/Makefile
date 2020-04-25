@@ -50,8 +50,7 @@ $(src_dir)/util/%.o: $(src_dir)/util/%.c
 
 $(src_dir)/device/%.o: $(src_dir)/device/%.c
 	@if [ ! -d "$(out_dir)/device" ]; then mkdir "$(out_dir)/device"; fi
-	$(CC) $(CFLAGS) -c -fPIC -o $(patsubst $(src_dir)/device/%.o, $(out_dir)/device/%.o, $@) $^ $(cflags_deps)
-	$(CC) $(CFLAGS) -shared -o $(patsubst $(src_dir)/device/%.o, $(out_dir)/device/%.so, $@) $(cflags_deps)
+	$(CC) $(CFLAGS) -g -shared -o $(patsubst $(src_dir)/device/%.o, $(out_dir)/device/%.so, $@) -fPIC $^ $(cflags_deps)
 
 protobuf: $(protobuf_out_files)
 	@rm -rf "$(protobuf_out_dir)" && mkdir "$(protobuf_out_dir)"

@@ -89,11 +89,27 @@ main(void) {
     }
 
     printf("Got device handle: %d\n", resp->get_device_handle->device_handle);
+    int handle = resp->get_device_handle->device_handle;
 
     nng_msg_free(msg);
     nng_msg_free(reply);
     free(buf);
     sunneed_response__free_unpacked(resp, NULL);
+
+    // Make the generic device action request.
+    req = (SunneedRequest)SUNNEED_REQUEST__INIT;
+    GenericDeviceActionRequest action_req = GENERIC_DEVICE_ACTION_REQUEST__INIT;
+    action_req.device_handle = handle;
+    req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_DEVICE_ACTION;
+    req.device_action = &action_req;
+
+    req_len = sunneed_request__get_packed_size(&req);
+    buf = malloc(req_len);
+    sunneed_request__pack(&req, buf);
+
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);
+    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);
+    SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, msg, 0);
 
     nng_close(sock);
 
