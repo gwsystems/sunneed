@@ -150,7 +150,7 @@ serve_generic_device_action(
     devices[request->device_handle].get(request->data.data);
 
     GenericResponse *sub_resp = sub_resp_buf;
-    *sub_resp = GENERIC_RESPONSE__INIT;
+    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
 
     return 0;
 }
