@@ -1,3 +1,6 @@
 [submodule "src/libbq27441"]
 	path = src/libbq27441
 	url = https://github.com/zacharied/libbq27441.git
+[submodule "src/sunneed/test/munit"]
+	path = src/sunneed/test/munit
+	url = https://github.com/nemequ/munit.git
