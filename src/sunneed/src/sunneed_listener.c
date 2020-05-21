@@ -125,13 +125,15 @@ serve_get_handle(
         return 1;
     }
 
+    size_t name_sz = strlen(request->name);
+
     devices[handle_cur] = (struct sunneed_device){.dlhandle = dlhandle,
                                                   .handle = handle_cur,
-                                                  .identifier = malloc(strlen(request->name)),
+                                                  .identifier = malloc(name_sz),
                                                   .get = dlsym(dlhandle, "get"),
                                                   .power_consumption = dlsym(dlhandle, "power_consumption"),
                                                   .is_linked = false};
-    strcpy(devices[handle_cur].identifier, request->name);
+    strncpy(devices[handle_cur].identifier, request->name, name_sz);
 
     if (devices[handle_cur].get == NULL || devices[handle_cur].power_consumption == NULL) {
         LOG_E("Error linking device '%s': %s", request->name, dlerror());

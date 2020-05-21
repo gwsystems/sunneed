@@ -1,0 +1,2 @@
+* We want to handle the power usage requests transparently. A client could be a script that passes its child PID (for its actual process) for sunneed to monitor.
+* Current work: how to monitor CPU usag
