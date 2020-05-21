@@ -42,10 +42,11 @@ register_client_state(nng_pipe pipe) {
 
     if (!tenants[idx].is_active) {
         // Register tenant.
-        int ret;
-        pid_t pid;
+        uint64_t pid_int;
 
-        SUNNEED_NNG_TRY(nng_pipe_get_uint64, !=0, pipe, NNG_OPT_IPC_PEER_PID, &pid);
+        SUNNEED_NNG_TRY(nng_pipe_get_uint64, !=0, pipe, NNG_OPT_IPC_PEER_PID, &pid_int);
+
+        pid_t pid = (pid_t)pid_int;
 
         if (sunneed_tenant_register(idx, pid) != 0) {
             LOG_E("Failed to register tenant %d", idx);
@@ -112,8 +113,8 @@ serve_get_handle(
     char filename[SUNNEED_DEVICE_PATH_MAX_LEN];
 
     int len;
-    if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/device/%s.so", request->name)
-               > SUNNEED_DEVICE_PATH_MAX_LEN)) {
+    if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/device/%s.so", request->name))
+               > SUNNEED_DEVICE_PATH_MAX_LEN) {
         LOG_E("sunneed error: device name '%s' is too long", request->name);
         return 1;
     }
@@ -152,7 +153,7 @@ serve_get_handle(
 
 static int
 serve_generic_device_action(
-        SunneedResponse *resp,
+        __attribute__((unused)) SunneedResponse *resp,
         void *sub_resp_buf,
         __attribute__((unused)) struct client_state *client_state,
         GenericDeviceActionRequest *request) {

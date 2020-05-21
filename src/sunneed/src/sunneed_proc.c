@@ -52,9 +52,9 @@ sunneed_update_tenant_cpu_usage(void) {
         file = fopen(filepath, "r");
         // Read CPU consumption from this tenant's PID.
         fscanf(file,
-               "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*lu %*lu %*lu %*lu" // 13 things we don't care about
+               "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u" // 13 things we don't care about
                " %llu %llu" // usertime, systemtime
-               " %*ld %*ld %*ld %*ld %*ld %*ld %*llu %*lu",  // 8 things we don't care about
+               " %*d %*d %*d %*d %*d %*d %*u %*u",  // 8 things we don't care about
                &cpu_usage.tenants[tenant->id].user, &cpu_usage.tenants[tenant->id].system);
         fclose(file);
     }
@@ -81,7 +81,7 @@ void
         LOG_D("Updating process CPU usage");
         if ((ret = sunneed_update_tenant_cpu_usage()) != 0) {
             LOG_E("Error updating CPU usage; monitor thread stopping");
-            return;
+            return NULL;
         } 
 
         sleep(5);
