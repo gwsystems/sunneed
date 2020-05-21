@@ -14,6 +14,7 @@
 #include "shared/sunneed_ipc.h"
 #include "sunneed.h"
 #include "sunneed_power.h"
+#include "sunneed_proc.h"
 
 #define SUNNEED_MESSAGE_DEFAULT_BODY_SZ 64
 #define SUNNEED_MAX_IPC_CLIENTS 512

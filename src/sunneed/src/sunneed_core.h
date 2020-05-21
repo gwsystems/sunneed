@@ -4,11 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "log.h"
 #include "shared/sunneed_pip_interface.h"
 #include "sunneed.h"
 #include "sunneed_listener.h"
+#include "sunneed_proc.h"
 
 #define HELP_TEXT                               \
     APP_NAME ": enforce power usage policies\n" \

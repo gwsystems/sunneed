@@ -5,6 +5,7 @@
 #define SUB_RESPONSE_BUF_SZ 4096
 
 extern struct sunneed_device devices[];
+extern struct sunneed_tenant tenants[];
 
 // Control flow:
 // When a new client (identified by pipe ID) connects, we register it in the clint_states array.
@@ -14,6 +15,7 @@ extern struct sunneed_device devices[];
 //  closed.
 struct client_state {
     int index;
+    sunneed_tenant_id tenant_id;
     bool is_active;
     nng_pipe pipe;
 };
@@ -38,7 +40,21 @@ register_client_state(nng_pipe pipe) {
     if (idx == SUNNEED_MAX_IPC_CLIENTS)
         return NULL;
 
-    client_states[idx] = (struct client_state){.index = idx, .is_active = true, .pipe = pipe};
+    if (!tenants[idx].is_active) {
+        // Register tenant.
+        int ret;
+        pid_t pid;
+
+        SUNNEED_NNG_TRY(nng_pipe_get_uint64, !=0, pipe, NNG_OPT_IPC_PEER_PID, &pid);
+
+        if (sunneed_tenant_register(idx, pid) != 0) {
+            LOG_E("Failed to register tenant %d", idx);
+            return NULL;
+        }
+    }
+
+    // TODO Get a real tenant ID somehow.
+    client_states[idx] = (struct client_state){.index = idx, .tenant_id = idx, .is_active = true, .pipe = pipe};
 
     return &client_states[idx];
 }
@@ -181,6 +197,7 @@ sunneed_listen(void) {
 
     // Buffer for `serve_` methods to write their sub-response to.
     void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
+    // TODO Check malloc.
 
     // Await messages.
     for (;;) {

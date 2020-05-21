@@ -11,6 +11,13 @@ sunneed_init_tenants(void) {
     return 0;
 }
 
+int
+sunneed_tenant_register(sunneed_tenant_id id, pid_t pid) {
+    tenants[id].pid = pid;
+    tenants[id].is_active = true;
+    return 0;
+}
+
 unsigned int
 sunneed_get_num_tenants(void) {
     unsigned int num_tenants = 0;
@@ -22,3 +29,62 @@ sunneed_get_num_tenants(void) {
 
     return num_tenants;
 }
+
+int
+sunneed_update_tenant_cpu_usage(void) {
+    FILE *file;
+    char filepath[FILENAME_MAX] = "/proc/stat";
+
+    file = fopen(filepath, "r");
+    fscanf(file, "%*s %llu %llu %llu %llu", &cpu_usage.user, &cpu_usage.nice, &cpu_usage.system, &cpu_usage.idle);
+    fclose(file);
+
+    for (struct sunneed_tenant *tenant = tenants; tenant < tenants + MAX_TENANTS; tenant++) {
+        if (!tenant->is_active)
+            continue;
+
+        snprintf(filepath, FILENAME_MAX, "/proc/%d/stat", tenant->pid);
+        if (access(filepath, F_OK) != 0) {
+            LOG_E("Unable to find procfs file for PID %d; most likely a tenant ended but forgot to tell us", tenant->pid);
+            continue;
+        }
+
+        file = fopen(filepath, "r");
+        // Read CPU consumption from this tenant's PID.
+        fscanf(file,
+               "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*lu %*lu %*lu %*lu" // 13 things we don't care about
+               " %llu %llu" // usertime, systemtime
+               " %*ld %*ld %*ld %*ld %*ld %*ld %*llu %*lu",  // 8 things we don't care about
+               &cpu_usage.tenants[tenant->id].user, &cpu_usage.tenants[tenant->id].system);
+        fclose(file);
+    }
+
+    return 0;
+}
+
+int
+sunneed_get_tenant_cpu_usage(sunneed_tenant_id tenant_id) {
+    if (!tenants[tenant_id].is_active) {
+        LOG_E("Attempt to get CPU usage of inactive tenant %d", tenant_id);
+        return -1;
+    }
+
+    // TODO Shit
+
+    return 0;
+}
+
+void
+*sunneed_proc_monitor(__attribute__((unused)) void *args) {
+    int ret;
+    while (true) {
+        LOG_D("Updating process CPU usage");
+        if ((ret = sunneed_update_tenant_cpu_usage()) != 0) {
+            LOG_E("Error updating CPU usage; monitor thread stopping");
+            return;
+        } 
+
+        sleep(5);
+    }
+}
+
