@@ -32,6 +32,8 @@ sunneed_get_num_tenants(void) {
 
 int
 sunneed_update_tenant_cpu_usage(void) {
+    // TODO Verify that the pipe and PID match up. It is entirely possible for the tenant process to die and a new
+    //  process with the same PID as the tenant's to start up.
     FILE *file;
     char filepath[FILENAME_MAX] = "/proc/stat";
 

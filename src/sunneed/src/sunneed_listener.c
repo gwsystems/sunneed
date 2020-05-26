@@ -60,6 +60,7 @@ register_client_state(nng_pipe pipe) {
     return &client_states[idx];
 }
 
+
 // The `serve_*` methods take a `sub_resp_buf` parameter. This is a pointer to a buffer in which the client
 //  can store their sub-response (the message in the oneof field of the SunneedResponse). Example:
 //
@@ -98,6 +99,25 @@ serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe, 
     }
 
     LOG_D("Registered pipe %d as client %d", pipe.id, (*state)->index);
+
+    return 0;
+}
+
+static int
+serve_unregister_client(
+        SunneedResponse *resp,
+        void *sub_resp_buf,
+        struct client_state *client_state) {
+    LOG_D("Unregistering client %d", client_state->index);
+
+    // Deactivate records.
+    client_state->is_active = false;
+    tenants[client_state->tenant_id].is_active = false;
+
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
+    GenericResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+    resp->generic = sub_resp;
 
     return 0;
 }
@@ -239,6 +259,9 @@ sunneed_listen(void) {
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT:
                 ret = serve_register_client(&resp, sub_resp_buf, pipe, &msg_client_state);
+                break;
+            case SUNNEED_REQUEST__MESSAGE_TYPE_UNREGISTER_CLIENT:
+                ret = serve_unregister_client(&resp, sub_resp_buf, msg_client_state);
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_GET_DEVICE_HANDLE:
                 ret = serve_get_handle(&resp, sub_resp_buf, msg_client_state, request->get_device_handle);

@@ -111,6 +111,28 @@ main(void) {
     SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);
     SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, msg, 0);
 
+    nng_msg_free(msg);
+    nng_msg_free(reply);
+    free(buf);
+
+    // Make the generic device action request.
+    req = (SunneedRequest)SUNNEED_REQUEST__INIT;
+    UnregisterClientRequest unreg_req = UNREGISTER_CLIENT_REQUEST__INIT;
+    req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_UNREGISTER_CLIENT;
+    req.unregister_client = &unreg_req;
+
+    req_len = sunneed_request__get_packed_size(&req);
+    buf = malloc(req_len);
+    sunneed_request__pack(&req, buf);
+
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);
+    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);
+    SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, msg, 0);
+
+    nng_msg_free(msg);
+    nng_msg_free(reply);
+    free(buf);
+
     nng_close(sock);
 
     return 0;

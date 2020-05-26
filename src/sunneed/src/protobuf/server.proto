@@ -8,10 +8,13 @@ message SunneedRequest {
         RegisterClientRequest register_client = 1;
         GetDeviceHandleRequest get_device_handle = 2;
         GenericDeviceActionRequest device_action = 3;
+        UnregisterClientRequest unregister_client = 4;
     }
 }
 
 message RegisterClientRequest {}
+
+message UnregisterClientRequest {}
 
 message GetDeviceHandleRequest {
     string name = 1;
