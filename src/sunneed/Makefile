@@ -7,22 +7,33 @@ endif
 CFLAGS ?= -Wall -Wextra -g
 PROTOC ?= protoc-c
 
+SUNNEED_BUILD_TYPE ?= devel
 SUNNEED_BUILD_PIP ?= bq27441
 SUNNEED_BUILD_OUT_DIR ?= build
 SUNNEED_BUILD_BIN_FILE ?= sunneed
+SUNNEED_BUILD_CLIENT_LIB_NAME ?= libsunneedclient
 
 SOURCE_FORMATTER = clang-format -style=file -i
 
 cflags_deps = -lnng -lpthread -ldl -lprotobuf-c
 
+ifeq ($(SUNNEED_BUILD_TYPE),devel)
+	util_cflags = -Wl,-rpath,$(CURDIR)/$(clientlib_out_dir)
+endif
+
 src_dir = src
 sources = $(wildcard $(src_dir)/*.c)
-clientlib_sources = $(wildcard $(src_dir)/client/*.c)
 
+# TODO Consistent naming on all this stuff.
 out_dir = $(SUNNEED_BUILD_OUT_DIR)
 bin_file = $(SUNNEED_BUILD_BIN_FILE)
 pip_obj = pip.o
 pip_name = $(SUNNEED_BUILD_PIP)
+
+clientlib_sources = $(wildcard $(src_dir)/client/*.c)
+clientlib_file = $(SUNNEED_BUILD_CLIENT_LIB_NAME).so
+clientlib_out_dir = $(out_dir)/client
+clientlib_obj = $(clientlib_out_dir)/$(clientlib_file)
 
 protobuf_dir = $(src_dir)/protobuf
 protobuf_sources = $(wildcard $(protobuf_dir)/*.proto)
@@ -33,7 +44,7 @@ protobuf_out_sources = $(wildcard $(protobuf_out_dir)/*.c)
 device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
-all: main util clientlib
+all: clientlib main util
 	@echo "My work here is done..."
 
 main: protobuf pip devices
@@ -43,9 +54,12 @@ pip: $(src_dir)/pip/$(pip_name).c
 	$(CC) $(CFLAGS) -c $(src_dir)/pip/$(pip_name).c -o $(out_dir)/$(pip_obj)
 
 devices: $(device_objs)
-util: $(util_objs)
+util: clientlib $(util_objs)
 
 $(src_dir)/util/%.o: $(src_dir)/util/%.c
+	$(CC) $(CFLAGS) -o $(patsubst $(src_dir)/util/%.o, $(out_dir)/%, $@) $^ $(protobuf_out_sources) -L$(clientlib_out_dir) -lsunneedclient $(util_cflags) $(cflags_deps)
+
+$(src_dir)/client/%.o: $(src_dir)/client/%.c
 	$(CC) $(CFLAGS) -o $(patsubst $(src_dir)/util/%.o, $(out_dir)/%, $@) $^ $(protobuf_out_sources) $(cflags_deps)
 
 $(src_dir)/device/%.o: $(src_dir)/device/%.c
@@ -62,7 +76,7 @@ $(protobuf_out_files): $(protobuf_sources)
 clientlib:
 	@if [ ! -d "$(out_dir)/client" ]; then mkdir "$(out_dir)/client"; fi
 	$(CC) $(CFLAGS) -c -fPIC -o $(out_dir)/client/clientlib.o $(clientlib_sources) $(cflags_deps)
-	$(CC) $(CFLAGS) -shared -o $(out_dir)/client/libsunneedclient.so $(out_dir)/client/clientlib.o
+	$(CC) $(CFLAGS) -shared -o $(clientlib_obj) $(out_dir)/client/clientlib.o
 
 clean:
 	rm -rf "$(SUNNEED_BUILD_OUT_DIR)"/*

@@ -1,0 +1,5 @@
+syntax = "proto3";
+
+message DeviceRandomResponse {
+    int32 val = 1;
+}

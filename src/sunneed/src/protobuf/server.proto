@@ -12,7 +12,9 @@ message SunneedRequest {
     }
 }
 
-message RegisterClientRequest {}
+message RegisterClientRequest {
+    string name = 1;
+}
 
 message UnregisterClientRequest {}
 
@@ -33,6 +35,7 @@ message SunneedResponse {
     oneof message_type {
         GenericResponse generic = 2;
         GetDeviceHandleResponse get_device_handle = 3;
+        DeviceResponse device = 4;
     }
 }
 
@@ -42,6 +45,16 @@ message GenericResponse {
 
 message GetDeviceHandleResponse {
     int32 device_handle = 1;
+};
+
+import "device.proto";
+
+// Dear whoever is reading this, I hope you like the word "Device"...
+message DeviceResponse {
+
+    oneof message_type {
+        DeviceRandomResponse random = 1;
+    }
 };
 
 // }}}
