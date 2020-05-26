@@ -20,11 +20,11 @@ struct sunneed_tenant {
 };
 
 struct tenant_cpu_usage {
-    unsigned long long user, system;
+    unsigned long long user, sys;
 };
 
 struct {
-    unsigned long long user, nice, system, idle;
+    unsigned long long user, nice, sys, idle;
     struct tenant_cpu_usage tenants[MAX_TENANTS];
 } cpu_usage;
 

@@ -38,7 +38,7 @@ sunneed_update_tenant_cpu_usage(void) {
     char filepath[FILENAME_MAX] = "/proc/stat";
 
     file = fopen(filepath, "r");
-    fscanf(file, "%*s %llu %llu %llu %llu", &cpu_usage.user, &cpu_usage.nice, &cpu_usage.system, &cpu_usage.idle);
+    fscanf(file, "%*s %llu %llu %llu %llu", &cpu_usage.user, &cpu_usage.nice, &cpu_usage.sys, &cpu_usage.idle);
     fclose(file);
 
     for (struct sunneed_tenant *tenant = tenants; tenant < tenants + MAX_TENANTS; tenant++) {
@@ -57,7 +57,7 @@ sunneed_update_tenant_cpu_usage(void) {
                "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u" // 13 things we don't care about
                " %llu %llu" // usertime, systemtime
                " %*d %*d %*d %*d %*d %*d %*u %*u",  // 8 things we don't care about
-               &cpu_usage.tenants[tenant->id].user, &cpu_usage.tenants[tenant->id].system);
+               &cpu_usage.tenants[tenant->id].user, &cpu_usage.tenants[tenant->id].sys);
         fclose(file);
     }
 
