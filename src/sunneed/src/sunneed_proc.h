@@ -9,11 +9,11 @@
 
 #define MAX_TENANTS 2
 
-typedef unsigned int sunneed_tenant_id;
+typedef unsigned int sunneed_tenant_id_t;
 
 // TODO Separate tenants from processes.
 struct sunneed_tenant {
-    sunneed_tenant_id id;
+    sunneed_tenant_id_t id;
     pid_t pid;
     float power_proportion;
     bool is_active;
@@ -35,13 +35,13 @@ int
 sunneed_init_tenants(void);
 
 int
-sunneed_tenant_register(sunneed_tenant_id tenant_id, pid_t pid);
+sunneed_tenant_register(sunneed_tenant_id_t tenant_id, pid_t pid);
 
 unsigned int
 sunneed_get_num_tenants(void);
 
 int
-sunneed_get_tenant_cpu_usage(sunneed_tenant_id tenant_id);
+sunneed_get_tenant_cpu_usage(sunneed_tenant_id_t tenant_id);
 
 void
 *sunneed_proc_monitor(void *args);

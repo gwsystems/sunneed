@@ -12,7 +12,7 @@ sunneed_init_tenants(void) {
 }
 
 int
-sunneed_tenant_register(sunneed_tenant_id id, pid_t pid) {
+sunneed_tenant_register(sunneed_tenant_id_t id, pid_t pid) {
     tenants[id].pid = pid;
     tenants[id].is_active = true;
     return 0;
@@ -65,7 +65,7 @@ sunneed_update_tenant_cpu_usage(void) {
 }
 
 int
-sunneed_get_tenant_cpu_usage(sunneed_tenant_id tenant_id) {
+sunneed_get_tenant_cpu_usage(sunneed_tenant_id_t tenant_id) {
     if (!tenants[tenant_id].is_active) {
         LOG_E("Attempt to get CPU usage of inactive tenant %d", tenant_id);
         return -1;

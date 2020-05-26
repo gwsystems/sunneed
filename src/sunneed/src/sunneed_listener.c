@@ -15,7 +15,7 @@ extern struct sunneed_tenant tenants[];
 //  closed.
 struct client_state {
     int index;
-    sunneed_tenant_id tenant_id;
+    sunneed_tenant_id_t tenant_id;
     bool is_active;
     nng_pipe pipe;
 };
