@@ -4,3 +4,6 @@
 [submodule "src/sunneed/test/munit"]
 	path = src/sunneed/test/munit
 	url = https://github.com/nemequ/munit.git
+[submodule "src/nng"]
+	path = src/nng
+	url = https://github.com/nanomsg/nng
