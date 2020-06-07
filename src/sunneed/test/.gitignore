@@ -1,2 +1,4 @@
 *.h
 !test.h
+
+run-tests
