@@ -2,10 +2,7 @@
 
 struct sunneed_pip pip;
 
-void *(*worker_thread_functions[])(void *) = {
-    sunneed_proc_monitor,
-    NULL
-};
+void *(*worker_thread_functions[])(void *) = {sunneed_proc_monitor, NULL};
 
 void
 sunneed_init(void) {

@@ -1,10 +1,10 @@
 #ifndef _SUNNEED_CORE_H_
 #define _SUNNEED_CORE_H_
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "log.h"
 #include "shared/sunneed_pip_interface.h"

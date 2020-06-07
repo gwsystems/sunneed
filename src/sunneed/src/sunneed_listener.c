@@ -44,7 +44,7 @@ register_client_state(nng_pipe pipe) {
         // Register tenant.
         uint64_t pid_int;
 
-        SUNNEED_NNG_TRY(nng_pipe_get_uint64, !=0, pipe, NNG_OPT_IPC_PEER_PID, &pid_int);
+        SUNNEED_NNG_TRY(nng_pipe_get_uint64, != 0, pipe, NNG_OPT_IPC_PEER_PID, &pid_int);
 
         pid_t pid = (pid_t)pid_int;
 
@@ -59,7 +59,6 @@ register_client_state(nng_pipe pipe) {
 
     return &client_states[idx];
 }
-
 
 // The `serve_*` methods take a `sub_resp_buf` parameter. This is a pointer to a buffer in which the client
 //  can store their sub-response (the message in the oneof field of the SunneedResponse). Example:
@@ -104,10 +103,7 @@ serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe, 
 }
 
 static int
-serve_unregister_client(
-        SunneedResponse *resp,
-        void *sub_resp_buf,
-        struct client_state *client_state) {
+serve_unregister_client(SunneedResponse *resp, void *sub_resp_buf, struct client_state *client_state) {
     LOG_D("Unregistering client %d", client_state->index);
 
     // Deactivate records.
@@ -134,7 +130,7 @@ serve_get_handle(
 
     int len;
     if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/device/%s.so", request->name))
-               > SUNNEED_DEVICE_PATH_MAX_LEN) {
+        > SUNNEED_DEVICE_PATH_MAX_LEN) {
         LOG_E("sunneed error: device name '%s' is too long", request->name);
         return 1;
     }

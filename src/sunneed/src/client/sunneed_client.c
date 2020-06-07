@@ -29,7 +29,8 @@ receive_and_unpack(SunneedResponse__MessageTypeCase message_type) {
     return resp;
 }
 
-int sunneed_client_init(const char *name) {
+int
+sunneed_client_init(const char *name) {
     SUNNEED_NNG_SET_ERROR_REPORT_FUNC(nngfatal);
     SUNNEED_NNG_TRY(nng_req0_open, != 0, &sunneed_socket);
     SUNNEED_NNG_TRY(nng_dial, != 0, sunneed_socket, SUNNEED_LISTENER_URL, NULL, 0);
@@ -74,9 +75,10 @@ int sunneed_client_init(const char *name) {
     return 0;
 }
 
-int sunneed_client_get_device_handle(const char *name, sunneed_device_handle_t *handle) {
+int
+sunneed_client_get_device_handle(const char *name, sunneed_device_handle_t *handle) {
     // TODO Check socket opened.
-    
+
     SunneedRequest req = SUNNEED_REQUEST__INIT;
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_GET_DEVICE_HANDLE;
     GetDeviceHandleRequest handle_req = GET_DEVICE_HANDLE_REQUEST__INIT;
@@ -112,9 +114,10 @@ int sunneed_client_get_device_handle(const char *name, sunneed_device_handle_t *
     return 0;
 }
 
-int sunneed_client_disconnect(void) {
+int
+sunneed_client_disconnect(void) {
     // TODO Check socket opened.
-    
+
     SunneedRequest req = SUNNEED_REQUEST__INIT;
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_UNREGISTER_CLIENT;
     UnregisterClientRequest unregister_req = UNREGISTER_CLIENT_REQUEST__INIT;

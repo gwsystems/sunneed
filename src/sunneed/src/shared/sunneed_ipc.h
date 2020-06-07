@@ -73,6 +73,7 @@ void (*_sunneed_nng_error_func)(const char *nng_call_name, int rv);
  * IPC helpers
  ***/
 
-int sunneed_ipc_register_self(void);
+int
+sunneed_ipc_register_self(void);
 
 #endif

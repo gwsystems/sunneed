@@ -2,10 +2,10 @@
 #define _SUNNEED_PROC_H_
 
 #include <sys/types.h>
-
-#include "sunneed.h"
-#include "log.h"
 #include <unistd.h>
+
+#include "log.h"
+#include "sunneed.h"
 
 #define MAX_TENANTS 2
 
@@ -43,7 +43,7 @@ sunneed_get_num_tenants(void);
 int
 sunneed_get_tenant_cpu_usage(sunneed_tenant_id_t tenant_id);
 
-void
-*sunneed_proc_monitor(void *args);
+void *
+sunneed_proc_monitor(void *args);
 
 #endif

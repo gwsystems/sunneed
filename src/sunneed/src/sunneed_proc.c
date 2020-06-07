@@ -47,7 +47,8 @@ sunneed_update_tenant_cpu_usage(void) {
 
         snprintf(filepath, FILENAME_MAX, "/proc/%d/stat", tenant->pid);
         if (access(filepath, F_OK) != 0) {
-            LOG_E("Unable to find procfs file for PID %d; most likely a tenant ended but forgot to tell us", tenant->pid);
+            LOG_E("Unable to find procfs file for PID %d; most likely a tenant ended but forgot to tell us",
+                  tenant->pid);
             continue;
         }
 
@@ -56,7 +57,7 @@ sunneed_update_tenant_cpu_usage(void) {
         fscanf(file,
                "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u" // 13 things we don't care about
                " %llu %llu" // usertime, systemtime
-               " %*d %*d %*d %*d %*d %*d %*u %*u",  // 8 things we don't care about
+               " %*d %*d %*d %*d %*d %*d %*u %*u", // 8 things we don't care about
                &cpu_usage.tenants[tenant->id].user, &cpu_usage.tenants[tenant->id].sys);
         fclose(file);
     }
@@ -76,17 +77,16 @@ sunneed_get_tenant_cpu_usage(sunneed_tenant_id_t tenant_id) {
     return 0;
 }
 
-void
-*sunneed_proc_monitor(__attribute__((unused)) void *args) {
+void *
+sunneed_proc_monitor(__attribute__((unused)) void *args) {
     int ret;
     while (true) {
         LOG_D("Updating process CPU usage");
         if ((ret = sunneed_update_tenant_cpu_usage()) != 0) {
             LOG_E("Error updating CPU usage; monitor thread stopping");
             return NULL;
-        } 
+        }
 
         sleep(5);
     }
 }
-
