@@ -104,6 +104,7 @@ overlay: clientlib
 clean:
 	rm -rf "$(SUNNEED_BUILD_OUT_DIR)"/*
 	rm -rf "$(protobuf_out_dir)"/*
+	make -C $(test_home) clean
 
 format:
 	$(SOURCE_FORMATTER) $(shell find '$(src_dir)' -not -path '$(protobuf_dir)/*' -type f -regex '.*\.[ch]')

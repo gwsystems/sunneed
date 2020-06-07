@@ -1,13 +1,8 @@
 #include "munit/munit.h"
 
-#include "nng.h"
-#include "overlay.h"
+#include "test.gen.h"
 
-static MunitSuite sub_suites[] = {
-    nng_suite,
-    overlay_suite,
-    { NULL, NULL, NULL, 1, MUNIT_SUITE_OPTION_NONE }
-};
+SUITES_ARRAY(sub_suites);
 
 static const MunitSuite main_suite = {
     (char*) "/sunneed",
