@@ -1,4 +1,10 @@
-#include "nng.h"
+#include "munit/munit.h"
+
+#include <stdio.h>
+
+#include <nng/nng.h>
+
+#include "../src/shared/sunneed_ipc.h"
 
 static void nng_fatal(const char *func, int rv) {
     fprintf(stderr, "%s: %s\n", func, nng_strerror(rv));
