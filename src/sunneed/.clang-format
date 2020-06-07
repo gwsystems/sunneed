@@ -37,6 +37,8 @@ IncludeCategories:
     Priority: 2
   - Regex: '.*'
     Priority: 1
+  - Regex: '^"munit/munit.h'
+    Priority: 0
 IncludeIsMainRegex: '$'
 IndentCaseLabels: true
 IndentPPDirectives: None

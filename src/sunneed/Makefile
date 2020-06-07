@@ -14,7 +14,7 @@ SUNNEED_BUILD_BIN_FILE ?= sunneed
 SUNNEED_BUILD_CLIENT_LIB_NAME ?= libsunneedclient
 SUNNEED_BUILD_OVERLAY_LIB_NAME ?= sunneed_overlay
 
-SOURCE_FORMATTER = clang-format -style=file -i
+export SOURCE_FORMATTER = clang-format -style=file -i
 
 export cflags_deps = -lnng -lpthread -ldl -lprotobuf-c
 
@@ -123,6 +123,7 @@ clean:
 
 format:
 	$(SOURCE_FORMATTER) $(shell find '$(src_dir)' -not -path '$(protobuf_dir)/*' -type f -regex '.*\.[ch]')
+	$(MAKE) -C $(test_home) format
 
 .PHONY: all main pip util test clean format
 

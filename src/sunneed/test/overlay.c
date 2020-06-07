@@ -1,9 +1,9 @@
 #include "munit/munit.h"
-
 #include <stdio.h>
 #include <unistd.h>
 
-MunitResult test_overlay_pid_is_same_as_process_pid(const MunitParameter params[], void *data) {
+MunitResult
+test_overlay_pid_is_same_as_process_pid(const MunitParameter params[], void *data) {
     // TODO Don't hardcode output directories.
     FILE *out = popen("build/run-with-overlay build/overlay_tester", "r");
     if (!out) {

@@ -10,8 +10,11 @@ all: $(glue_header)
 $(glue_header):
 	./scripts/generate-test-header $(suites) > $@
 
+format:
+	$(SOURCE_FORMATTER) $(shell find . -not -path './munit/*' -type f -regex '.*\.c')	
+
 clean:
 	rm $(glue_header)
 	rm $(test_runner_name)
 
-.PHONY: all clean
+.PHONY: all clean $(glue_header)
