@@ -1,28 +1,7 @@
 # Builds the main sunneed executable.
 
-# Prints a nice little header graphic in the form:
-#
-# 	=======================
-# 	=== Building <name> ===
-# 	=======================
-#
-# When using in the Makefile, in simple cases you can just call this at the beginning of the target. For more
-#  complicated targets, however, you will have to make a `pre-<target>` target and run that before resolving the rest
-#  of the target. Remember to put your `pre-` target *after* the targets that your depends upon, but *before* the list
-#  of files (if any). See the `main`, `util`, and `devices` targets for examples of usage in different situations.
-define section_title
-	@echo
-	$(eval _var := $(1))
-	$(eval _len := $(shell x="$(_var)"; echo -n $${#x}))
-	@printf '=%.0s' $(shell seq -16 $(_len))
-	@echo
-	@echo === Building $(1) ===
-	@printf '=%.0s' $(shell seq -16 $(_len))
-	@echo
-endef
-
 ifeq ($(origin CC),default)
-export CC = gcc
+	export CC = gcc
 endif
 
 CFLAGS ?= -Wall -Wextra -g
@@ -33,6 +12,7 @@ SUNNEED_BUILD_PIP ?= bq27441
 SUNNEED_BUILD_OUT_DIR ?= build
 SUNNEED_BUILD_BIN_FILE ?= sunneed
 SUNNEED_BUILD_CLIENT_LIB_NAME ?= libsunneedclient
+SUNNEED_BUILD_OVERLAY_LIB_NAME ?= sunneed_overlay
 
 SOURCE_FORMATTER = clang-format -style=file -i
 
@@ -45,20 +25,21 @@ endif
 src_dir = src
 sources = $(wildcard $(src_dir)/*.c)
 
-# TODO Consistent naming on all this stuff.
 out_dir = $(SUNNEED_BUILD_OUT_DIR)
 bin_file = $(SUNNEED_BUILD_BIN_FILE)
-pip_obj = pip.o
+
+pip_out_dir = $(out_dir)
+pip_obj = $(pip_out_dir)/pip.o
 pip_name = $(SUNNEED_BUILD_PIP)
 
 clientlib_sources = $(wildcard $(src_dir)/client/*.c)
-clientlib_file = $(SUNNEED_BUILD_CLIENT_LIB_NAME).so
 clientlib_out_dir = $(out_dir)/client
-clientlib_obj = $(clientlib_out_dir)/$(clientlib_file)
+clientlib_obj = $(clientlib_out_dir)/$(SUNNEED_BUILD_CLIENT_LIB_NAME).so
 
 overlay_sources = $(wildcard $(src_dir)/overlay/*.c)
-overlay_library_file = sunneed_overlay.so
-overlay_library_testing_file = sunneed_overlay_test.so
+overlay_out_dir = $(out_dir)
+overlay_obj = $(overlay_out_dir)/$(SUNNEED_BUILD_OVERLAY_LIB_NAME).so
+overlay_testing_obj = $(patsubst %.so,%_testing.so,$(overlay_obj))
 overlay_runner = $(out_dir)/run-with-overlay
 
 protobuf_dir = $(src_dir)/protobuf
@@ -80,10 +61,10 @@ pre-all:
 
 main: protobuf pip devices
 	$(call section_title,main executable)
-	$(CC) $(CFLAGS) $(sources) $(protobuf_out_sources) $(cflags_deps) $(out_dir)/$(pip_obj) -o $(out_dir)/$(bin_file)
+	$(CC) $(CFLAGS) $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
  
 pip: pre-pip $(src_dir)/pip/$(pip_name).c
-	$(CC) $(CFLAGS) -c $(src_dir)/pip/$(pip_name).c -o $(out_dir)/$(pip_obj)
+	$(CC) $(CFLAGS) -c $(src_dir)/pip/$(pip_name).c -o $(pip_obj)
 pre-pip:
 	$(call section_title,pip)
 
@@ -112,7 +93,7 @@ pre-protobuf:
 	$(call section_title,protobuf)
 
 $(protobuf_out_files): $(protobuf_sources)
-	@$(MAKE) --no-print-directory -C $(protobuf_dir)
+	$(MAKE) --no-print-directory -C $(protobuf_dir)
 
 clientlib:
 	$(call section_title,client library)
@@ -123,17 +104,16 @@ clientlib:
 test: tests
 	$(test_runner)
 tests:
-	$(call section_title,tests)
 	make -C $(test_home)
 
 # Note that we compile two overlay libraries. One is a tester, which contains additional output meant for
 #  debugging/testing purposes.
 overlay: clientlib
 	$(call section_title,overlay)
-	$(CC) $(CFLAGS) -g -fPIC -shared $(overlay_sources) -o $(out_dir)/$(overlay_library_file)	
-	$(CC) $(CFLAGS) -g -fPIC -shared -DTESTING $(overlay_sources) -o $(out_dir)/$(overlay_library_testing_file)	
+	$(CC) $(CFLAGS) -g -fPIC -shared $(overlay_sources) -o $(overlay_obj)
+	$(CC) $(CFLAGS) -g -fPIC -shared -DTESTING $(overlay_sources) -o $(overlay_testing_obj)
 	@echo Generate overlay runscript at $(overlay_runner)
-	@echo "#!/usr/bin/env bash\nLD_PRELOAD=$(abspath $(out_dir)/$(overlay_library_testing_file)) "'$$1' > $(overlay_runner)
+	@echo "#!/usr/bin/env bash\nLD_PRELOAD=$(abspath $(overlay_testing_obj)) "'$$1' > $(overlay_runner)
 	chmod +x $(overlay_runner)
 
 clean:
@@ -145,3 +125,30 @@ format:
 	$(SOURCE_FORMATTER) $(shell find '$(src_dir)' -not -path '$(protobuf_dir)/*' -type f -regex '.*\.[ch]')
 
 .PHONY: all main pip util test clean format
+
+LeftParens := (
+RightParens := )
+
+# Prints a nice little header graphic in the form:
+#
+# 	=======================
+# 	=== Building <name> ===
+# 	=======================
+#
+# When using in the Makefile, in simple cases you can just call this at the beginning of the target. For more
+#  complicated targets, however, you will have to make a `pre-<target>` target and run that before resolving the rest
+#  of the target. Remember to put your `pre-` target *after* the targets that your depends upon, but *before* the list
+#  of files (if any). See the `main`, `util`, and `devices` targets for examples of usage in different situations.
+section_count := 1
+num_sections := $(shell grep -E '^\s*\$$\$(LeftParens)\s*call\s+section_title,' Makefile | wc -l)
+define section_title
+	@echo
+	$(eval _var := $(section_count)/$(num_sections) $(1))
+	$(eval _len := $(shell x="$(_var)"; echo -n $${#x}))
+	@printf '=%.0s' $(shell seq -16 $(_len))
+	@echo
+	@echo === $(section_count)/$(num_sections) Building $(1) ===
+	@printf '=%.0s' $(shell seq -16 $(_len))
+	@echo
+	$(eval section_count := $(shell expr $(section_count) + 1))
+endef
