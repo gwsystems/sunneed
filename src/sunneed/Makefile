@@ -35,6 +35,11 @@ clientlib_file = $(SUNNEED_BUILD_CLIENT_LIB_NAME).so
 clientlib_out_dir = $(out_dir)/client
 clientlib_obj = $(clientlib_out_dir)/$(clientlib_file)
 
+overlay_sources = $(wildcard $(src_dir)/overlay/*.c)
+overlay_library_file = sunneed_overlay.so
+overlay_library_testing_file = sunneed_overlay_test.so
+overlay_runner = $(out_dir)/run-with-overlay
+
 protobuf_dir = $(src_dir)/protobuf
 protobuf_sources = $(wildcard $(protobuf_dir)/*.proto)
 protobuf_out_files = $(foreach src,$(protobuf_sources),$(subst !!!, ,$(join $(src:.proto=.pb-c.c!!!),$(src:.proto=.pb-c.h))))
@@ -44,7 +49,7 @@ protobuf_out_sources = $(wildcard $(protobuf_out_dir)/*.c)
 device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
-all: clientlib main util
+all: overlay main util
 	@echo "My work here is done..."
 
 main: protobuf pip devices
@@ -77,6 +82,15 @@ clientlib:
 	@if [ ! -d "$(out_dir)/client" ]; then mkdir "$(out_dir)/client"; fi
 	$(CC) $(CFLAGS) -c -fPIC -o $(out_dir)/client/clientlib.o $(clientlib_sources) $(cflags_deps)
 	$(CC) $(CFLAGS) -shared -o $(clientlib_obj) $(out_dir)/client/clientlib.o
+
+# Note that we compile two overlay libraries. One is a tester, which contains additional output meant for
+#  debugging/testing purposes.
+overlay: clientlib
+	$(CC) $(CFLAGS) -g -fPIC -shared $(overlay_sources) -o $(out_dir)/$(overlay_library_file)	
+	$(CC) $(CFLAGS) -g -fPIC -shared -DTESTING $(overlay_sources) -o $(out_dir)/$(overlay_library_testing_file)	
+	@echo Generate overlay runscript at $(overlay_runner)
+	@echo "#!/usr/bin/env bash\nLD_PRELOAD=$(abspath $(out_dir)/$(overlay_library_testing_file)) "'$$1' > $(overlay_runner)
+	chmod +x $(overlay_runner)
 
 clean:
 	rm -rf "$(SUNNEED_BUILD_OUT_DIR)"/*

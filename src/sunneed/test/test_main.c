@@ -1,9 +1,11 @@
 #include "munit/munit.h"
 
 #include "nng.h"
+#include "overlay.h"
 
 static MunitSuite sub_suites[] = {
     nng_suite,
+    overlay_suite,
     { NULL, NULL, NULL, 1, MUNIT_SUITE_OPTION_NONE }
 };
 
