@@ -1,7 +1,7 @@
 # Builds the main sunneed executable.
 
 ifeq ($(origin CC),default)
-CC = gcc
+export CC = gcc
 endif
 
 CFLAGS ?= -Wall -Wextra -g
@@ -15,7 +15,7 @@ SUNNEED_BUILD_CLIENT_LIB_NAME ?= libsunneedclient
 
 SOURCE_FORMATTER = clang-format -style=file -i
 
-cflags_deps = -lnng -lpthread -ldl -lprotobuf-c
+export cflags_deps = -lnng -lpthread -ldl -lprotobuf-c
 
 ifeq ($(SUNNEED_BUILD_TYPE),devel)
 	util_cflags = -Wl,-rpath,$(CURDIR)/$(clientlib_out_dir)
@@ -45,6 +45,10 @@ protobuf_sources = $(wildcard $(protobuf_dir)/*.proto)
 protobuf_out_files = $(foreach src,$(protobuf_sources),$(subst !!!, ,$(join $(src:.proto=.pb-c.c!!!),$(src:.proto=.pb-c.h))))
 protobuf_out_dir = $(src_dir)/protobuf/c
 protobuf_out_sources = $(wildcard $(protobuf_out_dir)/*.c)
+
+export test_home = test
+export test_runner_name = run-tests
+test_runner = $(test_home)/$(test_runner_name)
 
 device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
@@ -83,6 +87,11 @@ clientlib:
 	$(CC) $(CFLAGS) -c -fPIC -o $(out_dir)/client/clientlib.o $(clientlib_sources) $(cflags_deps)
 	$(CC) $(CFLAGS) -shared -o $(clientlib_obj) $(out_dir)/client/clientlib.o
 
+test: tests
+	$(test_runner)
+tests:
+	make -C $(test_home)
+
 # Note that we compile two overlay libraries. One is a tester, which contains additional output meant for
 #  debugging/testing purposes.
 overlay: clientlib
@@ -99,4 +108,4 @@ clean:
 format:
 	$(SOURCE_FORMATTER) $(shell find '$(src_dir)' -not -path '$(protobuf_dir)/*' -type f -regex '.*\.[ch]')
 
-.PHONY: all main pip util clean format
+.PHONY: all main pip util test clean format
