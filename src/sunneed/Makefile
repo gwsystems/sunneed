@@ -1,5 +1,26 @@
 # Builds the main sunneed executable.
 
+# Prints a nice little header graphic in the form:
+#
+# 	=======================
+# 	=== Building <name> ===
+# 	=======================
+#
+# When using in the Makefile, in simple cases you can just call this at the beginning of the target. For more
+#  complicated targets, however, you will have to make a `pre-<target>` target and run that before resolving the rest
+#  of the target. Remember to put your `pre-` target *after* the targets that your depends upon, but *before* the list
+#  of files (if any). See the `main`, `util`, and `devices` targets for examples of usage in different situations.
+define section_title
+	@echo
+	$(eval _var := $(1))
+	$(eval _len := $(shell x="$(_var)"; echo -n $${#x}))
+	@printf '=%.0s' $(shell seq -16 $(_len))
+	@echo
+	@echo === Building $(1) ===
+	@printf '=%.0s' $(shell seq -16 $(_len))
+	@echo
+endef
+
 ifeq ($(origin CC),default)
 export CC = gcc
 endif
@@ -53,17 +74,26 @@ test_runner = $(test_home)/$(test_runner_name)
 device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
-all: overlay main util
-	@echo "My work here is done..."
+all: pre-all overlay main util
+pre-all:
+	@echo "Starting all build..."
 
 main: protobuf pip devices
+	$(call section_title,main executable)
 	$(CC) $(CFLAGS) $(sources) $(protobuf_out_sources) $(cflags_deps) $(out_dir)/$(pip_obj) -o $(out_dir)/$(bin_file)
  
-pip: $(src_dir)/pip/$(pip_name).c
+pip: pre-pip $(src_dir)/pip/$(pip_name).c
 	$(CC) $(CFLAGS) -c $(src_dir)/pip/$(pip_name).c -o $(out_dir)/$(pip_obj)
+pre-pip:
+	$(call section_title,pip)
 
-devices: $(device_objs)
-util: clientlib $(util_objs)
+devices: pre-devices $(device_objs)
+pre-devices:
+	$(call section_title,devices)
+
+util: clientlib pre-util $(util_objs)
+pre-util:
+	$(call section_title,utils)
 
 $(src_dir)/util/%.o: $(src_dir)/util/%.c
 	$(CC) $(CFLAGS) -o $(patsubst $(src_dir)/util/%.o, $(out_dir)/%, $@) $^ $(protobuf_out_sources) -L$(clientlib_out_dir) -lsunneedclient $(util_cflags) $(cflags_deps)
@@ -75,14 +105,17 @@ $(src_dir)/device/%.o: $(src_dir)/device/%.c
 	@if [ ! -d "$(out_dir)/device" ]; then mkdir "$(out_dir)/device"; fi
 	$(CC) $(CFLAGS) -g -shared -o $(patsubst $(src_dir)/device/%.o, $(out_dir)/device/%.so, $@) -fPIC $^ $(cflags_deps)
 
-protobuf: $(protobuf_out_files)
+protobuf: pre-protobuf $(protobuf_out_files)
 	@rm -rf "$(protobuf_out_dir)" && mkdir "$(protobuf_out_dir)"
 	mv $(protobuf_out_files) $(protobuf_out_dir)
+pre-protobuf:
+	$(call section_title,protobuf)
 
 $(protobuf_out_files): $(protobuf_sources)
 	@$(MAKE) --no-print-directory -C $(protobuf_dir)
 
 clientlib:
+	$(call section_title,client library)
 	@if [ ! -d "$(out_dir)/client" ]; then mkdir "$(out_dir)/client"; fi
 	$(CC) $(CFLAGS) -c -fPIC -o $(out_dir)/client/clientlib.o $(clientlib_sources) $(cflags_deps)
 	$(CC) $(CFLAGS) -shared -o $(clientlib_obj) $(out_dir)/client/clientlib.o
@@ -90,11 +123,13 @@ clientlib:
 test: tests
 	$(test_runner)
 tests:
+	$(call section_title,tests)
 	make -C $(test_home)
 
 # Note that we compile two overlay libraries. One is a tester, which contains additional output meant for
 #  debugging/testing purposes.
 overlay: clientlib
+	$(call section_title,overlay)
 	$(CC) $(CFLAGS) -g -fPIC -shared $(overlay_sources) -o $(out_dir)/$(overlay_library_file)	
 	$(CC) $(CFLAGS) -g -fPIC -shared -DTESTING $(overlay_sources) -o $(out_dir)/$(overlay_library_testing_file)	
 	@echo Generate overlay runscript at $(overlay_runner)
