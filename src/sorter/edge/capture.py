@@ -4,8 +4,6 @@ import numpy as np
 # global vars
 cap = cv2.VideoCapture(0) # webcam
 
-#k = cv2.waitKey(5) & 0xFF
-
 def getInput():
     char = ""
     while(char != 'c'):
@@ -44,7 +42,6 @@ def capImg2():
         #destroyWindow("cam-test")
         cv2.imwrite("filename.jpg",img) #save image
 
-def capImg3():
     
 '''
 - take picture of empty background
