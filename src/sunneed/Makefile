@@ -55,7 +55,7 @@ test_runner = $(test_home)/$(test_runner_name)
 device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
-all: pre-all overlay main util
+all: pre-all main overlay util
 pre-all:
 	@echo "Starting all build..."
 
