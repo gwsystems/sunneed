@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <dlfcn.h>
+#include <string.h>
 
 #include "../client/sunneed_client.h"
+#include "../shared/sunneed_device_type.h"
 
 /** 
  * Call the overridden function from within an overlay function. This is done via the RTLD_NEXT flag, which instructs

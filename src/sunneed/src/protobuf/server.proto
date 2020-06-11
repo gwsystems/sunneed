@@ -9,6 +9,7 @@ message SunneedRequest {
         GetDeviceHandleRequest get_device_handle = 2;
         GenericDeviceActionRequest device_action = 3;
         UnregisterClientRequest unregister_client = 4;
+        FileIsLockedRequest file_is_locked = 5;
     }
 }
 
@@ -25,6 +26,10 @@ message GetDeviceHandleRequest {
 message GenericDeviceActionRequest {
     int32 device_handle = 1;
     bytes data = 2;
+}
+
+message FileIsLockedRequest {
+    string path = 1;
 }
 
 // {{{1 Response

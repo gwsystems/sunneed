@@ -129,6 +129,7 @@ serve_get_handle(
     char filename[SUNNEED_DEVICE_PATH_MAX_LEN];
 
     int len;
+    // TODO Don't hardcode devices path.
     if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/device/%s.so", request->name))
         > SUNNEED_DEVICE_PATH_MAX_LEN) {
         LOG_E("sunneed error: device name '%s' is too long", request->name);
@@ -186,6 +187,23 @@ serve_generic_device_action(
 
     GenericResponse *sub_resp = sub_resp_buf;
     *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+
+    return 0;
+}
+
+static int
+serve_file_is_locked(
+        __attribute__((unused)) SunneedResponse *resp,
+        void *sub_resp_buf,
+        __attribute__((unused)) struct client_state *client_state,
+        FileIsLockedRequest *request) {
+    GenericResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+
+    struct sunneed_device *locker;
+    if ((locker = sunneed_device_file_is_locked(request->path)) != NULL) {
+        // TODO Wait for availability, perform power calcs, etc.
+    }
 
     return 0;
 }
@@ -264,6 +282,9 @@ sunneed_listen(void) {
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_DEVICE_ACTION:
                 ret = serve_generic_device_action(&resp, sub_resp_buf, msg_client_state, request->device_action);
+                break;
+            case SUNNEED_REQUEST__MESSAGE_TYPE_FILE_IS_LOCKED:
+                ret = serve_file_is_locked(&resp, sub_resp_buf, msg_client_state, request->file_is_locked);
                 break;
         }
 #pragma GCC diagnostic pop

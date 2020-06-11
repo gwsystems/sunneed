@@ -34,4 +34,7 @@ int
 sunneed_client_get_device_handle(const char *identifier, sunneed_device_handle_t *handle);
 
 int
+sunneed_client_check_locked_file(const char *pathname);
+
+int
 sunneed_client_disconnect(void);

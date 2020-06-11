@@ -115,6 +115,24 @@ sunneed_client_get_device_handle(const char *name, sunneed_device_handle_t *hand
 }
 
 int
+sunneed_client_check_locked_file(const char *pathname) {
+    // TODO Check socket opened.
+
+    SunneedRequest req = SUNNEED_REQUEST__INIT;
+    req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_FILE_IS_LOCKED;
+    FileIsLockedRequest file_lock_req = FILE_IS_LOCKED_REQUEST__INIT;
+    file_lock_req.path = malloc(strlen(pathname));
+    if (!file_lock_req.path) {
+        FATAL(-1, "failed to allocated memory for path");
+    }
+    strncpy(file_lock_req.path, pathname, strlen(pathname));
+    req.file_is_locked = &file_lock_req;
+
+    PACK_AND_SEND(req);
+    free(file_lock_req.path);
+}
+
+int
 sunneed_client_disconnect(void) {
     // TODO Check socket opened.
 
