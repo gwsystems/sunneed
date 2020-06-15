@@ -1,0 +1,16 @@
+# python virtual environments
+env/
+
+# test images
+filename.jpg
+
+# file types (for now)
+*.pkl
+*.ipynb
+*.whl
+
+# test folders
+test(160,120)/
+test(320,240)/
+test(640,480)/
+

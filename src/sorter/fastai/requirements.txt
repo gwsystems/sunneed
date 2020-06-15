@@ -1,0 +1,12 @@
+beautifulsoup4
+bottleneck
+fastprogress>=0.2.1
+matplotlib
+numexpr
+nvidia-ml-py3
+packaging
+pandas
+pyyaml
+requests
+scipy
+spacy>=2.0.18
