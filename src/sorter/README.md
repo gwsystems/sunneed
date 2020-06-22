@@ -34,7 +34,7 @@ Generally, the more layers the network has, the more accurate it becomes, but it
 computation power, such as GPUs. Once the model is trained, inference is done on either using cpu, gpu, or tpu (tensor processing unit).
 
 Finding the best architecture for this project takes some trial and error. It needs to be lightweight,
-require low computation power, and be relatively accurate.
+fast, low power, and accurate.
 
 ### Resnet34
 The first architecture I tested. It classifies images into glass, plastic, metal, paper, cardboard, and trash.
@@ -47,6 +47,7 @@ A neural network designed to be deployed on devices with low computing power (ce
 - Detectron2
 - Inception v2
 - DeepLabv3, semantic segmentation
+- YOLOv3
 ## scr
 Each identification technique has its own subdirectory and python virtual environment
 - edge: contains py files for image segmentation
