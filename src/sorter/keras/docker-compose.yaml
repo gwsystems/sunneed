@@ -1,0 +1,8 @@
+version: "3"
+services:
+  train:
+    image: "jonathan/test"
+    volumes:
+      - /home/jonathan/power_mgmt_infra/src/sorter/docker:/home/jovyan/work
+    ports:
+      - 8888:8888
