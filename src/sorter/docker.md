@@ -17,13 +17,17 @@ docker run -it --rm \
   -v "${HOST_WORK}":"${CONTAINER_WORK}" \
   $IMAGE start-notebook.sh
 ```
+## Docker-compose
+I might try Docker-compose for a pipeline from Keras --> Darknet.  
+Run `docker-compose up`
 
 ## Build & run container
 - `docker build -t jonathan/test .` build and name docker image with tag `'jonathan/test'`  
 
 - Run the container using either option
   - `docker run -it --rm -p 8888:8888 -v "$PWD":/home/jovyan/work jonathan/test`
-    - Runs in interactive mode, removes container after exit
+    - Runs in interactive mode in working directory, removes container after exit
+    - `docker run -it --rm -p 8888:8888 -v /media/Data/sync/gw/research:/home/jovyan/work jonathan/test` My pwd
   - `docker run -d --rm -p 8888:8888 -v "$PWD":/home/jovyan/work jonathan/test`
     - Runs in background with daemon, use these commands to start and stop
       - `docker start container_name`
@@ -43,7 +47,9 @@ docker run -it --rm \
 - `docker ps -a` list all containers
 - `docker stop $(docker ps -a -q)` stop all containers
 - `docker rm $(docker ps -a -q)` remove all containers
-- `docker rmi $(docker images -f dangling=true -q)` remove docker images with no tag
+- `docker rmi image_name` remove docker image
+- `docker rmi $(docker images -f dangling=true -q)` remove images with no tag
+- `docker rmi $(docker images -q) --force` force remove all images
 
 ## Issues
 - [Permission denied from Jupyter Notebook](https://github.com/jupyter/docker-stacks/issues/114)  
