@@ -7,6 +7,7 @@ filename.jpg
 # file types (for now)
 *.pkl
 *.whl
+*.h5
 
 # directories
 *.ipynb_checkpoints/
