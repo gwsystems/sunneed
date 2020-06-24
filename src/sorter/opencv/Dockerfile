@@ -1,4 +1,5 @@
 # specify base image
+# https://hub.docker.com/r/spmallick/opencv-docker/tags
 FROM spmallick/opencv-docker:opencv
 
 # Don't change dir or copy files. Instead use docker run -v to link files
