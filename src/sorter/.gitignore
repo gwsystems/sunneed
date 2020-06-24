@@ -6,7 +6,9 @@ filename.jpg
 
 # file types (for now)
 *.pkl
-*.ipynb
 *.whl
 
+# directories
+*.ipynb_checkpoints/
+*downloads/
 
