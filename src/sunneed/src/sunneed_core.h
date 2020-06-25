@@ -11,6 +11,8 @@
 #include "sunneed.h"
 #include "sunneed_listener.h"
 #include "sunneed_proc.h"
+#include "sunneed_loader.h"
+#include "sunneed_device.h"
 
 #define HELP_TEXT                               \
     APP_NAME ": enforce power usage policies\n" \
