@@ -1,9 +1,17 @@
 # Docker Documentation
+Why use docker?  
+https://nickjanetakis.com/blog/setting-up-a-python-development-environment-with-and-without-docker
+https://blogs.sap.com/2018/10/28/jupyter-python-notebooks-on-docker/
+
 
 ## Setup
-- `sudo usermod -aG docker jonathan` allow user to run docker commands (without sudo)
-
+Allow user to run docker commands (without sudo)
+```
+sudo usermod -aG docker jonathan
+```
 ## Dockerfile
+https://medium.com/bb-tutorials-and-thoughts/docker-a-beginners-guide-to-dockerfile-with-a-sample-project-6c1ac1f17490
+Maybe put run in Dockerfile like this?
 ```
 # Start container
 JUPY_CONTAINER_NAME="jupytest"
@@ -17,23 +25,15 @@ docker run -it --rm \
   -v "${HOST_WORK}":"${CONTAINER_WORK}" \
   $IMAGE start-notebook.sh
 ```
-## Docker-compose
-I might try Docker-compose for a pipeline from Keras --> Darknet.  
+Might try Docker-compose multiple containers (ie. train and convert_to_Darknet)
 Run `docker-compose up`
 
 ## Build & run container
-- `docker build -t jonathan/test .` build and name docker image with tag `'jonathan/test'`  
+```
+docker build -t jonathan/test /media/Data/sync/gw/research/power_mgmt_infra/src/sorter/keras/
+docker run -it --rm -p 8888:8888 -v /media/Data/sync/gw/research:/home/jovyan/work jonathan/test
+```
 
-- Run the container using either option
-  - `docker run -it --rm -p 8888:8888 -v "$PWD":/home/jovyan/work jonathan/test`
-    - Runs in interactive mode in working directory, removes container after exit
-    - `docker run -it --rm -p 8888:8888 -v /media/Data/sync/gw/research:/home/jovyan/work jonathan/test` My pwd
-  - `docker run -d --rm -p 8888:8888 -v "$PWD":/home/jovyan/work jonathan/test`
-    - Runs in background with daemon, use these commands to start and stop
-      - `docker start container_name`
-      - `docker stop container_name`
-
-### Command options
   `docker run [options]` ([docs](https://docs.docker.com/engine/reference/commandline/run/))
   - `--rm` removes container after completion
   - `--name container_name` names container
@@ -42,18 +42,30 @@ Run `docker-compose up`
   - `-it` runs container in interactive mode (use to get notebook URL)
   - `-v "$PWD":/home/jovyan/work` mounts current director in container to allow read/write. `jovyan` is the default user for jupyter notebooks
 
-## Maintenance
-- `docker image ls` list images  
-- `docker ps -a` list all containers
-- `docker stop $(docker ps -a -q)` stop all containers
-- `docker rm $(docker ps -a -q)` remove all containers
-- `docker rmi image_name` remove docker image
-- `docker rmi $(docker images -f dangling=true -q)` remove images with no tag
-- `docker rmi $(docker images -q) --force` force remove all images
+Maybe run `-td`? Run as daemon, but need URL with token.
+
+### Other commands
+List images and containers.
+```
+docker image ls
+docker ps -a
+```
+
+Stop and remove all containers.
+```
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
+```
+
+Remove image, image with no tag, force remove all.
+```
+docker rmi image_name
+docker rmi $(docker images -f dangling=true -q)
+docker rmi $(docker images -q) --force
+```
 
 ## Issues
 - [Permission denied from Jupyter Notebook](https://github.com/jupyter/docker-stacks/issues/114)  
-Test this in terminal.
   ```
   mkdir test
   ls -l test
