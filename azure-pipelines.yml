@@ -57,6 +57,7 @@ steps:
     targetType: 'inline'
     script: |
       cd src/sunneed
-      gcc --version
+      rm /usr/bin/gcc
+      ln -s /usr/bin/gcc-8 /usr/bin/gcc
       make tests
   displayName: 'Build Tests'
