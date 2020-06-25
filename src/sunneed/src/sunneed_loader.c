@@ -9,17 +9,17 @@ is_object_file(char *path) {
         return false;
 }
 
-/* Returns an allocated array of the shared objects in the device directory, represented as sunneed devices. */
-struct sunneed_device *
-sunneed_load_devices(void) {
-    struct sunneed_device *ret = NULL;
+/* Loads all objects in the device directory as sunneed devices, storing them in the `target` array. */
+int
+sunneed_load_devices(struct sunneed_device *target) {
+    int ret = 0;
 
     DIR *dir = opendir("build/device");
     struct dirent *ent;
 
     if (!dir) {
         LOG_E("Failed to open devices directory");
-        ret = NULL;
+        ret = 1;
         goto end;
     }
 
@@ -29,9 +29,6 @@ sunneed_load_devices(void) {
         strncat(device_path, ent->d_name, DEVICE_PATH_LEN);
 
         if (is_object_file(device_path)) {
-            // Allocate space in the return array.
-            ret = realloc(ret, sizeof(struct sunneed_device) * (device_count + 1)); 
-
             // Strip the `.so` from the path to get the device name.
             char device_name[DEVICE_PATH_LEN];
             strncpy(device_name, ent->d_name, strlen(ent->d_name) - OBJ_EXTENSION_LEN);
@@ -60,8 +57,10 @@ sunneed_load_devices(void) {
                 continue;
             }
 
-            // Put device in return array.
-            ret[device_count++] = dev;
+            dev.is_linked = true;
+
+            // Allocate space in the return array.
+            target[device_count++] = dev;
 
             LOG_I("Loaded device \"%s\"", dev.identifier);
         }

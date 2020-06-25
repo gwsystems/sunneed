@@ -9,5 +9,5 @@
 #define OBJ_EXTENSION ".so"
 #define OBJ_EXTENSION_LEN 3
 
-struct sunneed_device *
-sunneed_load_devices(void);
+int
+sunneed_load_devices(struct sunneed_device *target);

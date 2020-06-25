@@ -1,5 +1,7 @@
 #include "sunneed_core.h"
 
+extern struct sunneed_device devices[MAX_DEVICES];
+
 struct sunneed_pip pip;
 
 void *(*worker_thread_functions[])(void *) = {sunneed_proc_monitor, NULL};
@@ -62,9 +64,8 @@ main(int argc, char *argv[]) {
     LOG_I("Acquired PIP: %s", pip.name);
 
     LOG_I("Loading devices...");
-    struct sunneed_device *devices = sunneed_load_devices();
-    if (!devices) {
-        LOG_E("Failed to load any devices");
+    if ((ret = sunneed_load_devices(devices)) != 0) {
+        LOG_E("Failed to load devices");
         ret = 1;
         goto end;
     }
@@ -82,7 +83,5 @@ main(int argc, char *argv[]) {
     }
 
 end:
-    free(devices);
-
     return 0;
 }

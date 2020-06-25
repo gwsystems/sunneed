@@ -124,48 +124,30 @@ serve_get_handle(
         void *sub_resp_buf,
         __attribute__((unused)) struct client_state *client_state,
         GetDeviceHandleRequest *request) {
-    static int handle_cur = 0;
+    struct sunneed_device *device = NULL;
+    
+    // Find the device with the name matching the request.
+    for (unsigned int device_index = 0; device_index < MAX_DEVICES; device_index++) {
+        if (!devices[device_index].is_linked)
+            continue;
 
-    char filename[SUNNEED_DEVICE_PATH_MAX_LEN];
+        if (strncmp(devices[device_index].identifier, request->name, strlen(devices[device_index].identifier)) == 0) {
+            device = &devices[device_index]; 
+            break;
+        }
+    }
 
-    int len;
-    // TODO Don't hardcode devices path.
-    if ((len = snprintf(filename, SUNNEED_DEVICE_PATH_MAX_LEN, "build/device/%s.so", request->name))
-        > SUNNEED_DEVICE_PATH_MAX_LEN) {
-        LOG_E("sunneed error: device name '%s' is too long", request->name);
+    if (!device) {
+        LOG_E("Unable to find requested device '%s'", request->name);
         return 1;
     }
 
-    void *dlhandle = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
-    if (!dlhandle) {
-        LOG_E("Error loading device from '%s': %s", filename, dlerror());
-        return 1;
-    }
-
-    size_t name_sz = strlen(request->name);
-
-    devices[handle_cur] = (struct sunneed_device){.dlhandle = dlhandle,
-                                                  .handle = handle_cur,
-                                                  .identifier = malloc(name_sz),
-                                                  .get = dlsym(dlhandle, "get"),
-                                                  .power_consumption = dlsym(dlhandle, "power_consumption"),
-                                                  .is_linked = false};
-    strncpy(devices[handle_cur].identifier, request->name, name_sz);
-
-    if (devices[handle_cur].get == NULL || devices[handle_cur].power_consumption == NULL) {
-        LOG_E("Error linking device '%s': %s", request->name, dlerror());
-        return 1;
-    }
-
-    devices[handle_cur].is_linked = true;
-
+    // Respond with the handle.
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GET_DEVICE_HANDLE;
     GetDeviceHandleResponse *sub_resp = sub_resp_buf;
     *sub_resp = (GetDeviceHandleResponse)GET_DEVICE_HANDLE_RESPONSE__INIT;
-    sub_resp->device_handle = handle_cur;
+    sub_resp->device_handle = device->handle;
     resp->get_device_handle = sub_resp;
-
-    LOG_I("Linked device '%s' at handle %d", request->name, handle_cur);
 
     return 0;
 }
