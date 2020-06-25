@@ -23,7 +23,9 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      cd src/nng
+      cd src
+      ls -la
+      cd nng
       ls -la
       mkdir build
       cd build
