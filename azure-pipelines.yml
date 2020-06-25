@@ -17,13 +17,14 @@ steps:
     targetType: 'inline'
     script: |
         git clone https://github.com/grahamschock/power_mgmt_infra.git
+        ls -la
   displayName: 'Clone system'
 - task: Bash@3
   inputs:
     targetType: 'inline'
     script: |
       cd src/nng
-      ls
+      ls -la
       mkdir build
       cd build
       cmake -G Ninja ..
