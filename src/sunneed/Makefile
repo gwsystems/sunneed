@@ -16,7 +16,7 @@ SUNNEED_BUILD_OVERLAY_LIB_NAME ?= sunneed_overlay
 
 export SOURCE_FORMATTER = clang-format -style=file -i
 
-export cflags_deps = -lnng -lpthread -ldl -lprotobuf-c
+export cflags_deps = -I$(PWD)/../nng/include -L$(PWD)/../nng/build -lnng -lpthread -ldl -lprotobuf-c
 
 ifeq ($(SUNNEED_BUILD_TYPE),devel)
 	util_cflags = -Wl,-rpath,$(CURDIR)/$(clientlib_out_dir)
@@ -110,8 +110,8 @@ tests:
 #  debugging/testing purposes.
 overlay: clientlib
 	$(call section_title,overlay)
-	$(CC) $(CFLAGS) -g -fPIC -shared $(overlay_sources) -o $(overlay_obj)
-	$(CC) $(CFLAGS) -g -fPIC -shared -DTESTING $(overlay_sources) -o $(overlay_testing_obj)
+	$(CC) $(CFLAGS) -g -fPIC -shared $(overlay_sources) -o $(overlay_obj) $(cflags_deps)
+	$(CC) $(CFLAGS) -g -fPIC -shared -DTESTING $(overlay_sources) -o $(overlay_testing_obj) $(cflags_deps)
 	@echo Generate overlay runscript at $(overlay_runner)
 	@echo "#!/usr/bin/env bash\nLD_PRELOAD=$(abspath $(overlay_testing_obj)) "'$$1' > $(overlay_runner)
 	chmod +x $(overlay_runner)
