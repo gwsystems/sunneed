@@ -34,3 +34,35 @@ steps:
       ninja
       ninja install
   displayName: 'Build nng'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/libbq27441
+      make
+  displayName: 'Build libbq'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/libbq27441
+      make
+  displayName: 'Build libbq'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/sunneed
+      make
+  displayName: 'Build sunneed'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/sunneed
+      make tests
+  displayName: 'Build Tests'
