@@ -28,3 +28,8 @@ RUN	wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/nul
 	apt update -y &&\
 	apt install -y cmake
 
+RUN 	apt-get -y install \
+	ninja-build \
+	libprotobuf-c-dev protobuf-c-compiler \
+	libi2c-dev
+
