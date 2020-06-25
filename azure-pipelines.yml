@@ -47,9 +47,9 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      cd src/libbq27441
+      cd src
       make
-  displayName: 'Build libbq'
+  displayName: 'Build Dependencies'
 
 - task: Bash@3
   inputs:
