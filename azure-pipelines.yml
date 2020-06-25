@@ -17,6 +17,7 @@ steps:
     targetType: 'inline'
     script: |
         git clone https://github.com/grahamschock/power_mgmt_infra.git
+        git submodule update --init --recursive
         ls -la
   displayName: 'Clone system'
 - task: Bash@3
