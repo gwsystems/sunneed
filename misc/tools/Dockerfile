@@ -32,4 +32,5 @@ RUN 	apt-get -y install \
 	ninja-build \
 	libprotobuf-c-dev protobuf-c-compiler \
 	libi2c-dev
+RUN chmod a+rwx -R /tmp
 
