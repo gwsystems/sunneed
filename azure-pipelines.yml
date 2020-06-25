@@ -67,5 +67,6 @@ steps:
     targetType: 'inline'
     script: |
       cd src/suneed/test
+      ls -la
       ./run-tests
   displayName: 'Build Tests'
