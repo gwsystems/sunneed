@@ -23,6 +23,8 @@ steps:
     targetType: 'inline'
     script: |
       cd src/nng
+      mkdir build
+      cd build
       cmake -G Ninja ..
       ninja
       ninja test
