@@ -61,3 +61,11 @@ steps:
       ln -s /usr/bin/gcc-8 /usr/bin/gcc
       make tests
   displayName: 'Build Tests'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/suneed/test
+      ./run-tests
+  displayName: 'Build Tests'
