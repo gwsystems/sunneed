@@ -66,7 +66,7 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      cd src/suneed/test
+      cd src/sunneed/test
       ls -la
       ./run-tests
   displayName: 'Build Tests'
