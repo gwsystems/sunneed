@@ -1,0 +1,72 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-18.04'
+
+container: grahamschock/suneed_env:latest
+
+steps:
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+        git clone https://github.com/grahamschock/power_mgmt_infra.git
+        git submodule update --init --recursive
+        ls -la
+  displayName: 'Clone system'
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src
+      ls -la
+      cd nng
+      ls -la
+      mkdir build
+      cd build
+      cmake -G Ninja ..
+      ninja
+      ninja install
+  displayName: 'Build nng'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/libbq27441
+      make
+  displayName: 'Build libbq'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/sunneed
+      mkdir build
+      make
+  displayName: 'Build sunneed'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/sunneed
+      rm /usr/bin/gcc
+      ln -s /usr/bin/gcc-8 /usr/bin/gcc
+      make tests
+  displayName: 'Build Tests'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/sunneed/test
+      ls -la
+      ./run-tests
+  displayName: 'Build Tests'

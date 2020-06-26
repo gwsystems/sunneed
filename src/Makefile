@@ -1,16 +1,20 @@
+.ONESHELL:
 dependencies: nng libbq27441
 
 nng:
 	@cd nng
-	@mkdir build; cd build
+	@[ ! -d build ] && mkdir build; cd build
 	cmake -G Ninja ..
-	ninja
-	ninja test
+	if [ ! -f libnng.a ]; then
+		ninja
+		ninja test
+	fi
 
 libbq27441:
-	@cd libbq27441
-	make	
+	make -C libbq27441
 
 clean:
 	rm -rf nng/build
 	make -C libbq27441 clean
+
+.PHONY: nng libbq27441 dependencies clean

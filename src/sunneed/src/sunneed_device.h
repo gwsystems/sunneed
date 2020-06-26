@@ -26,7 +26,11 @@ struct sunneed_device {
     } device_type;
 };
 
-void *sunneed_device_get_device_type(struct sunneed_device *device);
+void *
+sunneed_device_get_device_type(struct sunneed_device *device);
+
+bool
+sunneed_device_is_linked(struct sunneed_device *device);
 
 struct sunneed_device *
 sunneed_device_file_is_locked(const char *pathname);

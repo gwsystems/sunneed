@@ -11,6 +11,13 @@ void *sunneed_device_get_device_type(struct sunneed_device *device) {
     return NULL;
 }
 
+bool
+sunneed_device_is_linked(struct sunneed_device *device) {
+    if (device->get == NULL || device->power_consumption == NULL)
+        return false;
+    return true;
+}
+
 /** 
  * Check for devices locking the specified pathname.
  * Returns the device specifying the lock if one is found, otherwise returns NULL.
