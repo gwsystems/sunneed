@@ -1,0 +1,11 @@
+pip3 install virtualenv
+python3 -m virtualenv env
+source env/bin/activate
+deactivate
+
+conda create -n tf python=2.7
+conda activate tf
+conda deactivate
+conda remove --name tf --all
+
+conda install keras

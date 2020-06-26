@@ -4,7 +4,7 @@ env/
 # test images
 filename.jpg
 
-# file types (for now)
+# file types
 *.pkl
 *.whl
 *.h5
@@ -12,4 +12,5 @@ filename.jpg
 # directories
 *.ipynb_checkpoints/
 *downloads/
-
+*benchmark/
+*Waste-Sorter/
