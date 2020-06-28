@@ -13,18 +13,18 @@ Below is instructions for getting a basic instance of `sunneed` running on a Lin
 left ambiguous due to the variety of naming schemes for packages across distros; see the `misc/install_dependencies`
 file for package names on Ubuntu 18.04.
 
-If you are running Ubuntu 18.04 (and likely other versions of Ubuntu and Debian), you may ignore this section and run
-`misc/install_dependencies` (with root privileges).
+If you are running Ubuntu 18.04 (and likely other versions of Ubuntu and Debian), you may run`misc/install_dependencies` 
+(with root privileges) and then skip to [Dependencies of Dependencies](#dependencies-of-dependencies).
 
 ## Getting the dependencies
 
 `sunneed` uses protobufs for I2C. Specifically, it uses the `protobufs-c` library. Both the `protoc-c` compiler and the
 `libprotobuf-c` headers and libraries must be installed.
 
+### Dependencies of dependencies
+
 We also need to manually compile some dependencies. Run `git submodule update --init --recursive`. This will download
 the code for NNG and libbq27441, which must be compiled manually on common distros.
-
-### Dependencies of dependencies
 
 For building NNG, you will need CMake > 3.13 and Ninja. These are available as packages on common distros.
 
