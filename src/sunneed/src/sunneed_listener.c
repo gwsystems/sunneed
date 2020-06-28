@@ -8,56 +8,50 @@ extern struct sunneed_device devices[];
 extern struct sunneed_tenant tenants[];
 
 // Control flow:
-// When a new client (identified by pipe ID) connects, we register it in the clint_states array.
-// Once registered, clients can send requests over NNG. Requests consist of a token word that describes the request
-//  being made, optionally followed by a newline character delimiting the arguments for that command.
+// When a new pipe connects, we use this struct to make a mapping of its pipe ID to a tenant. Then, when further
+//  requests are made, the pipe ID is used to identify a tenant to the request.
 // The client will have to send some notification in order to unregister; I don't think we can tell if a pipe
 //  closed.
-struct client_state {
-    int index;
-    sunneed_tenant_id_t tenant_id;
-    bool is_active;
+struct tenant_pipe {
+    struct sunneed_tenant *tenant;
     nng_pipe pipe;
-};
-
-struct client_state client_states[SUNNEED_MAX_IPC_CLIENTS];
+} tenant_pipes[SUNNEED_MAX_IPC_CLIENTS];
 
 // TODO This is probably slow -- O(n) lookup for every request made.
-static struct client_state *
-get_client_state_by_pipe_id(int pipe_id) {
+static struct sunneed_tenant *
+tenant_of_pipe(int pipe_id) {
     for (int i = 0; i < SUNNEED_MAX_IPC_CLIENTS; i++)
-        if (nng_pipe_id(client_states[i].pipe) == pipe_id)
-            return &client_states[i];
+        if (nng_pipe_id(tenant_pipes[i].pipe) == pipe_id)
+            return tenant_pipes[i].tenant;
     return NULL;
 }
 
-static struct client_state *
-register_client_state(nng_pipe pipe) {
-    int idx;
-    for (idx = 0; idx < SUNNEED_MAX_IPC_CLIENTS; idx++)
-        if (!client_states[idx].is_active)
-            break;
-    if (idx == SUNNEED_MAX_IPC_CLIENTS)
+// Get the PID of a pipe and use that to create a new sunneed tenant with that ID.
+// TODO: This shouldn't always create a new tenant, since we want multiple processes
+//  mapped to one tenant.
+static struct sunneed_client *
+register_client(nng_pipe pipe) {
+    struct sunneed_tenant *tenant;
+
+    // Get PID of pipe.
+    uint64_t pid_int;
+    SUNNEED_NNG_TRY(nng_pipe_get_uint64, != 0, pipe, NNG_OPT_IPC_PEER_PID, &pid_int);
+    pid_t pid = (pid_t)pid_int;
+
+    if ((tenant = sunneed_tenant_register(pid)) == NULL) {
+        LOG_E("Failed to initialize tenant from PID %d", pid); 
         return NULL;
+    }
 
-    if (!tenants[idx].is_active) {
-        // Register tenant.
-        uint64_t pid_int;
-
-        SUNNEED_NNG_TRY(nng_pipe_get_uint64, != 0, pipe, NNG_OPT_IPC_PEER_PID, &pid_int);
-
-        pid_t pid = (pid_t)pid_int;
-
-        if (sunneed_tenant_register(idx, pid) != 0) {
-            LOG_E("Failed to register tenant %d", idx);
-            return NULL;
+    for (int i = 0; i < SUNNEED_MAX_IPC_CLIENTS; i++) {
+        if (tenant_pipes[i].tenant == NULL) {
+            tenant_pipes[i].tenant = tenant;
+            tenant_pipes[i].pipe = pipe;
+            break;
         }
     }
 
-    // TODO Get a real tenant ID somehow.
-    client_states[idx] = (struct client_state){.index = idx, .tenant_id = idx, .is_active = true, .pipe = pipe};
-
-    return &client_states[idx];
+    return tenant;
 }
 
 // The `serve_*` methods take a `sub_resp_buf` parameter. This is a pointer to a buffer in which the client
@@ -72,43 +66,58 @@ register_client_state(nng_pipe pipe) {
 //  data is contained within the buffer, to which a pointer is in scope in the main request listening
 //  loop.
 
+// Create a mapping between this pipe and a sunneed tenant.
+// TODO Currently, this just spawns a new tenant for each different pipe. We want tenants to be able to have multiple 
+//  pipes to sunneed open.
 static int
-serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe, struct client_state **state) {
+serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe) {
+    int retval;
+
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
 
     GenericResponse *sub_resp = sub_resp_buf;
     *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
     resp->generic = sub_resp;
 
-    // If the caller doesn't specify `state` we set it to this helper variable.
-    struct client_state *s;
-    if (state == NULL) {
-        state = &s;
-    }
-
-    if ((*state = get_client_state_by_pipe_id(pipe.id)) != NULL) {
-        LOG_W("Registration request for already-registered pipe %d", pipe.id);
-        return 1;
-    }
+    struct sunneed_tenant *tenant = NULL;
 
     // Register as a new client.
-    if ((*state = register_client_state(pipe)) == NULL) {
+    if ((tenant = register_client(pipe)) == NULL) {
         LOG_W("Registration failed for pipe %d", pipe.id);
         return 1;
     }
 
-    LOG_D("Registered pipe %d as client %d", pipe.id, (*state)->index);
+    LOG_D("Registered pipe %d with tenant %d", pipe.id, tenant->id);
 
     return 0;
 }
 
 static int
-serve_unregister_client(SunneedResponse *resp, void *sub_resp_buf, struct client_state *client_state) {
-    LOG_D("Unregistering client %d", client_state->index);
+serve_unregister_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe, struct sunneed_tenant *tenant) {
+    int retval;
 
-    // Deactivate records.
-    client_state->is_active = false;
-    tenants[client_state->tenant_id].is_active = false;
+    LOG_D("Unregistering tenant %d", tenant->id);
+
+    // Find the entry in the tenant pipe mappings.
+    bool cleared = false;
+    for (int i = 0; i < SUNNEED_MAX_IPC_CLIENTS; i++)
+        if (tenant_pipes[i].pipe.id == pipe.id) {
+            LOG_D("Removing mapping from pipe %d to tenant %d", pipe.id, tenant->id); 
+            tenant_pipes[i].tenant = NULL;
+            tenant_pipes[i].pipe = (nng_pipe)NNG_PIPE_INITIALIZER;
+            cleared = true;
+            break;
+        }
+
+    if (!cleared) {
+        LOG_E("No mapping cleared when unregistering pipe %d; something is wrong with the pipe->tenant table", pipe.id);
+        return 1;
+    }
+
+    if ((retval = sunneed_tenant_unregister(tenant)) != 0)
+        // TODO Handle (follow the pattern of the `register_client` stuff by making a secondary `unregister` function
+        //  that handles interacting with tenants).
+        return 1;
 
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
     GenericResponse *sub_resp = sub_resp_buf;
@@ -122,7 +131,7 @@ static int
 serve_get_handle(
         SunneedResponse *resp,
         void *sub_resp_buf,
-        __attribute__((unused)) struct client_state *client_state,
+        __attribute__((unused)) struct sunneed_tenant *tenant,
         GetDeviceHandleRequest *request) {
     struct sunneed_device *device = NULL;
     
@@ -156,7 +165,7 @@ static int
 serve_generic_device_action(
         __attribute__((unused)) SunneedResponse *resp,
         void *sub_resp_buf,
-        __attribute__((unused)) struct client_state *client_state,
+        __attribute__((unused)) struct sunneed_tenant *tenant,
         GenericDeviceActionRequest *request) {
     // TODO SAFETY (DON'T JUST ACCEPT ANY HANDLE)!!!!!
     if (!devices[request->device_handle].is_linked) {
@@ -177,7 +186,7 @@ static int
 serve_file_is_locked(
         __attribute__((unused)) SunneedResponse *resp,
         void *sub_resp_buf,
-        __attribute__((unused)) struct client_state *client_state,
+        __attribute__((unused)) struct sunneed_tenant *tenant,
         FileIsLockedRequest *request) {
     GenericResponse *sub_resp = sub_resp_buf;
     *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
@@ -201,7 +210,7 @@ sunneed_listen(void) {
 
     // Initialize client states.
     for (int i = 0; i < MAX_TENANTS; i++) {
-        client_states[i] = (struct client_state){.is_active = false,
+        tenant_pipes[i] = (struct tenant_pipe){.tenant = NULL,
                                                  // TODO Why do I need to cast this...
                                                  .pipe = (nng_pipe)NNG_PIPE_INITIALIZER};
     }
@@ -231,12 +240,10 @@ sunneed_listen(void) {
         // Get contents of message.
         SunneedRequest *request = sunneed_request__unpack(NULL, nng_msg_len(msg), nng_msg_body(msg));
 
-        struct client_state *msg_client_state = NULL;
+        struct sunneed_tenant *tenant = NULL;
 
-        // Find the pipe's associated client state. If we can't find it, we error out unless the message is of type
-        //  REGISTER_CLIENT..
-        if (!msg_client_state && (msg_client_state = get_client_state_by_pipe_id(pipe.id)) == NULL
-            && request->message_type_case != SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT) {
+        // Find the pipe's associated tenant. If we can't find it, we error out unless the message is of type REGISTER_CLIENT.
+        if ((tenant = tenant_of_pipe(pipe.id)) == NULL && request->message_type_case != SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT) {
             // This client has not registered!
             LOG_W("Received message from %d, who is not registered.", pipe.id);
             goto end;
@@ -254,19 +261,19 @@ sunneed_listen(void) {
                 ret = -1;
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT:
-                ret = serve_register_client(&resp, sub_resp_buf, pipe, &msg_client_state);
+                ret = serve_register_client(&resp, sub_resp_buf, pipe);
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_UNREGISTER_CLIENT:
-                ret = serve_unregister_client(&resp, sub_resp_buf, msg_client_state);
+                ret = serve_unregister_client(&resp, sub_resp_buf, pipe, tenant);
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_GET_DEVICE_HANDLE:
-                ret = serve_get_handle(&resp, sub_resp_buf, msg_client_state, request->get_device_handle);
+                ret = serve_get_handle(&resp, sub_resp_buf, tenant, request->get_device_handle);
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_DEVICE_ACTION:
-                ret = serve_generic_device_action(&resp, sub_resp_buf, msg_client_state, request->device_action);
+                ret = serve_generic_device_action(&resp, sub_resp_buf, tenant, request->device_action);
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_FILE_IS_LOCKED:
-                ret = serve_file_is_locked(&resp, sub_resp_buf, msg_client_state, request->file_is_locked);
+                ret = serve_file_is_locked(&resp, sub_resp_buf, tenant, request->file_is_locked);
                 break;
         }
 #pragma GCC diagnostic pop

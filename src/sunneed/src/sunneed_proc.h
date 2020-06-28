@@ -34,8 +34,11 @@ sunneed_update_tenant_cpu_usage(void);
 int
 sunneed_init_tenants(void);
 
+struct sunneed_tenant *
+sunneed_tenant_register(pid_t pid);
+
 int
-sunneed_tenant_register(sunneed_tenant_id_t tenant_id, pid_t pid);
+sunneed_tenant_unregister(struct sunneed_tenant *tenant);
 
 unsigned int
 sunneed_get_num_tenants(void);

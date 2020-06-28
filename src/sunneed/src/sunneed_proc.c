@@ -11,10 +11,37 @@ sunneed_init_tenants(void) {
     return 0;
 }
 
+// Find an unused spot for a tenant and register ourself there.
+struct sunneed_tenant *
+sunneed_tenant_register(pid_t pid) {
+    struct sunneed_tenant *tenant = NULL;
+    for (int i = 0; i < MAX_TENANTS; i++) {
+        if (!tenants[i].is_active) {
+            tenant = &tenants[i];
+            break;
+        }
+    }
+
+    if (tenant == NULL) {
+        LOG_E("Sorry PID %d, can't spawn any more tenants!", pid);
+        return NULL;
+    }
+
+    tenant->pid = pid;
+    tenant->is_active = true;
+
+    return tenant;
+}
+
 int
-sunneed_tenant_register(sunneed_tenant_id_t id, pid_t pid) {
-    tenants[id].pid = pid;
-    tenants[id].is_active = true;
+sunneed_tenant_unregister(struct sunneed_tenant *tenant) {
+    if (tenant == NULL || !tenant->is_active) {
+        LOG_W("Cannot deactivate an inactive tenant");
+        return 1;
+    }
+
+    tenant->is_active = false;
+
     return 0;
 }
 
