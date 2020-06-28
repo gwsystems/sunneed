@@ -2,10 +2,6 @@
 
 void
 on_load() {
-#ifdef TESTING
-    printf("PID %d\n", getpid());
-#endif
-    
     sunneed_client_init("TODO");
 
     sunneed_device_handle_t handle;
