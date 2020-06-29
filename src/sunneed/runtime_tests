@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+testcount=$(build/sunneed -c)
+
+if [[ $testcount == 0 ]]; then
+    echo "No runtime tests available." >&2
+    exit
+fi
+
+for i in `seq 0 $testcount`; do
+    build/sunneed -t $i
+    if [[ $? != 0 ]]; then
+        echo "Test #$i failed with code: $?" >&2
+        exit 1
+    fi
+done

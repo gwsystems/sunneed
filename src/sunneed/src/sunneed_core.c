@@ -6,6 +6,28 @@ struct sunneed_pip pip;
 
 void *(*worker_thread_functions[])(void *) = {sunneed_proc_monitor, NULL};
 
+#ifdef TESTING
+int (*runtime_tests[])(void) = { NULL };
+
+static unsigned int
+testcase_count(void) {
+    unsigned int testcases = 0;
+    for (int (**cur)(void) = runtime_tests; *cur != NULL; cur++)
+        testcases++; 
+    return testcases;
+}
+
+static int 
+run_testcase(unsigned int testcase) {
+    if (testcase >= testcase_count()) {
+        LOG_E("Cannot run testcase #%d because it does not exist", testcase);
+        return 1;
+    }
+
+    return runtime_tests[testcase]();
+}
+#endif
+
 static int
 spawn_worker_threads(void) {
     int ret;
@@ -41,11 +63,30 @@ main(int argc, char *argv[]) {
     int opt;
     extern int optopt;
 
-    while ((opt = getopt(argc, argv, ":h")) != -1) {
+#ifdef TESTING
+    const char *optstring = ":ht:c";
+#else
+    const char *optstring = ":h";
+#endif
+
+    // TODO Long-form getopts.
+    while ((opt = getopt(argc, argv, optstring)) != -1) {
         switch (opt) {
             case 'h':
                 printf(HELP_TEXT, argv[0]);
                 exit(0);
+#ifdef TESTING
+            case 't': ;
+                int testcase = strtol(optarg, NULL, 10);
+                if (errno) {
+                    LOG_E("Failed to parse testcase index: %s", strerror(errno));
+                    return 1;
+                }
+                return run_testcase(testcase);
+            case 'c':
+                printf("%d\n", testcase_count());
+                exit(0);
+#endif
             case '?':
                 fprintf(stderr, "%s: illegal option -%c\n", APP_NAME, optopt);
                 exit(1);

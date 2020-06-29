@@ -51,6 +51,7 @@ protobuf_out_sources = $(wildcard $(protobuf_out_dir)/*.c)
 export test_home = test
 export test_runner_name = run-tests
 test_runner = $(test_home)/$(test_runner_name)
+runtime_tests_runner = ./runtime-tests
 
 device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
@@ -61,7 +62,7 @@ pre-all:
 
 main: protobuf pip devices
 	$(call section_title,main executable)
-	$(CC) $(CFLAGS) $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+	$(CC) $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
  
 pip: pre-pip $(src_dir)/pip/$(pip_name).c
 	$(CC) $(CFLAGS) -c $(src_dir)/pip/$(pip_name).c -o $(pip_obj)
@@ -101,6 +102,8 @@ clientlib:
 	$(CC) $(CFLAGS) -c -fPIC -o $(out_dir)/client/clientlib.o $(clientlib_sources) $(cflags_deps)
 	$(CC) $(CFLAGS) -shared -o $(clientlib_obj) $(out_dir)/client/clientlib.o
 
+runtime_test: main
+	$(runtime-tests-runner)
 test: tests
 	$(test_runner)
 tests:
