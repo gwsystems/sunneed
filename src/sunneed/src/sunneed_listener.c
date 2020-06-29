@@ -29,7 +29,7 @@ tenant_of_pipe(int pipe_id) {
 // Get the PID of a pipe and use that to create a new sunneed tenant with that ID.
 // TODO: This shouldn't always create a new tenant, since we want multiple processes
 //  mapped to one tenant.
-static struct sunneed_client *
+static struct sunneed_tenant *
 register_client(nng_pipe pipe) {
     struct sunneed_tenant *tenant;
 
