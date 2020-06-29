@@ -71,8 +71,6 @@ register_client(nng_pipe pipe) {
 //  pipes to sunneed open.
 static int
 serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe) {
-    int retval;
-
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
 
     GenericResponse *sub_resp = sub_resp_buf;

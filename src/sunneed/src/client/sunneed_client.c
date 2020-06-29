@@ -130,6 +130,8 @@ sunneed_client_check_locked_file(const char *pathname) {
 
     PACK_AND_SEND(req);
     free(file_lock_req.path);
+
+    return 0;
 }
 
 int
