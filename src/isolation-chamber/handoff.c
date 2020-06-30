@@ -6,11 +6,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// #include <stdlib.h>
-// #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
-// #include <unistd.h>
 #include <errno.h>
 
 #include <sys/types.h>
@@ -61,6 +58,7 @@ struct sock_filter filter[] = {
     Allow(pread64),
     Allow(mprotect),
     Allow(uname),
+    //Allow(chdir),
     
 
     /* and if we don't match above, die */
@@ -72,6 +70,8 @@ struct sock_fprog filterprog = {
 };
 
 static char child_stack[1048576];
+
+char executable[100]; //global path to executable
 
 static void print_nodename() {
   struct utsname utsname;
@@ -104,8 +104,8 @@ static int child_fn(){
     }
 
 
-    if(pivot_root("./busybox","./busybox/.old") < 0){
-        printf("error pivoting root\n");
+    if(pivot_root("./tenroot","./tenroot/.old") < 0){
+        perror("error pivoting root");
     }
  
     if(mount("tmpfs","/dev", "tmpfs", MS_NOSUID | MS_STRICTATIME, NULL) < 0){
@@ -118,13 +118,8 @@ static int child_fn(){
         printf("erroor mounting 't'?\n");
     }
 
-    // printf("ls\n");
-    // system("ls /.old/home");
-    // system("pwd");
-
     chdir("/");
-    // printf("ls\n");
-    // system("ls /tenant");
+   
 
     if(umount2("/.old", MNT_DETACH) < 0){
         printf("error unmounting old\n");
@@ -146,57 +141,51 @@ static int child_fn(){
     print_nodename();
 
     //seccomp bpf filter code:
-
     /* set up the restricted environment */
-    // if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
-    //     perror("Could not start seccomp:");
-    //     exit(1);
-    // }
-    // if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &filterprog) == -1) {
-    //     perror("Could not start seccomp:");
-    //     exit(1);
-    // }
+    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
+        perror("Could not start seccomp:");
+        exit(1);
+    }
+    if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &filterprog) == -1) {
+        perror("Could not start seccomp:");
+        exit(1);
+    }
 
     /* printf only writes to stdout, but for some reason it stats it. */
     printf("hello from handoff.c\n");
-
     printf("PID: %d\n", getpid());
 
-    //system("pwd");
-    //system("ls");
-    // chdir("/.old/home/n060dy/Desktop/research/power_mgmt_infra/src/isolation-chamber");
-    // chdir("/tenant/");
-    //system("pwd");
-    //system("cat /bin/hellosandbox");
-    //system("ls -al /bin/hellosandbox");
-    //system("ls -l /bin/");
-    // system("/bin/hellosandbox hello sandbox");
-    // char *args[] = {"Hello", "Sandbox", NULL};
-    char *args[] = {NULL};
-    execv("/bin/test", args);
-    // execvp("/bin/bash",args);
+    
+    char *args[] = {"Hello", "Sandbox", NULL};
+    execv(executable, args);
+    
     printf("back to handoff.c\n");
-
-
 
     return 0;
 }
 
 
 int main(int argc, char **argv) {
-    // char buf[1024];
+    if(argc <= 1){
+        printf("no executable specified - exiting\n");
+        return 0;
+    }
+
     printf("Original UTS namespace nodename: ");
     print_nodename();
 
     printf("Original PID: %d\n", getpid());
 
-    //system("mount --make-rprivate /");//make root mount private
+    // system("mount --make-rprivate /");//make root mount private
+    if(mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0){
+        printf("error mounting private\n");
+    }
 
-    // if(mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0){
-    //     printf("error mounting private\n");
-    // }
+    //create executable path w/ user input
+    strcpy(executable,"/bin/");
+    strcat(executable, argv[1]);
 
-
+    //clone child into new namespaces and run @ child_fn()
     pid_t child_pid = clone(child_fn, child_stack+1048576, CLONE_NEWPID | CLONE_NEWUTS | SIGCHLD, NULL);
 
     if(child_pid < 0){
@@ -209,8 +198,6 @@ int main(int argc, char **argv) {
     print_nodename();
 
     waitpid(child_pid, NULL, 0);
-    
-
 
     return 0;
 }
