@@ -51,7 +51,7 @@ protobuf_out_sources = $(wildcard $(protobuf_out_dir)/*.c)
 export test_home = test
 export test_runner_name = run-tests
 test_runner = $(test_home)/$(test_runner_name)
-runtime_tests_runner = ./runtime-tests
+runtime_tests_runner = ./runtime_tests
 
 device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
@@ -103,9 +103,11 @@ clientlib:
 	$(CC) $(CFLAGS) -shared -o $(clientlib_obj) $(out_dir)/client/clientlib.o
 
 runtime_test: main
-	$(runtime-tests-runner)
+	$(runtime_tests_runner)
+
 test: tests
 	$(test_runner)
+
 tests:
 	make -C $(test_home)
 
@@ -128,7 +130,7 @@ format:
 	$(SOURCE_FORMATTER) $(shell find '$(src_dir)' -not -path '$(protobuf_dir)/*' -type f -regex '.*\.[ch]')
 	$(MAKE) -C $(test_home) format
 
-.PHONY: all main pip util test clean format
+.PHONY: all pip util test runtime_test clean format
 
 LeftParens := (
 RightParens := )

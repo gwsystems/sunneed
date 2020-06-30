@@ -60,7 +60,7 @@ steps:
       rm /usr/bin/gcc
       ln -s /usr/bin/gcc-8 /usr/bin/gcc
       make tests
-  displayName: 'Build tests'
+  displayName: 'Build unit tests'
 
 - task: Bash@3
   inputs:
@@ -69,4 +69,12 @@ steps:
       cd src/sunneed
       ls -la
       make test
-  displayName: 'Run tests'
+  displayName: 'Run unit tests'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/sunneed
+      make runtime_test
+  displayName: 'Run runtime tests'
