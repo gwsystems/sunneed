@@ -14,7 +14,7 @@ static void print_nodename() {
 
 int main(int argc, char *argv[]){
 
-	printf("%s %s\n",argv[0], argv[1]);
+	//printf("%s %s\n",argv[0], argv[1]);
 	printf("hello from sandbox\n");
 	//system("pwd");
 	//system("ls");

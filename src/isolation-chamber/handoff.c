@@ -58,7 +58,32 @@ struct sock_filter filter[] = {
     Allow(pread64),
     Allow(mprotect),
     Allow(uname),
-    //Allow(chdir),
+    Allow(set_tid_address),//ls...
+    Allow(set_robust_list),
+    Allow(rt_sigaction),
+    Allow(rt_sigprocmask),
+    Allow(prlimit64),
+    Allow(statfs),
+    Allow(ioctl),
+    Allow(getdents64),
+    Allow(getuid),//sh...
+    Allow(getgid),
+    Allow(getppid),
+    Allow(geteuid),
+    Allow(getegid),
+    Allow(getcwd),
+    Allow(getpgrp),
+    Allow(lstat),
+    Allow(setuid),
+    Allow(setgid),
+    Allow(setpgid),
+    Allow(stat),
+    Allow(fcntl),
+    Allow(kill),
+    Allow(wait4),
+
+
+
     
 
     /* and if we don't match above, die */
@@ -72,6 +97,7 @@ struct sock_fprog filterprog = {
 static char child_stack[1048576];
 
 char executable[100]; //global path to executable
+char **args;
 
 static void print_nodename() {
   struct utsname utsname;
@@ -156,9 +182,10 @@ static int child_fn(){
     printf("PID: %d\n", getpid());
 
     
-    char *args[] = {"Hello", "Sandbox", NULL};
+    //char *args[] = {"Hello", "Sandbox", NULL};
+    // char *arg[] = {NULL};
     execv(executable, args);
-    
+    //execv("/bin/sh",args);
     printf("back to handoff.c\n");
 
     return 0;
@@ -166,10 +193,23 @@ static int child_fn(){
 
 
 int main(int argc, char **argv) {
+    printf("argc: %d\n", argc);
+    int n = (sizeof argv) / (sizeof *argv);
+    printf("argn: %d\n", n);
     if(argc <= 1){
         printf("no executable specified - exiting\n");
         return 0;
+    }else if(argc == 2){
+        char *tempargs[] = {argv[0],NULL};
+        args = tempargs;
+
+
+    }else if(argc > 2){
+        //printf("second argument: %s\n",argv[2]);
+        args = argv + 1;
+        // printf("first/second argument: %s\n",args[1]);
     }
+
 
     printf("Original UTS namespace nodename: ");
     print_nodename();
@@ -186,7 +226,7 @@ int main(int argc, char **argv) {
     strcat(executable, argv[1]);
 
     //clone child into new namespaces and run @ child_fn()
-    pid_t child_pid = clone(child_fn, child_stack+1048576, CLONE_NEWPID | CLONE_NEWUTS | SIGCHLD, NULL);
+    pid_t child_pid = clone(child_fn, child_stack+1048576, CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWUTS | SIGCHLD, NULL);
 
     if(child_pid < 0){
         printf("clone failed\n");
@@ -194,10 +234,12 @@ int main(int argc, char **argv) {
 
     sleep(1);
 
+    waitpid(child_pid, NULL, 0);
+
     printf("Original UTS namespace nodename: ");
     print_nodename();
 
-    waitpid(child_pid, NULL, 0);
+    
 
     return 0;
 }
