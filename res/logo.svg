@@ -12,9 +12,9 @@
    inkscape:version="1.0 (4035a4fb49, 2020-05-01)"
    id="svg8"
    version="1.1"
-   viewBox="0 0 73.244574 36.956995"
-   height="139.67998"
-   width="276.8299">
+   viewBox="0 0 70.069576 33.781994"
+   height="255.35995"
+   width="529.65979">
   <defs
      id="defs2">
     <linearGradient
@@ -103,6 +103,7 @@
     </clipPath>
   </defs>
   <sodipodi:namedview
+     scale-x="0.5"
      inkscape:window-maximized="1"
      inkscape:window-y="1072"
      inkscape:window-x="-8"
@@ -117,8 +118,8 @@
      inkscape:document-rotation="0"
      inkscape:current-layer="layer1"
      inkscape:document-units="mm"
-     inkscape:cy="124.20626"
-     inkscape:cx="56.686746"
+     inkscape:cy="98.823464"
+     inkscape:cx="350.10219"
      inkscape:zoom="1.4"
      inkscape:pageshadow="2"
      inkscape:pageopacity="0.0"
@@ -144,7 +145,7 @@
     </rdf:RDF>
   </metadata>
   <g
-     transform="translate(-66.122443,-167.67795)"
+     transform="translate(-67.709943,-169.26545)"
      id="layer1"
      inkscape:groupmode="layer"
      inkscape:label="Layer 1">
@@ -189,6 +190,6 @@
          y="189.74405"><tspan
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Baskerville Old Face';-inkscape-font-specification:'Baskerville Old Face';stroke-width:0.264583">SUNNEE</tspan><tspan
            style="font-size:2.82222px"> </tspan><tspan
-           style="fill:#ffffff">D</tspan></tspan></text>
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Baskerville Old Face';-inkscape-font-specification:'Baskerville Old Face';fill:#ffffff">D</tspan></tspan></text>
   </g>
 </svg>
