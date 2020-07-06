@@ -1,3 +1,5 @@
+[![Logo](res/logo.svg)](res/logo.svg)
+
 [![Build Status](https://dev.azure.com/gschock/suneed/_apis/build/status/grahamschock.power_mgmt_infra?branchName=master)](https://dev.azure.com/gschock/suneed/_build/latest?definitionId=2&branchName=master)
 
 # power_mgmt_infra
