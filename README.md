@@ -1,3 +1,5 @@
+[![Sunny D Logo](res/logo.svg)](res/logo.svg)
+
 [![Build Status](https://dev.azure.com/gwsystems/sunneed/_apis/build/status/gwsystems.sunneed?branchName=master)](https://dev.azure.com/gwsystems/sunneed/_build/latest?definitionId=3&branchName=master)
 
 # sunneed
