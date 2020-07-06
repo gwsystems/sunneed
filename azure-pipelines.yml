@@ -16,7 +16,7 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-        git clone https://github.com/gwsystems/sunneed.git.git
+        git clone https://github.com/gwsystems/sunneed.git
         git submodule update --init --recursive
         ls -la
   displayName: 'Clone system'

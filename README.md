@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/gschock/suneed/_apis/build/status/grahamschock.power_mgmt_infra?branchName=master)](https://dev.azure.com/gschock/suneed/_build/latest?definitionId=2&branchName=master)
+[![Build Status](https://dev.azure.com/gwsystems/sunneed/_apis/build/status/gwsystems.sunneed?branchName=master)](https://dev.azure.com/gwsystems/sunneed/_build/latest?definitionId=3&branchName=master)
 
 # sunneed
 
