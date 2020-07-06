@@ -7,3 +7,9 @@
 [submodule "src/nng"]
 	path = src/nng
 	url = https://github.com/nanomsg/nng
+[submodule "ext/libbq27441"]
+	path = ext/libbq27441
+	url = git@github.com:zacharied/libbq27441
+[submodule "ext/nng"]
+	path = ext/nng
+	url = git@github.com:nanomsg/nng
