@@ -1,6 +1,8 @@
-[![Build Status](https://dev.azure.com/gwsystems/sunneed/_apis/build/status/gwsystems.sunneed?branchName=master)](https://dev.azure.com/gwsystems/sunneed/_build/latest?definitionId=3&branchName=master)
+[![Sunny D Logo](res/logo.svg)](res/logo.svg)
+<!-- I'm sorry everyone but I spell it that way so that screen readers will say it correctly. This spelling is
+   - not endorsed in any way by the sunneed development team. -->
 
-# sunneed
+[![Build Status](https://dev.azure.com/gwsystems/sunneed/_apis/build/status/gwsystems.sunneed?branchName=master)](https://dev.azure.com/gwsystems/sunneed/_build/latest?definitionId=3&branchName=master)
 
 We are creating a framework for tracking and managing the distribution of power consumption of individual processes in
 multi-tenant computing environments. In systems with uncertain reserves of power available, such as a computer powered
