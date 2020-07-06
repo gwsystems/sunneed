@@ -71,7 +71,7 @@ pip: pre-pip $(src_dir)/pip/$(pip_name).c
 pre-pip:
 	$(call section_title,pip)
 
-devices: pre-devices $(device_objs)
+devices: pre-devices ext $(device_objs)
 pre-devices:
 	$(call section_title,devices)
 
@@ -134,9 +134,10 @@ format:
 	$(MAKE) -C $(test_home) format
 
 ext:
-	$(MAKE) -C $(ext_dir) dependencies
+	$(call section_title,dependencies)
+	$(MAKE) -C $(ext_dir)
 
-.PHONY: all pip util test runtime_test clean format
+.PHONY: all pip util test runtime_test clean format ext
 
 LeftParens := (
 RightParens := )

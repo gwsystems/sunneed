@@ -1,6 +1,6 @@
 [![Build Status](https://dev.azure.com/gschock/suneed/_apis/build/status/grahamschock.power_mgmt_infra?branchName=master)](https://dev.azure.com/gschock/suneed/_build/latest?definitionId=2&branchName=master)
 
-# power_mgmt_infra
+# sunneed
 
 We are creating a framework for tracking and managing the distribution of power consumption of individual processes in
 multi-tenant computing environments. In systems with uncertain reserves of power available, such as a computer powered
@@ -33,33 +33,11 @@ on the distro; you want whichever package gives you the file `/usr/include/linux
 
 ## Compilation
 
-Once you have all the dependencies in place, we can begin compilation. These steps assume you cloned this repo into
-`~/src`
-
-Change to the base directory:
-
-```
-~/src/power_mgmt_infra$ cd src
-```
-
-Compile the dependencies:
-
-```
-~/src/power_mgmt_infra/src$ make
-```
-
-Change to the `sunneed` base directory:
-
-```
-~/src/power_mgmt_infra/src$ cd sunneed
-```
-
-Compile `sunneed`:
-
-```
-~/src/power_mgmt_infra/src/sunneed$ make
-```
+Once you have all the dependencies in place, we can begin compilation. First, create the output directory by running
+`mkdir build`. Then, begin compilation by running `make` in the root of the `sunneed` directory. This should compile all
+the local dependencies, the `sunneed` runtime overlay, client library, and main executable.
 
 After all this, there should be a file `build/sunneed` in the `sunneed` directory. This is the core `sunneed` binary.
+You can run this, and then run one of the example programs to test connectivity to `sunneed`.
 
 <!-- vim: set tw=120: -->
