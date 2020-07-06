@@ -20,34 +20,11 @@ steps:
         git submodule update --init --recursive
         ls -la
   displayName: 'Clone system'
-- task: Bash@3
-  inputs:
-    targetType: 'inline'
-    script: |
-      cd src
-      ls -la
-      cd nng
-      ls -la
-      mkdir build
-      cd build
-      cmake -G Ninja ..
-      ninja
-      ninja install
-  displayName: 'Build nng'
 
 - task: Bash@3
   inputs:
     targetType: 'inline'
     script: |
-      cd src/libbq27441
-      make
-  displayName: 'Build libbq'
-
-- task: Bash@3
-  inputs:
-    targetType: 'inline'
-    script: |
-      cd src/sunneed
       mkdir build
       make
   displayName: 'Build sunneed'
@@ -56,7 +33,6 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      cd src/sunneed
       rm /usr/bin/gcc
       ln -s /usr/bin/gcc-8 /usr/bin/gcc
       make tests
@@ -66,7 +42,6 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      cd src/sunneed
       ls -la
       make test
   displayName: 'Run unit tests'
