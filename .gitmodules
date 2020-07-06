@@ -13,3 +13,6 @@
 [submodule "ext/nng"]
 	path = ext/nng
 	url = git@github.com:nanomsg/nng
+[submodule "test/munit"]
+	path = test/munit
+	url = git@github.com:nemequ/munit
