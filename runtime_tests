@@ -7,10 +7,15 @@ if [[ $testcount == 0 ]]; then
     exit
 fi
 
-for i in `seq 0 $testcount`; do
+echo "Found $testcount tests"
+
+for i in `seq 0 $((testcount - 1))`; do
+    echo -n "Running test #$i... "
     build/sunneed -t $i
-    if [[ $? != 0 ]]; then
-        echo "Test #$i failed with code: $?" >&2
-        exit 1
+    code=$?
+    if [[ $code != 0 ]]; then
+        echo "$(tput setaf 1)Failed: $code$(tput setaf 9)"
+    else
+        echo "$(tput setaf 2)Success!"
     fi
 done

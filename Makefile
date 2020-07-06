@@ -53,6 +53,8 @@ protobuf_out_sources = $(wildcard $(protobuf_out_dir)/*.c)
 export test_home = test
 export test_runner_name = run-tests
 test_runner = $(test_home)/$(test_runner_name)
+runtime_tests_generator = ./generate_runtime_tests_array
+runtime_tests_generated_header = $(out_dir)/runtime_tests.gen.h
 runtime_tests_runner = ./runtime_tests
 
 device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
@@ -62,7 +64,7 @@ all: pre-all main overlay util
 pre-all:
 	@echo "Starting all build..."
 
-main: ext protobuf pip devices
+main: $(runtime_tests_generated_header) ext protobuf pip devices
 	$(call section_title,main executable)
 	$(CC) $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
  
@@ -104,6 +106,11 @@ clientlib: ext
 	$(CC) $(CFLAGS) -c -fPIC -o $(out_dir)/client/clientlib.o $(clientlib_sources) $(cflags_deps)
 	$(CC) $(CFLAGS) -shared -o $(clientlib_obj) $(out_dir)/client/clientlib.o
 
+# Generate the runtime test header
+$(runtime_tests_generated_header):
+	$(runtime_tests_generator) > $(runtime_tests_generated_header)
+
+# Run the runtime tests
 runtime_test: main
 	$(runtime_tests_runner)
 

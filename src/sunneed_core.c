@@ -7,7 +7,11 @@ struct sunneed_pip pip;
 void *(*worker_thread_functions[])(void *) = {sunneed_proc_monitor, NULL};
 
 #ifdef TESTING
-int (*runtime_tests[])(void) = { NULL };
+
+// This is a special case. Please don't ever include .c files.
+#include "sunneed_test.h"
+
+int (*runtime_tests[])(void) = RUNTIME_TESTS;
 
 static unsigned int
 testcase_count(void) {

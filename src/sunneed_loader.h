@@ -11,3 +11,12 @@
 
 int
 sunneed_load_devices(struct sunneed_device *target);
+
+#ifdef TESTING
+
+int TEST_load_device(void);
+
+#define SUNNEED_RUNTIME_TESTS_LOADER \
+    TEST_load_device
+
+#endif
