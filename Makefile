@@ -126,6 +126,7 @@ overlay: clientlib
 clean:
 	rm -rf "$(SUNNEED_BUILD_OUT_DIR)"/*
 	rm -rf "$(protobuf_out_dir)"/*
+	make -C $(ext_dir) clean
 	make -C $(test_home) clean
 
 format:
@@ -133,7 +134,7 @@ format:
 	$(MAKE) -C $(test_home) format
 
 ext:
-	$(MAKE) -C ext dependencies
+	$(MAKE) -C $(ext_dir) dependencies
 
 .PHONY: all pip util test runtime_test clean format
 

@@ -14,7 +14,6 @@ format:
 	$(SOURCE_FORMATTER) $(shell find . -not -path './munit/*' -type f -regex '.*\.c')	
 
 clean:
-	rm $(glue_header)
-	rm $(test_runner_name)
+	rm -f $(glue_header) $(test_runner_name)
 
 .PHONY: all clean $(glue_header)
