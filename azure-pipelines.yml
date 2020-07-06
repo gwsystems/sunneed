@@ -3,6 +3,10 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+variables:
+- name: IS_AZURE_PIPELINE
+  value: true
+
 trigger:
 - master
 

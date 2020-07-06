@@ -7,7 +7,7 @@ nng:
 	cmake -G Ninja ..
 	if [ ! -f libnng.a ]; then
 		ninja
-		ninja test
+		[ -z ${IS_AZURE_PIPELINE} ] && ninja test
 	fi
 
 libbq27441:
