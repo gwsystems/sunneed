@@ -68,10 +68,6 @@ main(int argc, char *argv[]) {
     extern int optopt;
 
 #ifdef TESTING
-    logfile = fopen("sunneed_log.txt", "w+");
-#endif
-
-#ifdef TESTING
     const char *optstring = ":ht:c";
 #else
     const char *optstring = ":h";
@@ -85,6 +81,7 @@ main(int argc, char *argv[]) {
                 exit(0);
 #ifdef TESTING
             case 't': ;
+                logfile = fopen("sunneed_log.txt", "w+");
                 int testcase = strtol(optarg, NULL, 10);
                 if (errno) {
                     LOG_E("Failed to parse testcase index: %s", strerror(errno));

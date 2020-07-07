@@ -14,8 +14,8 @@ for i in `seq 0 $((testcount - 1))`; do
     build/sunneed -t $i
     code=$?
     if [[ $code != 0 ]]; then
-        echo "$(tput setaf 1)Failed: $code$(tput setaf 9)"
+        echo "$(tput setaf 1)Failed: $code$(tput sgr0)"
     else
-        echo "$(tput setaf 2)Success!$(tput setaf 9)"
+        echo "$(tput setaf 2)Success!$(tput sgr0)"
     fi
 done
