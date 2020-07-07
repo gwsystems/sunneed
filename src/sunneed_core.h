@@ -33,10 +33,5 @@
 #define HELP_TEXT _HELP_TEXT_HEAD _HELP_TEXT_TAIL
 #endif
 
-#ifdef TESTING
-
-#define RT_TEST(NAME) int TEST_## NAME (void)
-
-#endif
 
 #endif
