@@ -6,9 +6,9 @@
 
 [![Build Status](https://dev.azure.com/gwsystems/sunneed/_apis/build/status/gwsystems.sunneed?branchName=master)](https://dev.azure.com/gwsystems/sunneed/_build/latest?definitionId=3&branchName=master)
 
-We are creating a framework for tracking and managing the distribution of power consumption of individual processes in
-multi-tenant computing environments. In systems with uncertain reserves of power available, such as a computer powered
-by a solar battery, it is impossible to guarantee unlimited power to each tenant. The basis of this project is to make a
+`sunneed` (pronounced "Sunny D") is a framework for tracking and managing the distribution of power consumption of individual 
+processes in multi-tenant computing environments. In systems with uncertain reserves of power available, such as a computer
+powered by a solar battery, it is impossible to guarantee unlimited power to each tenant. The basis of this project is to make
 toolset for tenants to run **power-constrained code** on the system, limited by a power budget described by `sunneed`.
 
 # Installation
