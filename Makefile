@@ -125,10 +125,13 @@ overlay: clientlib
 	chmod +x $(overlay_runner)
 
 clean:
-	rm -rf "$(SUNNEED_BUILD_OUT_DIR)"/*
+	rm -rf "$(out_dir)"/*
 	rm -rf "$(protobuf_out_dir)"/*
-	make -C $(ext_dir) clean
-	make -C $(test_home) clean
+	$(MAKE) -C $(test_home) clean
+	@echo '============================================================='
+	@echo '= External library files were not cleaned.                  ='
+	@echo '= Please run `make -C ext clean` if you wish to clean them. ='
+	@echo '============================================================='
 
 format:
 	$(SOURCE_FORMATTER) $(shell find '$(src_dir)' -not -path '$(protobuf_dir)/*' -type f -regex '.*\.[ch]')
