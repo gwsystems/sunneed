@@ -1,4 +1,4 @@
-[![Sunny D Logo](res/logo.svg)](res/logo.svg)
+[![Sunny D Logo](res/logo.png)](res/logo.png)
 <!-- I'm sorry everyone but I spell it that way so that screen readers will say it correctly. This spelling is
    - not endorsed in any way by the sunneed development team. -->
 
