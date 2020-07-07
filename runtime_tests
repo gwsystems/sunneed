@@ -16,6 +16,6 @@ for i in `seq 0 $((testcount - 1))`; do
     if [[ $code != 0 ]]; then
         echo "$(tput setaf 1)Failed: $code$(tput setaf 9)"
     else
-        echo "$(tput setaf 2)Success!"
+        echo "$(tput setaf 2)Success!$(tput setaf 9)"
     fi
 done
