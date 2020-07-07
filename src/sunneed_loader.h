@@ -14,9 +14,13 @@ sunneed_load_devices(struct sunneed_device *target);
 
 #ifdef TESTING
 
+#include "shared/sunneed_testing.h"
+
 int TEST_load_device(void);
+int TEST_load_broken_device(void);
 
 #define SUNNEED_RUNTIME_TESTS_LOADER \
-    TEST_load_device
+    TEST_load_device, \
+    TEST_load_broken_device
 
 #endif

@@ -102,6 +102,21 @@ TEST_load_device(void) {
     if (dev.power_consumption(NULL) != 0)
         return 4;
 
+    if (strcmp(dev.get(NULL), TEST_DEVICE_OUTPUT) != 0)
+        return 5;
+
+    return 0;
+}
+
+int
+TEST_load_broken_device(void) {
+    int res;
+
+    struct sunneed_device dev;  
+    if ((res = load_device("build/device/test_broken.so", "test", 0, &dev)) == 0)
+        // Should fail.
+        return 1;
+
     return 0;
 }
 
