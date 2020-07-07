@@ -68,6 +68,10 @@ main(int argc, char *argv[]) {
     extern int optopt;
 
 #ifdef TESTING
+    logfile = fopen("sunneed_log.txt", "w+");
+#endif
+
+#ifdef TESTING
     const char *optstring = ":ht:c";
 #else
     const char *optstring = ":h";
