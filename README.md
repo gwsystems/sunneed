@@ -1,6 +1,8 @@
-[![Sunny D Logo](res/logo.png)](res/logo.png)
-<!-- I'm sorry everyone but I spell it that way so that screen readers will say it correctly. This spelling is
-   - not endorsed in any way by the sunneed development team. -->
+<p align="center">
+   <img src="res/logo.png" alt="Sunny D logo"></img>
+   <!-- I'm sorry everyone but I spell it that way so that screen readers will say it correctly. This spelling is
+      - not endorsed in any way by the sunneed development team. -->
+</p>
 
 [![Build Status](https://dev.azure.com/gwsystems/sunneed/_apis/build/status/gwsystems.sunneed?branchName=master)](https://dev.azure.com/gwsystems/sunneed/_build/latest?definitionId=3&branchName=master)
 
