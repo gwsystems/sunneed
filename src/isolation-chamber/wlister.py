@@ -11,9 +11,7 @@ def allow_calls(obj,syscalls):
 	allowstring = ""
 
 	for i in syscalls:
-		allowstring = allowstring + "\tAllow(" + i + "),\n"
-		# scdump.write(i + "\n")
-
+		allowstring = allowstring + i
 
 	fn = './filter.h'
 
@@ -32,12 +30,14 @@ def check_prog(obj):
 	os.system('gcc -o handoff handoff.c')
 	os.system('(sudo strace -o procdump -f ./handoff ' + obj + ") &")
 
-	sleep(2)
+	sleep(5)
+
+	os.system('sudo killall -9 strace')
 
 	pdump  = open("procdump","r")
-	# scdump = open("wlist.txt", "a")
 
 	syssearch = re.compile(r'si_syscall=__NR_([a-zA-Z0-9_]*),')
+	syssearch_arm = re.compile(r'si_syscall=__ARM_NR_([a-zA-Z0-9_]*),')
 
 	syscalls = set()
 
@@ -49,8 +49,11 @@ def check_prog(obj):
 		if re.search("si_signo=SIGSYS", i):
 			trapflag = True
 			searchresult = syssearch.search(i)
-			print(searchresult.group(1))
-			syscalls.add(searchresult.group(1))
+			armresult    = syssearch_arm.search(i)
+			if searchresult != None:
+				syscalls.add("\tAllow(" + searchresult.group(1) + "),\n")
+			else:
+				syscalls.add("\tAllow_ARM(" + armresult.group(1) + "),\n")
 
 	if trapflag == True:
 		allow_calls(obj,syscalls)

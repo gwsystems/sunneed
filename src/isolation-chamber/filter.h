@@ -22,16 +22,21 @@
 #include <linux/seccomp.h>
 #include <linux/audit.h>
 
+
 #define ArchField offsetof(struct seccomp_data, arch)
 
 #define Allow(syscall) \
-    BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, SYS_##syscall, 0, 1), \
+    BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_##syscall, 0, 1), \
+    BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW)
+
+#define Allow_ARM(syscall) \
+    BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __ARM_NR_##syscall, 0, 1), \
     BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW)
 
 struct sock_filter filter[] = {
     /* validate arch */
     BPF_STMT(BPF_LD+BPF_W+BPF_ABS, ArchField),
-    BPF_JUMP( BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_X86_64, 1, 0),
+    BPF_JUMP( BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_ARM, 1, 0),
     BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL),
 
     /* load syscall */
@@ -40,18 +45,11 @@ struct sock_filter filter[] = {
     /* list of allowed syscalls */
     Allow(exit_group),  /* exits a processs */
     Allow(brk),     /* for malloc(), inside libc */
-    Allow(mmap),        /* also for malloc() */
+    Allow(mmap2),        /* also for malloc() */
     Allow(munmap),      /* for free(), inside libc */
     Allow(write),       /* called by printf */
     Allow(fstat),
     Allow(execve),      /* called by parent to create child */
-    Allow(arch_prctl),
-    Allow(access),
-    Allow(openat),
-    Allow(close),
-    Allow(read),
-    Allow(pread64),
-    Allow(mprotect),
     //--EndOfAllows--
 
     /* and if we don't match above, die */
