@@ -1,4 +1,4 @@
-#include "filter.h"
+#include "handoff.h"
 
 
 static char child_stack[1048576];
@@ -107,17 +107,11 @@ int main(int argc, char **argv) {
         printf("no executable specified - exiting\n");
         return 0;
     }else if(argc >= 2){
-        // char *tempargs[] = {argv[1],NULL};
-        // args = tempargs;
         args = argv + 1;
-        printf("first argument: %s\n",args[0]);
+        //printf("first argument: %s\n",args[0]);
 
     }
-    // else if(argc > 2){
-    //     //printf("second argument: %s\n",argv[2]);
-    //     args = argv + 1;
-    //     printf("first argument: %s\n",args[0]);
-    // }
+    
 
 
     printf("Original UTS namespace nodename: ");

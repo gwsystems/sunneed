@@ -13,7 +13,7 @@ def allow_calls(obj,syscalls):
 	for i in syscalls:
 		allowstring = allowstring + i
 
-	fn = './filter.h'
+	fn = './filter.gen.h'
 
 	for line in fi.FileInput(fn, inplace = 1):
 		if '//--EndOfAllows--' in line:
@@ -51,9 +51,9 @@ def check_prog(obj):
 			searchresult = syssearch.search(i)
 			armresult    = syssearch_arm.search(i)
 			if searchresult != None:
-				syscalls.add("\tAllow(" + searchresult.group(1) + "),\n")
+				syscalls.add("\tALLOW(" + searchresult.group(1) + "),\n")
 			else:
-				syscalls.add("\tAllow_ARM(" + armresult.group(1) + "),\n")
+				syscalls.add("\tALLOW_ARM(" + armresult.group(1) + "),\n")
 
 	if trapflag == True:
 		allow_calls(obj,syscalls)
