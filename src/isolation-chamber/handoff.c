@@ -25,9 +25,8 @@ int pivot_root(char *a, char *b){
     return syscall(SYS_pivot_root,a,b);
 }
 
-
-static int child_fn(){
-    //isolation ns code:
+int ns_config(){
+    printf("Setting up new namespaces...");
     //new mount ns:
     if(unshare(CLONE_NEWNS) < 0){
         printf("can't create new mount ns");
@@ -40,7 +39,7 @@ static int child_fn(){
     if(pivot_root("./tenroot","./tenroot/.old") < 0){
         perror("error pivoting root");
     }
- 
+    
     if(mount("tmpfs","/dev", "tmpfs", MS_NOSUID | MS_STRICTATIME, NULL) < 0){
         printf("error mounting tmpfs\n");
     }
@@ -52,7 +51,7 @@ static int child_fn(){
     }
 
     chdir("/");
-   
+    
 
     if(umount2("/.old", MNT_DETACH) < 0){
         printf("error unmounting old\n");
@@ -73,8 +72,75 @@ static int child_fn(){
     printf("New UTS namespace nodename: ");
     print_nodename();
 
+    return 0;
+}
+
+//inspiration from: https://blog.lizzie.io/linux-containers-in-500-loc/contained.c
+int drop_caps(){
+
+    printf("Dropping capabilities...");
+
+    int caps[] = {
+        CAP_AUDIT_CONTROL,
+        CAP_AUDIT_READ,
+        CAP_AUDIT_WRITE,
+        CAP_BLOCK_SUSPEND,
+        CAP_DAC_READ_SEARCH,
+        CAP_FSETID,
+        CAP_IPC_LOCK,
+        CAP_MAC_ADMIN,
+        CAP_MAC_OVERRIDE,
+        CAP_MKNOD,
+        CAP_SETFCAP,
+        CAP_SYSLOG,
+        CAP_SYS_ADMIN,
+        CAP_SYS_BOOT,
+        CAP_SYS_MODULE,
+        CAP_SYS_NICE,
+        CAP_SYS_RAWIO,
+        CAP_SYS_RESOURCE,
+        CAP_SYS_TIME,
+        CAP_WAKE_ALARM,
+        CAP_NET_ADMIN,
+        CAP_NET_BIND_SERVICE,
+        CAP_NET_RAW
+    };
+
+    size_t ncaps = sizeof(caps) / sizeof(caps[1]);
+
+    int i;
+
+    for(i = 0; i < ncaps; i++){
+        if(prctl(PR_CAPBSET_DROP, drop_caps[i], 0, 0, 0)) {
+            perror("Couldn't drop cap: %d\n", i);
+            return -1;
+        }
+    }
+
+    cap_t cap = NULL;
+    if (!(cap = cap_get_proc())
+        || cap_set_flag(cap, CAP_INHERITABLE, ncaps, caps, CAP_CLEAR)
+        || cap_set_proc(cap)) {
+        fprintf(stderr, "failed: %m\n");
+        if (cap) cap_free(cap);
+        return 1;
+    }
+    cap_free(cap);
+
+    return 0;
+}
+
+
+static int child_fn(){
+    //isolation ns code:
+    ns_config();
+
+    drop_caps();
+
     //seccomp bpf filter code:
     /* set up the restricted environment */
+    printf("Setting seccomp syscall filter...");
+
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
         perror("Could not start seccomp:");
         exit(1);
