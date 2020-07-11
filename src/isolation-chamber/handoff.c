@@ -20,13 +20,13 @@ int pivot_root(char *a, char *b){
     if(mkdir(b,0755) < 0){
         printf("error mkdir\n");
     }
-    printf("pivot setup good\n");
+//    printf("pivot setup good\n");
 
     return syscall(SYS_pivot_root,a,b);
 }
 
 int ns_config(){
-    printf("Setting up new namespaces...");
+    printf("Setting up new namespaces...\n");
     //new mount ns:
     if(unshare(CLONE_NEWNS) < 0){
         printf("can't create new mount ns");
@@ -63,14 +63,14 @@ int ns_config(){
 
 
     //set up uts ns
-    printf("New UTS namespace nodename: ");
-    print_nodename();
+  //  printf("New UTS namespace nodename: ");
+    //print_nodename();
 
-    printf("Changing nodename inside new UTS namespace\n");
+    //printf("Changing nodename inside new UTS namespace\n");
     sethostname("tenant", 6);
 
-    printf("New UTS namespace nodename: ");
-    print_nodename();
+    //printf("New UTS namespace nodename: ");
+    //print_nodename();
 
     return 0;
 }
@@ -78,7 +78,7 @@ int ns_config(){
 //inspiration from: https://blog.lizzie.io/linux-containers-in-500-loc/contained.c
 int drop_caps(){
 
-    printf("Dropping capabilities...");
+    printf("Dropping capabilities...\n");
 
     int caps[] = {
         CAP_AUDIT_CONTROL,
@@ -111,8 +111,8 @@ int drop_caps(){
     int i;
 
     for(i = 0; i < ncaps; i++){
-        if(prctl(PR_CAPBSET_DROP, drop_caps[i], 0, 0, 0)) {
-            perror("Couldn't drop cap: %d\n", i);
+        if(prctl(PR_CAPBSET_DROP, caps[i], 0, 0, 0)) {
+            perror("Couldn't drop cap");
             return -1;
         }
     }
@@ -139,7 +139,7 @@ static int child_fn(){
 
     //seccomp bpf filter code:
     /* set up the restricted environment */
-    printf("Setting seccomp syscall filter...");
+    printf("Setting seccomp syscall filter...\n");
 
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
         perror("Could not start seccomp:");
@@ -149,26 +149,14 @@ static int child_fn(){
         perror("Could not start seccomp:");
         exit(1);
     }
-
-    /* printf only writes to stdout, but for some reason it stats it. */
-    printf("hello from handoff.c\n");
-    printf("PID: %d\n", getpid());
-
-    
-    //char *args[] = {"Hello", "Sandbox", NULL};
-    // char *arg[] = {NULL};
+    printf("exec tenant program:\n\n");
     execv(executable, args);
-    //execv("/bin/sh",args);
-    printf("back to handoff.c\n");
-
     return 0;
 }
 
 
 int main(int argc, char **argv) {
-    printf("argc: %d\n", argc);
     int n = (sizeof argv) / (sizeof *argv);
-    printf("argn: %d\n", n);
     if(argc <= 1){
         printf("no executable specified - exiting\n");
         return 0;
@@ -205,9 +193,7 @@ int main(int argc, char **argv) {
 
     waitpid(child_pid, NULL, 0);
 
-    printf("Original UTS namespace nodename: ");
-    print_nodename();
-
+    printf("\n\nback to handoff... done\n\n");
     
 
     return 0;

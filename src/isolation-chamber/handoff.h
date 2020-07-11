@@ -22,6 +22,8 @@
 #include <linux/seccomp.h>
 #include <linux/audit.h>
 
+#include <linux/capability.h>
+#include <sys/capability.h>
 
 #define ARCHFIELD offsetof(struct seccomp_data, arch)
 

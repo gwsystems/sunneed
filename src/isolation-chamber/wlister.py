@@ -27,11 +27,13 @@ def allow_calls(obj,syscalls):
 
 def check_prog(obj):
 	print("--- Compiling and strace-ing program...\n")
-	os.system('gcc -o handoff handoff.c')
+	os.system('make clean && make')
+	print()
 	os.system('(sudo strace -o procdump -f ./handoff ' + obj + ") &")
 
 	sleep(5)
 
+	print("--- Attempt to killall strace processes incase they are hung")
 	os.system('sudo killall -9 strace')
 
 	pdump  = open("procdump","r")
