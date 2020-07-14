@@ -15,11 +15,20 @@
 
 #define QUANTUMS_RINGBUF_SZ 16
 
+// TODO This is waaaaaaaaaaaaaaaaaaaaay too big.
+#define QUANTUM_DURATION_MS 5000
+
 struct sunneed_power_usage_event {
     struct {
+        // The moment the power event occurred.
         struct timespec timestamp;
+
         struct sunneed_tenant *tenant;
+
+        // If NULL, then the power event is a CPU usage digest.
         struct sunneed_device *device;
+
+        // Unused for now, can configure parameters of the device interaction.
         void *args;
     } ev;
     struct sunneed_power_usage_event *next;
@@ -31,6 +40,9 @@ int
 sunneed_quantum_begin(void);
 int
 sunneed_quantum_end(void);
+
+sunneed_worker_thread_result_t
+sunneed_quantum_worker(void *args);
 
 struct sunneed_power_usage_event *power_usage_evs;
 

@@ -14,7 +14,10 @@ static struct {
 
     // Whether events can be recorded to this quantum.
     bool is_active;
-} current_quantum = {-1, 0.0, {0}, false};
+
+    // If a power event has occurred in this quantum.
+    bool has_power_event;
+} current_quantum = {-1, 0.0, {0}, false, false};
 
 int
 sunneed_record_power_usage_event(struct sunneed_power_usage_event ev) {
@@ -41,6 +44,8 @@ sunneed_record_power_usage_event(struct sunneed_power_usage_event ev) {
         return 1;
     }
     *cur->next = ev;
+
+    current_quantum.has_power_event = true;
 
     return 0;
 }
@@ -85,7 +90,16 @@ sunneed_quantum_end(void) {
     // Add up power used in this quantum by each tenant.
     struct sunneed_power_usage_event *ev = power_usage_evs;
     while (ev != NULL) {
-        power_consumed[ev->ev.tenant->id] += ev->ev.device->power_consumption(ev->ev.args);
+        if (!current_quantum.has_power_event)
+            // No power events to add to tenant.
+            break;
+
+        if (ev->ev.device == NULL) {
+            // This is a CPU usage digest.
+            // TODO Check CPU usage lol.
+            power_consumed[ev->ev.tenant->id] += 0;
+        } else
+            power_consumed[ev->ev.tenant->id] += ev->ev.device->power_consumption(ev->ev.args);
         ev = ev->next;
     }
 
@@ -110,4 +124,24 @@ sunneed_quantum_end(void) {
     LOG_D("Finished ending quantum %d", current_quantum.id);
 
     return 0;
+}
+
+sunneed_worker_thread_result_t
+sunneed_quantum_worker(__attribute__((unused)) void *args) {
+    int ret;
+    while (true) {
+        if ((ret = sunneed_quantum_begin()) != 0) {
+            goto end;
+        }
+
+        usleep(QUANTUM_DURATION_MS * 1000);
+
+        if ((ret = sunneed_quantum_end()) != 0) {
+            goto end;
+        }
+    }
+
+end:
+    LOG_E("Error with quantum; quantum thread stopping");
+    return NULL;
 }
