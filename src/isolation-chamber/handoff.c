@@ -60,17 +60,8 @@ int ns_config(){
         perror("rmdir");
     }
 
-
-
     //set up uts ns
-  //  printf("New UTS namespace nodename: ");
-    //print_nodename();
-
-    //printf("Changing nodename inside new UTS namespace\n");
     sethostname("tenant", 6);
-
-    //printf("New UTS namespace nodename: ");
-    //print_nodename();
 
     return 0;
 }
@@ -103,7 +94,10 @@ int drop_caps(){
         CAP_WAKE_ALARM,
         CAP_NET_ADMIN,
         CAP_NET_BIND_SERVICE,
-        CAP_NET_RAW
+        CAP_NET_RAW,
+	CAP_SETUID,	//consider removing if we add user ns
+	CAP_SETGID,	//consider removing if we add user ns
+	CAP_SYS_CHROOT
     };
 
     size_t ncaps = sizeof(caps) / sizeof(caps[1]);
@@ -162,11 +156,7 @@ int main(int argc, char **argv) {
         return 0;
     }else if(argc >= 2){
         args = argv + 1;
-        //printf("first argument: %s\n",args[0]);
-
     }
-    
-
 
     printf("Original UTS namespace nodename: ");
     print_nodename();
@@ -194,7 +184,6 @@ int main(int argc, char **argv) {
     waitpid(child_pid, NULL, 0);
 
     printf("\n\nback to handoff... done\n\n");
-    
 
     return 0;
 }
