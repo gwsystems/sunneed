@@ -33,5 +33,10 @@
 #define HELP_TEXT _HELP_TEXT_HEAD _HELP_TEXT_TAIL
 #endif
 
+#ifdef TESTING
+
+#define MAX_TESTS_PER_SUITE 64
+
+#endif
 
 #endif
