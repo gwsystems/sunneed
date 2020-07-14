@@ -37,4 +37,6 @@ sunneed_device_file_is_locked(const char *pathname);
 
 extern struct sunneed_device devices[];
 
+typedef void* sunneed_worker_thread_result_t; 
+
 #endif

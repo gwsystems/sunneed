@@ -104,7 +104,7 @@ sunneed_get_tenant_cpu_usage(sunneed_tenant_id_t tenant_id) {
     return 0;
 }
 
-void *
+sunneed_worker_thread_result_t
 sunneed_proc_monitor(__attribute__((unused)) void *args) {
     int ret;
     while (true) {

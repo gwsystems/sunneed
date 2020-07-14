@@ -46,7 +46,7 @@ sunneed_get_num_tenants(void);
 int
 sunneed_get_tenant_cpu_usage(sunneed_tenant_id_t tenant_id);
 
-void *
+sunneed_worker_thread_result_t
 sunneed_proc_monitor(void *args);
 
 #endif
