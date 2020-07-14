@@ -62,7 +62,7 @@ sunneed_load_devices(struct sunneed_device *target) {
         // Strip the `.so` from the path to get the device name.
         char device_name[DEVICE_PATH_LEN];
         strncpy(device_name, ent->d_name, strlen(ent->d_name) - OBJ_EXTENSION_LEN);
-        device_name[strlen(ent->d_name) - OBJ_EXTENSION_LEN + 1] = '\0';
+        device_name[strlen(ent->d_name) - OBJ_EXTENSION_LEN] = '\0';
             
         char device_path[DEVICE_PATH_LEN] = "build/device/";
         strncat(device_path, ent->d_name, DEVICE_PATH_LEN);
