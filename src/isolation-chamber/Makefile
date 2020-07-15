@@ -1,8 +1,11 @@
 CC=gcc
-CFLAGS= -lcap
+CFLAGS=-lcap
 
 handoff: handoff.c
-	$(CC) -o handoff handoff.c $(CFLAGS)
+	$(CC) handoff.c -o handoff  $(CFLAGS)
+
+debug: handoff.c
+	$(CC) -DDEBUG=1 handoff.c -o handoff $(CFLAGS)
 
 clean:
 	rm -f handoff

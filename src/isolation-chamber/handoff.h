@@ -25,6 +25,8 @@
 #include <linux/capability.h>
 #include <sys/capability.h>
 
+
+
 #define ARCHFIELD offsetof(struct seccomp_data, arch)
 
 #define ALLOW(syscall) \
@@ -54,8 +56,15 @@ struct sock_filter filter[] = {
     ALLOW(execve),      /* called by parent to create child */
     #include "filter.gen.h"
 
-    /* and if we don't match above, die */
-    BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRAP),
+    /* and if we don't match above, die (trap or kill)*/
+    #ifdef DEBUG
+    #if DEBUG==1
+        BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRAP),
+    #endif
+    #else
+        BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL),
+    #endif
+
 };
 struct sock_fprog filterprog = {
     .len = sizeof(filter)/sizeof(filter[0]),

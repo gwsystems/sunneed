@@ -26,11 +26,16 @@ def allow_calls(obj,syscalls):
 
 	check_prog(obj)
 
-
+def check_call(syscall):
+	# print("checking call!")
+	for i in blklist:
+		x = i.strip()
+		if syscall == x:
+			printR("-- Warning! The " + syscall + " system call is potentially dangerous!")
 
 def check_prog(obj):
 	printY("--- Compiling and strace-ing program...\n")
-	os.system('make clean && make')
+	os.system('make clean && make debug')
 	print()
 	os.system('(sudo strace -o procdump -f ./handoff ' + obj + ") &")
 
@@ -57,14 +62,15 @@ def check_prog(obj):
 			armresult    = syssearch_arm.search(i)
 			if searchresult != None:
 				syscalls.add("\tALLOW(" + searchresult.group(1) + "),\n")
+				check_call(searchresult.group(1))
 			else:
 				syscalls.add("\tALLOW_ARM(" + armresult.group(1) + "),\n")
 
 	if trapflag == True:
 		allow_calls(obj,syscalls)
 	else:
-		printG("\n--- Program is fully white listed!")
-
+		printG("\n--- Program is fully white listed! Recompiling without debug mode...")
+		os.system('make clean && make')
 
 
 
@@ -79,5 +85,10 @@ if(len(sys.argv) < 2 ):
 obj_name = sys.argv[1]
 # print(obj_name)
 
+blkfile = open("default_docker_blacklist.txt", "r")
+blklist = blkfile.readlines()
 
+
+os.system('sudo rm -f filter.gen.h && echo //--EndOfAllows-- > filter.gen.h')
+os.system('sudo cp ' + obj_name + ' tenroot/bin/' + obj_name)
 check_prog(obj_name)

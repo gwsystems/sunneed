@@ -12,12 +12,11 @@
 #include <sys/reboot.h>
 int main(int argc, char *argv[]){
 
-	printf("hello from test 0\n");
-	printf("PID in sandbox: %d\n", getpid());
+	// printf("hello from test-capabilities\n");
 
 	assert(-1 == mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL));
 	assert(-1 == reboot(LINUX_REBOOT_CMD_POWER_OFF));
         
-	printf("Done testing!\n");
+	printf("Done testing! Assertions passed!\n");
 	return 0;
 }

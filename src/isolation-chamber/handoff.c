@@ -1,16 +1,21 @@
+/*
+USAGE:
+    sudo ./handoff <tenant program>
+*/
+
 #include "handoff.h"
-
-
+ 
 static char child_stack[1048576];
 
 char executable[100]; //global path to executable
 char **args;
 
-static void print_nodename() {
-  struct utsname utsname;
-  uname(&utsname);
-  printf("%s\n", utsname.nodename);
-}
+//method used for debugging
+// static void print_nodename() {
+//   struct utsname utsname;
+//   uname(&utsname);
+//   printf("%s\n", utsname.nodename);
+// }
 
 //wrapper function for pivot_root system call:
 int pivot_root(char *a, char *b){
@@ -95,9 +100,9 @@ int drop_caps(){
         CAP_NET_ADMIN,
         CAP_NET_BIND_SERVICE,
         CAP_NET_RAW,
-	CAP_SETUID,	//consider removing if we add user ns
-	CAP_SETGID,	//consider removing if we add user ns
-	CAP_SYS_CHROOT
+	    CAP_SETUID,	//consider removing if we add user ns
+	    CAP_SETGID,	//consider removing if we add user ns
+	    CAP_SYS_CHROOT
     };
 
     size_t ncaps = sizeof(caps) / sizeof(caps[1]);
@@ -158,10 +163,10 @@ int main(int argc, char **argv) {
         args = argv + 1;
     }
 
-    printf("Original UTS namespace nodename: ");
-    print_nodename();
+    // printf("Original UTS namespace nodename: ");
+    // print_nodename();
 
-    printf("Original PID: %d\n", getpid());
+    // printf("Original PID: %d\n", getpid());
 
     // system("mount --make-rprivate /");//make root mount private
     if(mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0){
@@ -181,9 +186,19 @@ int main(int argc, char **argv) {
 
     sleep(1);
 
-    waitpid(child_pid, NULL, 0);
+    int child_status;
+    waitpid(child_pid, &child_status, 0);
+    int exit_status = WIFEXITED(child_status);
+    
+    printf("\n\nback to handoff... \n");
 
-    printf("\n\nback to handoff... done\n\n");
+    printf("child_exit_status: %d\n",exit_status);
+    // if(WIFEXITED(child_status)){
+    //     int exit_status = WEXITSTATUS(child_status);
+    //     printf("Exit Status of child: %d\n",exit_status);
+    // }
+
+    
 
     return 0;
 }
