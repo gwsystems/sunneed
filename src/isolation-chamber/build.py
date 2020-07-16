@@ -16,16 +16,16 @@ printY("--- Downloading dependencies...")
 # -lcap flag to have access to #include <sys/capability.h>
 if(os.system('sudo apt-get install libcap-dev') != 0):
 	printR("--- Failed to install libcap-dev ---")
-	error = 1
+	sys.exit(1)#error exit
 
 # download packages to set up tenant filesystem
 if(os.system('sudo apt-get install debootstrap') != 0):
 	printR("--- Failed to install debootstrap ---")
-	error = 1
+	sys.exit(1)#error exit
 
 if(os.system('sudo apt-get install build-essential') != 0):
 	printR("--- Failed to install build-essential ---")
-	error = 1
+	sys.exit(1)#error exit
 
 	
 printY("--- Installing Debian Buster to ./tenroot/ ...")
@@ -34,12 +34,8 @@ printY("--- Installing Debian Buster to ./tenroot/ ...")
 # if dpkg is installed, which it usually is by default, specify if this breaks)
 if(os.system('sudo debootstrap buster ./tenroot/ http://ftp.us.debian.org/debian') != 0):
 	printR("--- Failed to install Debian to ./tenroot/ ---")
-	error = 1
-
-#check build status
-if error:
-	printR("--- Build Failed ---")
 	sys.exit(1)#error exit
-else:
-	printG("--- Build Complete ---")
-	sys.exit(0)#clean exit
+
+
+printG("--- Build Complete ---")
+sys.exit(0)#clean exit
