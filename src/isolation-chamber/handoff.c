@@ -188,17 +188,12 @@ int main(int argc, char **argv) {
 
     int child_status;
     waitpid(child_pid, &child_status, 0);
-    int exit_status = WIFEXITED(child_status);
+    int exit_status = WIFEXITED(child_status); //nonzero = normal exit
+                                               //zero    = failed exit
     
     printf("\n\nback to handoff... \n");
 
     printf("child_exit_status: %d\n",exit_status);
-    // if(WIFEXITED(child_status)){
-    //     int exit_status = WEXITSTATUS(child_status);
-    //     printf("Exit Status of child: %d\n",exit_status);
-    // }
-
-    
 
     return 0;
 }

@@ -1,4 +1,5 @@
 import os
+import sys
 
 error = 0
 errCount = 0
@@ -21,15 +22,6 @@ def test_seccomp():
 	# and expect to fail
 	os.system('gcc -o testsec test_seccomp.c')
 	os.system('sudo cp testsec tenroot/bin/testsec')
-	# os.system('sudo strace -o procdump_testsec -e trace=socket ./handoff testsec > output1.txt')
-
-	# pdump   = open("procdump_testsec", "r")
-	# dump = pdump.read()
-
-	# if "CLD_KILLED" not in dump:
-	# 	printR("--- Seccomp test failed: Process not killed ---")
-	# 	error = 1
-	# 	errCount += 1
 	os.system('sudo ./handoff testsec > output.txt')
 
 	outdump = open("output.txt", "r")
@@ -66,10 +58,12 @@ def test_capabilities():
 test_seccomp()
 test_capabilities()
 
+os.system('sudo rm -f output.txt')
 
 if error:
 	printR("--- Testing complete... " + str(errCount) + " errors found ---")
+	sys.exit(1)#error exit
 else:
 	printG("--- Testing complete! No errors to report ---")
+	sys.exit(0)#clean exit
 
-os.system('sudo rm -f output.txt')
