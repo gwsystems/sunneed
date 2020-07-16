@@ -1,13 +1,34 @@
 import os
 import sys
 
-error = 0
-errCount = 0
-
 
 def printR(skk): print("\033[91m {}\033[00m" .format(skk)) 
 def printG(skk): print("\033[92m {}\033[00m" .format(skk)) 
 def printY(skk): print("\033[93m {}\033[00m" .format(skk)) 
+
+
+def test_filter():
+	global error
+	global errCount
+	default_filter   = open("simplefilter.txt", "r")
+	generated_filter = open("filter.gen.h"    , "r")
+
+	default_list = default_filter.readlines()
+	gen_list     = generated_filter.readlines()
+
+	if len(default_list) != len(gen_list):
+		printR("--- Filter test failed: Generated filter is the wrong length ---")
+		sys.exit(1)#error exit
+
+	# whitelist should have same syscalls but not necessarily in same order so
+	# we can't just check for equality of the files
+	for i in default_list:
+		if i not in gen_list:
+			printR("--- Filter test failed: Missing syscall from filter ---")
+			printR(i)
+			sys.exit(1)#error exit
+
+
 
 def test_seccomp():
 	global error
@@ -17,6 +38,9 @@ def test_seccomp():
 	# gives an ideal minimal whitelist for testing
 	os.system('gcc -o testsimple test_simple.c')
 	os.system('python3 wlister.py testsimple > output.txt')
+
+	# test filter creation
+	test_filter()
 
 	# try running test_seccomp with this minimal filter
 	# and expect to fail
@@ -30,8 +54,7 @@ def test_seccomp():
 	# "Assertion" will appear if an assertion failed
 	if "child_exit_status: 0" not in dump:
 		printR("--- Seccomp test failed: Process not killed ---")
-		error = 1
-		errCount += 1
+		sys.exit(1)#error exit
 
 
 def test_capabilities():
@@ -51,8 +74,7 @@ def test_capabilities():
 	# "Assertion" will appear if an assertion failed
 	if "child_exit_status: 0" in dump:
 		printR("--- Capabilities test failed: Assertion failed ---")
-		error = 1
-		errCount += 1
+		sys.exit(1)#error exit
 
 
 test_seccomp()
@@ -60,10 +82,6 @@ test_capabilities()
 
 os.system('sudo rm -f output.txt')
 
-if error:
-	printR("--- Testing complete... " + str(errCount) + " errors found ---")
-	sys.exit(1)#error exit
-else:
-	printG("--- Testing complete! No errors to report ---")
-	sys.exit(0)#clean exit
+printG("--- Testing complete! No errors to report ---")
+sys.exit(0)#clean exit
 

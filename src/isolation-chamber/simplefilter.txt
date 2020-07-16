@@ -1,0 +1,9 @@
+	ALLOW(close),
+	ALLOW(access),
+	ALLOW(writev),
+	ALLOW(openat),
+	ALLOW(read),
+	ALLOW(mmap),
+	ALLOW(mprotect),
+	ALLOW(arch_prctl),
+//--EndOfAllows--
