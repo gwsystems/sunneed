@@ -8,7 +8,6 @@ sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_p
 
 #ifdef TESTING
 
-// This is a special case. Please don't ever include .c files.
 #include "sunneed_test.h"
 
 int (*runtime_tests[])(void) = RUNTIME_TESTS;
@@ -18,7 +17,8 @@ testcase_count(void) {
     unsigned int testcases = 0;
     for (int (**cur)(void) = runtime_tests; *cur != NULL; cur++)
         testcases++; 
-    return testcases;
+    // TODO Why minus one...
+    return testcases - 1;
 }
 
 static int 
