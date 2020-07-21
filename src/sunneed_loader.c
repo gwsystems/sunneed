@@ -18,6 +18,13 @@ load_device(const char *device_path, const char *device_name, int handle, struct
         return 1;
     }
 
+    unsigned int (*flags)(void) = dlsym(dlhandle, "device_flags");
+
+    bool silent_fail = false;
+    if (flags) {
+        silent_fail = flags() & SUNNEED_DEVICE_FLAG_SILENT_FAIL;      
+    }
+
     // Initialize the device instance.
     *dev = (struct sunneed_device) {
             .dlhandle = dlhandle,
@@ -30,7 +37,8 @@ load_device(const char *device_path, const char *device_name, int handle, struct
     strncpy(dev->identifier, device_name, strlen(device_name));
 
     if (!sunneed_device_is_linked(dev)) {
-        LOG_E("Error linking device '%s': %s", device_name, dlerror());
+        if (!silent_fail)
+            LOG_E("Error linking device '%s': %s", device_name, dlerror());
         return 1;
     }
 

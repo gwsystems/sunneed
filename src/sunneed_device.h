@@ -12,6 +12,8 @@
 
 #define MAX_DEVICES 64
 
+#define SUNNEED_DEVICE_FLAG_SILENT_FAIL (1 << 0)
+
 struct sunneed_device {
     void *dlhandle;
     int handle;
@@ -36,7 +38,5 @@ struct sunneed_device *
 sunneed_device_file_is_locked(const char *pathname);
 
 extern struct sunneed_device devices[];
-
-typedef void* sunneed_worker_thread_result_t; 
 
 #endif

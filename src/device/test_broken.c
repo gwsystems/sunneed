@@ -17,3 +17,8 @@ get(void *args) {
     UNUSED(args);
     return TEST_DEVICE_OUTPUT;
 }
+
+unsigned int
+device_flags(void) {
+    return SUNNEED_DEVICE_FLAG_SILENT_FAIL;
+}
