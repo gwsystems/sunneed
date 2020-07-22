@@ -137,6 +137,9 @@ format:
 	$(SOURCE_FORMATTER) $(shell find '$(src_dir)' -not -path '$(protobuf_dir)/*' -type f -regex '.*\.[ch]')
 	$(MAKE) -C $(test_home) format
 
+tags:
+	ctags src/*
+
 ext:
 	$(call section_title,dependencies)
 	$(MAKE) -C $(ext_dir)
