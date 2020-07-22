@@ -23,7 +23,7 @@ sunneed_device_is_linked(struct sunneed_device *device) {
  * Returns the device specifying the lock if one is found, otherwise returns NULL.
  */
 struct sunneed_device *
-sunneed_device_file_is_locked(const char *pathname) {
+sunneed_device_file_locker(const char *pathname) {
     for (int i = 0; i < MAX_DEVICES; i++) {
         // Find devices of type FILE_LOCK.
         if (!devices[i].is_linked || devices[i].device_type_kind != DEVICE_TYPE_FILE_LOCK)

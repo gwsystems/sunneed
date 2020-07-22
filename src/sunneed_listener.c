@@ -181,16 +181,17 @@ serve_generic_device_action(
 }
 
 static int
-serve_file_is_locked(
+serve_open_file(
         __attribute__((unused)) SunneedResponse *resp,
         void *sub_resp_buf,
         __attribute__((unused)) struct sunneed_tenant *tenant,
-        FileIsLockedRequest *request) {
-    GenericResponse *sub_resp = sub_resp_buf;
-    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+        OpenFileRequest *request) {
+    OpenFileResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (OpenFileResponse)OPEN_FILE_RESPONSE__INIT;
 
     struct sunneed_device *locker;
-    if ((locker = sunneed_device_file_is_locked(request->path)) != NULL) {
+    if ((locker = sunneed_device_file_locker(request->path)) != NULL) {
+         
         // TODO Wait for availability, perform power calcs, etc.
     }
 
@@ -270,8 +271,8 @@ sunneed_listen(void) {
             case SUNNEED_REQUEST__MESSAGE_TYPE_DEVICE_ACTION:
                 ret = serve_generic_device_action(&resp, sub_resp_buf, tenant, request->device_action);
                 break;
-            case SUNNEED_REQUEST__MESSAGE_TYPE_FILE_IS_LOCKED:
-                ret = serve_file_is_locked(&resp, sub_resp_buf, tenant, request->file_is_locked);
+            case SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE:
+                ret = serve_open_file(&resp, sub_resp_buf, tenant, request->open_file);
                 break;
         }
 #pragma GCC diagnostic pop

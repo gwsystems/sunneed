@@ -119,17 +119,17 @@ sunneed_client_check_locked_file(const char *pathname) {
     // TODO Check socket opened.
 
     SunneedRequest req = SUNNEED_REQUEST__INIT;
-    req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_FILE_IS_LOCKED;
-    FileIsLockedRequest file_lock_req = FILE_IS_LOCKED_REQUEST__INIT;
-    file_lock_req.path = malloc(strlen(pathname));
-    if (!file_lock_req.path) {
+    req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE;
+    OpenFileRequest open_file_req = OPEN_FILE_REQUEST__INIT;
+    open_file_req.path = malloc(strlen(pathname));
+    if (!open_file_req.path) {
         FATAL(-1, "failed to allocated memory for path");
     }
-    strncpy(file_lock_req.path, pathname, strlen(pathname));
-    req.file_is_locked = &file_lock_req;
+    strncpy(open_file_req.path, pathname, strlen(pathname));
+    req.open_file = &open_file_req;
 
     PACK_AND_SEND(req);
-    free(file_lock_req.path);
+    free(open_file_req.path);
 
     return 0;
 }

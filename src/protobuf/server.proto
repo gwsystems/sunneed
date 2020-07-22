@@ -9,7 +9,7 @@ message SunneedRequest {
         GetDeviceHandleRequest get_device_handle = 2;
         GenericDeviceActionRequest device_action = 3;
         UnregisterClientRequest unregister_client = 4;
-        FileIsLockedRequest file_is_locked = 5;
+        OpenFileRequest open_file = 5;
     }
 }
 
@@ -28,7 +28,7 @@ message GenericDeviceActionRequest {
     bytes data = 2;
 }
 
-message FileIsLockedRequest {
+message OpenFileRequest {
     string path = 1;
 }
 
@@ -48,9 +48,14 @@ message GenericResponse {
     bytes data = 1;
 }
 
+// TODO Deprecated 
 message GetDeviceHandleResponse {
     int32 device_handle = 1;
 };
+
+message OpenFileResponse {
+    int32 fd = 1;
+}
 
 import "device.proto";
 
