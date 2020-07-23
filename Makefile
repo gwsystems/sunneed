@@ -144,7 +144,7 @@ ext:
 	$(call section_title,dependencies)
 	$(MAKE) -C $(ext_dir)
 
-.PHONY: all pip util test runtime_test clean format ext
+.PHONY: all pip util test runtime_test clean format ext tags
 
 LeftParens := (
 RightParens := )
