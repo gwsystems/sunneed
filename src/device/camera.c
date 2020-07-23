@@ -5,7 +5,8 @@
 
 #define UNUSED(X) (void)(X)
 
-const struct sunneed_device_type_file_lock device_type = {
+enum sunneed_device_type device_type_kind = DEVICE_TYPE_FILE_LOCK;
+struct sunneed_device_type_file_lock device_type_data = {
     .files = CAMERA_PATH
 };
 
@@ -27,12 +28,7 @@ power_consumption(void *args) {
     return *(double *)args;
 }
 
-enum sunneed_device_type
-get_device_type_kind(void) {
-    return DEVICE_TYPE_FILE_LOCK;
-}
-
-const void *
-get_device_type(void) {
-    return &device_type;
+void *
+get_device_type_data(void) {
+    return &device_type_data;
 }

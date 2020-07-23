@@ -9,5 +9,5 @@ enum sunneed_device_type {
 
 struct sunneed_device_type_file_lock {
     // Semicolon-separated list of files to lock on.
-    const char *files;
+    char files[1024];
 };

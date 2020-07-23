@@ -1,4 +1,5 @@
 #include "../protobuf/c/device.pb-c.h"
+
 #include "../protobuf/c/server.pb-c.h"
 #include "../shared/sunneed_ipc.h"
 
@@ -33,7 +34,7 @@ sunneed_client_init(const char *name);
 int
 sunneed_client_get_device_handle(const char *identifier, sunneed_device_handle_t *handle);
 
-int
+const char *
 sunneed_client_check_locked_file(const char *pathname);
 
 int

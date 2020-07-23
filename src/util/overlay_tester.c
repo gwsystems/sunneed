@@ -13,8 +13,6 @@
 
 int
 main(void) {
-    printf("PID %d\n", getpid());
-
     int fd = open(CAMERA_PATH, O_CREAT | O_RDWR, 0666);
     if (fd == -1) {
         fprintf(stderr, "Failed to open file\n");

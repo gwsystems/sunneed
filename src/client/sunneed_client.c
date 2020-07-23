@@ -114,7 +114,7 @@ sunneed_client_get_device_handle(const char *name, sunneed_device_handle_t *hand
     return 0;
 }
 
-int
+const char *
 sunneed_client_check_locked_file(const char *pathname) {
     // TODO Check socket opened.
 
@@ -130,6 +130,23 @@ sunneed_client_check_locked_file(const char *pathname) {
 
     PACK_AND_SEND(req);
     free(open_file_req.path);
+
+    printf("Sent\n");
+
+    nng_msg *reply;
+    SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
+
+    SunneedResponse *resp = sunneed_response__unpack(NULL, nng_msg_len(reply), nng_msg_body(reply));
+    if (resp == NULL) {
+        printf("wtf\n");
+        // TODO Gotos
+        return 0;
+    }
+
+    printf("Opening dummy path '%s'\n", resp->open_file->path);
+
+    nng_msg_free(reply);
+    sunneed_response__free_unpacked(resp, NULL);
 
     return 0;
 }
@@ -148,6 +165,7 @@ sunneed_client_disconnect(void) {
     SunneedResponse *resp = receive_and_unpack(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
     if (resp == NULL) {
         // TODO Handle
+        printf("Disconnect response was NULL\n");
     }
 
     printf("Unregistered.\n");

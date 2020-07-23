@@ -1,15 +1,11 @@
 #include "sunneed_device.h"
 
 struct sunneed_device devices[MAX_DEVICES];
-
-void *sunneed_device_get_device_type(struct sunneed_device *device) {
-    switch (device->device_type_kind) {
-        case DEVICE_TYPE_FILE_LOCK:
-            return &device->device_type.file_lock;
-    }
-
-    return NULL;
-}
+struct {
+    int fd;
+    char pathname[64]; // TODO Don't hardcode.
+    char dummypath[64];
+} dummy_fd_map[MAX_LOCKED_FILES] = { { -1, { '\0' }, { '\0' } } };
 
 bool
 sunneed_device_is_linked(struct sunneed_device *device) {
@@ -29,12 +25,42 @@ sunneed_device_file_locker(const char *pathname) {
         if (!devices[i].is_linked || devices[i].device_type_kind != DEVICE_TYPE_FILE_LOCK)
             continue;
 
-        LOG_D("Comparing %s to %s", pathname, devices[i].device_type.file_lock.files);
+        LOG_D("Comparing %s to %s", pathname, devices[i].device_type_data.file_lock.files);
         
         // TODO Treat locked filepaths as a list of paths.
-        if (!strncmp(pathname, devices[i].device_type.file_lock.files, strlen(pathname))) {
-            printf("Locked file\n");
+        if (!strncmp(pathname, devices[i].device_type_data.file_lock.files, strlen(pathname))) {
             return &devices[i];
+        }
+    }
+
+    return NULL;
+}
+
+char *
+sunneed_device_get_dummy_file(const char *orig_path) {
+    // Try to find the already-created locked file with that name.
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        // TODO Hashmap or something.
+        if (dummy_fd_map[i].fd != -1)
+            if (strncmp(orig_path, dummy_fd_map[i].pathname, sizeof(dummy_fd_map[i].pathname)) == 0)
+                return dummy_fd_map[i].dummypath;
+    }
+    
+    char template[] = "locked_XXXXXX";
+    int dummy;
+    if ((dummy = mkstemp(template)) == -1) {
+        LOG_E("Error creating temp dummy file");
+        return NULL;
+    }
+
+    LOG_I("Created dummy file '%s'", template);
+    
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        if (dummy_fd_map[i].fd == -1) {
+            dummy_fd_map[i].fd = dummy;            
+            strncpy(dummy_fd_map[i].pathname, orig_path, sizeof(dummy_fd_map[i].pathname));
+            strncpy(dummy_fd_map[i].dummypath, template, sizeof(dummy_fd_map[i].dummypath));
+            return dummy_fd_map[i].dummypath;
         }
     }
 

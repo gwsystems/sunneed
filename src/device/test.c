@@ -24,4 +24,13 @@ power_consumption(void *args) {
     return 0;
 }
 
+enum sunneed_device_type device_type_kind = DEVICE_TYPE_FILE_LOCK;
+
+void *
+get_device_type_data(void) {
+    return &(struct sunneed_device_type_file_lock) {
+        .files = ""
+    };
+}
+
 // TODO Device type.

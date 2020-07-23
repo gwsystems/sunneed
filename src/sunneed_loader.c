@@ -1,5 +1,31 @@
 #include "sunneed_loader.h"
 
+/** 
+ * Assign to the `device_type_data` member of a device struct, choosing the correct union member based on what has been assigned
+ * to `device_type_kind`.
+ */
+static int
+assign_device_type_data_field(struct sunneed_device *dev, void *data) {
+    switch (dev->device_type_kind) {
+        case DEVICE_TYPE_FILE_LOCK: ;
+            // This is just to get the size of the `files` field. 
+            size_t fieldsize = sizeof(((struct sunneed_device_type_file_lock *)0)->files);
+            if (sizeof(*data) > fieldsize) {
+                LOG_E("Data for device '%s' is too large", dev->identifier);
+                return 1;
+            }
+
+            strncpy(dev->device_type_data.file_lock.files, ((struct sunneed_device_type_file_lock *)data)->files, fieldsize);
+            break;
+
+        default:
+            LOG_E("Invalid device kind %d", dev->device_type_kind);
+            return 1;
+    }
+
+    return 0;
+}
+
 static bool
 is_object_file(char *path) {
     size_t len = strlen(path);
@@ -26,6 +52,7 @@ load_device(const char *device_path, const char *device_name, int handle, struct
     }
 
     // Initialize the device instance.
+    bool err = false;
     *dev = (struct sunneed_device) {
             .dlhandle = dlhandle,
             .handle = handle,
@@ -36,7 +63,22 @@ load_device(const char *device_path, const char *device_name, int handle, struct
     };
     strncpy(dev->identifier, device_name, strlen(device_name));
 
-    if (!sunneed_device_is_linked(dev)) {
+    // Set up device type data.
+    void *kindsym = dlsym(dlhandle, "device_type_kind");
+    if (kindsym) {
+        dev->device_type_kind = *(enum sunneed_device_type *)kindsym;
+
+        void *(*data_fn)(void) = dlsym(dlhandle, "get_device_type_data");
+        if (data_fn) {
+            void *data = data_fn();
+            if (assign_device_type_data_field(dev, data))
+                err = true;
+        } else err = true;
+    } else err = true;
+
+    // TODO Use gotos for handling different kinds of errors.
+    // Check for errors during loading.
+    if (!sunneed_device_is_linked(dev) || err) {
         if (!silent_fail)
             LOG_E("Error linking device '%s': %s", device_name, dlerror());
         return 1;

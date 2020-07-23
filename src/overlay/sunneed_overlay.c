@@ -3,16 +3,11 @@
 void
 on_load() {
     sunneed_client_init("TODO");
-
-    sunneed_device_handle_t handle;
-
-    // TODO We are manually registering camera because a device needs to be loaded in order for its lockfiles to be
-    //  read. We need some kind of solution to automatically load when one of their lockfiles is accessed.
-    sunneed_client_get_device_handle("camera", &handle);
 }
 
 void
 on_unload() {
+    sunneed_client_disconnect();
 }
 
 int

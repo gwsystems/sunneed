@@ -15,10 +15,9 @@ get(void *args);
 extern double
 power_consumption(void *args);
 
-extern enum sunneed_device_type
-get_device_type_kind(void);
+extern enum sunneed_device_type device_type_kind;
 
-extern const void *
-get_device_type(void);
+extern void *
+get_device_type_data(void);
 
 #endif

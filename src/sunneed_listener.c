@@ -182,17 +182,25 @@ serve_generic_device_action(
 
 static int
 serve_open_file(
-        __attribute__((unused)) SunneedResponse *resp,
+        SunneedResponse *resp,
         void *sub_resp_buf,
         __attribute__((unused)) struct sunneed_tenant *tenant,
         OpenFileRequest *request) {
+    LOG_D("Got request to open file '%s'", request->path);
+
     OpenFileResponse *sub_resp = sub_resp_buf;
     *sub_resp = (OpenFileResponse)OPEN_FILE_RESPONSE__INIT;
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_OPEN_FILE;
+    resp->open_file = sub_resp;
 
     struct sunneed_device *locker;
     if ((locker = sunneed_device_file_locker(request->path)) != NULL) {
-         
         // TODO Wait for availability, perform power calcs, etc.
+        
+        char *dummypath = sunneed_device_get_dummy_file(request->path);
+        // TODO Free this
+        sub_resp->path = malloc(strlen(dummypath));
+        strncpy(sub_resp->path, dummypath, strlen(dummypath));
     }
 
     return 0;
