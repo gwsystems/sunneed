@@ -7,57 +7,96 @@ USAGE:
  
 static char child_stack[1048576];
 
-char executable[100]; //global path to executable
-char **args;
 
-//method used for debugging
-// static void print_nodename() {
-//   struct utsname utsname;
-//   uname(&utsname);
-//   printf("%s\n", utsname.nodename);
-// }
+char **args;
+char *tid;
+char data_dir[75];
+char new_mount_dir[75];
+char child_fs[75];//if we have more than 10^4 tenants 50 could be a problem for char amount 
+char old_dir[75];
+char ipc_dir[75];
+char child_home[75];
+char executable[100]; //global path to executable
+
+char hostname[25];
+int  hn_len;
+
 
 //wrapper function for pivot_root system call:
 int pivot_root(char *a, char *b){
-    if(mount(a,a,"bind", MS_BIND | MS_REC,"") < 0){
-        printf("error mounting in pivot_root\n");
-    }
-    if(mkdir(b,0755) < 0){
-        printf("error mkdir\n");
-    }
-//    printf("pivot setup good\n");
-
     return syscall(SYS_pivot_root,a,b);
 }
 
 int ns_config(){
     printf("Setting up new namespaces...\n");
-    //new mount ns:
-    if(unshare(CLONE_NEWNS) < 0){
-        printf("can't create new mount ns");
+    //mount rprivate to ensure fs is private to processes outside mount namespace
+    if(mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0){
+        printf("error mounting private\n");
     }
+    //umount proc because we need to mount new /proc for new PID namespace
     if(umount2("/proc", MNT_DETACH) < 0){
         printf("error unmounting /proc\n");
     }
 
+    //self binding creates mount point
+    if(mount(child_fs, child_fs,"bind", MS_BIND | MS_REC,"") < 0){
+        printf("error mounting in pivot_root\n");
+    }
+    if(mkdir(old_dir,0755) < 0){
+        printf("error mkdir: /.old/\n");
+    }
 
-    if(pivot_root("./tenroot","./tenroot/.old") < 0){
+
+    //bind shared home directory to save tenant working directory
+    if(mount(data_dir,data_dir,NULL,MS_BIND,NULL)){
+        perror("error binding /tmp/tenant_ipc");
+    }
+    if(mount(NULL,data_dir,NULL,MS_SHARED,NULL)){
+        perror("error marking shared mount");
+    }
+    if(mount(data_dir,child_home,NULL,MS_BIND,NULL)){
+        perror("error binding /tmp/tenant_ipc -> /tenroot/tmp/ipc");
+    }
+
+
+    //most important piece of function
+    //switches namespace's root / to child_fs
+    if(pivot_root(child_fs, old_dir) < 0){
         perror("error pivoting root");
     }
     
-    if(mount("tmpfs","/dev", "tmpfs", MS_NOSUID | MS_STRICTATIME, NULL) < 0){
+    //mounting important pieces of fs
+    if(mount("tmpfs","/tmp", "tmpfs", 0, NULL) < 0){ //create temporary fs for tmp to be mounted on
         printf("error mounting tmpfs\n");
     }
-    if(mount("proc","/proc", "proc",0,NULL) < 0){
+    if(mount("proc","/proc", "proc",0,NULL) < 0){//mount /proc to access PID namespace relevant info
         printf("error mounting /proc\n");
     }
-    if(mount("t","/sys","sysfs", 0, NULL) < 0){
-        printf("erroor mounting 't'?\n");
+    if(mount("t","/sys","sysfs", 0, NULL) < 0){//mount /sys to have access to kernel abstractions
+        printf("error mounting /sys\n");
     }
 
-    chdir("/");
-    
 
+    //bind sunneed's tenant_ipc directory to a read only mount on tenants fs:
+    if(mount("/.old/tmp/tenant_ipc/","/.old/tmp/tenant_ipc/",NULL,MS_BIND,NULL)){
+        perror("error binding /tmp/tenant_ipc");
+    }
+    if(mount(NULL,"/.old/tmp/tenant_ipc/",NULL,MS_SHARED,NULL)){
+        perror("error marking shared mount");
+    }
+    if(mkdir("/tmp/ipc",0777) < 0){
+        perror("error mkdir: /tmp/ipc/\n");
+    }
+    if(mount("/.old/tmp/tenant_ipc/","/tmp/ipc",NULL,MS_BIND,NULL)){
+        perror("error binding /tmp/tenant_ipc -> /tenroot/tmp/ipc");
+    }
+    if(mount("/.old/tmp/tenant_ipc/","/tmp/ipc",NULL,MS_REMOUNT | MS_BIND | MS_RDONLY,NULL)){
+        perror("error remounting read-only");
+    }
+    
+    chdir("/");
+
+    // detatch from host fs
     if(umount2("/.old", MNT_DETACH) < 0){
         printf("error unmounting old\n");
     }
@@ -66,7 +105,7 @@ int ns_config(){
     }
 
     //set up uts ns
-    sethostname("tenant", 6);
+    sethostname(hostname, hn_len);
 
     return 0;
 }
@@ -122,7 +161,7 @@ int drop_caps(){
         || cap_set_proc(cap)) {
         fprintf(stderr, "failed: %m\n");
         if (cap) cap_free(cap);
-        return 1;
+        return -1;
     }
     cap_free(cap);
 
@@ -134,12 +173,15 @@ static int child_fn(){
     //isolation ns code:
     ns_config();
 
-    drop_caps();
+    if(drop_caps() != 0){
+        printf("failed dropping capabilities\n");
+        exit(1);
+    }
 
-    //seccomp bpf filter code:
-    /* set up the restricted environment */
+    
     printf("Setting seccomp syscall filter...\n");
-
+    //seccomp bpf filter code:
+    /* process entering the restricted environment */
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
         perror("Could not start seccomp:");
         exit(1);
@@ -153,32 +195,67 @@ static int child_fn(){
     return 0;
 }
 
+int build_paths(char *prog){
+    char tenants_fs[] = "/opt/isochamber/tenants_fs/";
+    char tenants_persist[] = "/opt/isochamber/tenants_persist/";
+
+    //build new_mount_dir path where child fs lies
+    strcpy(new_mount_dir,tenants_fs);
+    strcat(new_mount_dir,tid);
+    strcat(new_mount_dir,"/overlay");
+
+    //build path to tenants persistant data directory
+    strcpy(data_dir,tenants_persist);
+    strcat(data_dir,tid);
+    strcat(data_dir,"/home");
+
+    //create executable path w/ user input
+    strcpy(executable,"/bin/");
+    strcat(executable, prog);
+
+    //save mount dir to global child_fs var
+    int len = strlen(new_mount_dir);
+    memcpy(child_fs, new_mount_dir, len + 1);//save path name globally
+
+
+    //create name of 'old directory' which will be unmounted by tenant
+    memcpy(old_dir, child_fs, len + 1);
+    strcat(old_dir, "/.old");
+
+    //create ipc dir to mount shared on sunneed's ipc folder in /tmp/tenant_ipc
+    memcpy(ipc_dir, child_fs, len + 1);
+    strcat(ipc_dir, "/tmp/ipc");
+
+    //this directory is where tenant data persists
+    memcpy(child_home, child_fs, len + 1); 
+    strcat(child_home, "/home");
+
+    //create hostname for tenant (for UTS NS)
+    hostname[0] = 't';
+    strcat(hostname,tid);
+    hn_len = strlen(hostname);
+}
 
 int main(int argc, char **argv) {
     int n = (sizeof argv) / (sizeof *argv);
-    if(argc <= 1){
-        printf("no executable specified - exiting\n");
+    if(argc <= 2){
+        printf("USAGE: sudo ./handoff <tid> <prog>   - exiting\n");
         return 0;
-    }else if(argc >= 2){
-        args = argv + 1;
+    }else if(argc > 2){
+        args = argv + 2;
     }
 
-    // printf("Original UTS namespace nodename: ");
-    // print_nodename();
+    tid = argv[1];
+    
+    build_paths(argv[2]);
 
-    // printf("Original PID: %d\n", getpid());
-
-    // system("mount --make-rprivate /");//make root mount private
+    //host process mounts fs with rprivate for its own safety from untrusted tenant
     if(mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0){
         printf("error mounting private\n");
     }
 
-    //create executable path w/ user input
-    strcpy(executable,"/bin/");
-    strcat(executable, argv[1]);
-
     //clone child into new namespaces and run @ child_fn()
-    pid_t child_pid = clone(child_fn, child_stack+1048576, CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWUTS | SIGCHLD, NULL);
+    pid_t child_pid = clone(child_fn, child_stack+1048576, CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD, NULL);
 
     if(child_pid < 0){
         printf("clone failed\n");
@@ -186,6 +263,7 @@ int main(int argc, char **argv) {
 
     sleep(1);
 
+    //find child exit status
     int child_status;
     waitpid(child_pid, &child_status, 0);
     int exit_status = WIFEXITED(child_status); //nonzero = normal exit
@@ -193,7 +271,12 @@ int main(int argc, char **argv) {
     
     printf("\n\nback to handoff... \n");
 
-    printf("child_exit_status: %d\n",exit_status);
+    printf("child_exit_status: ");
+    if(exit_status == 0){
+        printf("failed\n");
+    }else{
+        printf("successful\n");
+    }
 
     return 0;
 }

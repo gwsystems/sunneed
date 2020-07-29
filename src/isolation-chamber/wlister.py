@@ -3,6 +3,7 @@ import os
 import sys
 from time import sleep
 import fileinput as fi
+from handoff import mount_tenant,umount_tenant
 
 def printR(skk): print("\033[91m {}\033[00m" .format(skk)) 
 def printG(skk): print("\033[92m {}\033[00m" .format(skk)) 
@@ -34,12 +35,19 @@ def check_call(syscall):
 			printR("-- Warning! The " + syscall + " system call is potentially dangerous!")
 
 def check_prog(obj):
+	global tid
 	printY("--- Compiling and strace-ing program...\n")
 	os.system('make clean && make debug')
 	print()
-	os.system('(sudo strace -o procdump -f ./handoff ' + obj + ") &")
+
+	c_path = mount_tenant(tid)
+
+
+	os.system('(sudo strace -o procdump -f ./handoff '+tid+' '+ obj + ") &")
 
 	sleep(5)
+
+	umount_tenant(c_path,tid)
 
 	printY("--- Attempt to killall strace processes incase they are hung")
 	os.system('sudo killall -9 strace')
@@ -74,21 +82,19 @@ def check_prog(obj):
 
 
 
+if(len(sys.argv) < 3 ):
+	printR("--- ERROR - Usage: sudo python3 wlister.py <tid> <program name>")
+	sys.exit(1)
+
+tid      = sys.argv[1]
+obj_name = sys.argv[2]
 
 
-# print('n arguments: ', len(sys.argv))
-# print('args: ', sys.argv[1])
-if(len(sys.argv) < 2 ):
-	printR("--- ERROR - Usage: python3 wlister.py <program name>")
-	sys.exit(0)
-
-obj_name = sys.argv[1]
-# print(obj_name)
 
 blkfile = open("default_docker_blacklist.txt", "r")
 blklist = blkfile.readlines()
 
 
-os.system('sudo rm -f filter.gen.h && echo //--EndOfAllows-- > filter.gen.h')
-os.system('sudo cp ' + obj_name + ' tenroot/bin/' + obj_name)
+# os.system('rm -f filter.gen.h && echo //--EndOfAllows-- > filter.gen.h')
+os.system('cp ' + obj_name + ' tenroot/bin/' + obj_name)
 check_prog(obj_name)
