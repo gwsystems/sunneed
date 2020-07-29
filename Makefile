@@ -121,7 +121,7 @@ overlay: clientlib
 	$(CC) $(CFLAGS) -g -fPIC -shared $(overlay_sources) -o $(overlay_obj) $(cflags_deps)
 	$(CC) $(CFLAGS) -g -fPIC -shared -DTESTING $(overlay_sources) -o $(overlay_testing_obj) $(cflags_deps)
 	@echo Generate overlay runscript at $(overlay_runner)
-	@echo "#!/usr/bin/env bash\nLD_PRELOAD=$(abspath $(overlay_testing_obj)) "'$$1' > $(overlay_runner)
+	@echo "#!/usr/bin/env bash\n$(overlay_runscript_content)" > $(overlay_runner)
 	chmod +x $(overlay_runner)
 
 clean:
@@ -172,3 +172,9 @@ define section_title
 	@echo
 	$(eval section_count := $(shell expr $(section_count) + 1))
 endef
+
+ifeq ($(SUNNEED_BUILD_TYPE),devel)
+	overlay_runscript_content := "gdb --args env LD_PRELOAD=$(abspath $(overlay_testing_obj)) $$\@"
+else
+	overlay_runscript_content := "LD_PRELOAD=$(abspath $(overlay_obj)) $$@"
+endif
