@@ -260,8 +260,6 @@ sunneed_listen(void) {
         SunneedResponse resp = SUNNEED_RESPONSE__INIT;
         int ret = -1;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wswitch"
         switch (request->message_type_case) {
             case SUNNEED_REQUEST__MESSAGE_TYPE__NOT_SET:
                 LOG_W("Request from pipe %d has no message type set.", pipe.id);
@@ -282,8 +280,11 @@ sunneed_listen(void) {
             case SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE:
                 ret = serve_open_file(&resp, sub_resp_buf, tenant, request->open_file);
                 break;
+            default:
+                LOG_W("Received request with invalid type %d", request->message_type_case);
+                ret = -1;
+                break;
         }
-#pragma GCC diagnostic pop
 
         resp.status = ret;
 
