@@ -194,7 +194,7 @@ TEST_load_device(void) {
     int res;
 
     struct sunneed_device dev;  
-    if ((res = load_device("build/device/test.so", "test", 0, &dev)) != 0)
+    if ((res = load_device("build/device/test_file_lock.so", "test", 0, &dev)) != 0)
         return 1;
 
     if (dev.handle != 0)
@@ -202,6 +202,9 @@ TEST_load_device(void) {
     
     if (strcmp(dev.identifier, "test") != 0)
         return 3;
+
+    if (strcmp(dev.device_type_data.file_lock->paths[0], TEST_FILE_LOCK_FILE_PATH) != 0)
+        return 4;
 
     return 0;
 }
