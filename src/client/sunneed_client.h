@@ -31,9 +31,6 @@ typedef unsigned int sunneed_device_handle_t;
 int
 sunneed_client_init(const char *name);
 
-int
-sunneed_client_get_device_handle(const char *identifier, sunneed_device_handle_t *handle);
-
 const char *
 sunneed_client_check_locked_file(const char *pathname);
 

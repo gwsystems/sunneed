@@ -1,18 +1,12 @@
 #include "sunneed_device.h"
 
 struct sunneed_device devices[MAX_DEVICES];
+// TODO FD's make no sense here!
 struct {
     int fd;
     char pathname[64]; // TODO Don't hardcode.
     char dummypath[64];
 } dummy_fd_map[MAX_LOCKED_FILES] = { { -1, { '\0' }, { '\0' } } };
-
-bool
-sunneed_device_is_linked(struct sunneed_device *device) {
-    if (device->get == NULL || device->power_consumption == NULL)
-        return false;
-    return true;
-}
 
 /** 
  * Check for devices locking the specified pathname.
@@ -22,14 +16,17 @@ struct sunneed_device *
 sunneed_device_file_locker(const char *pathname) {
     for (int i = 0; i < MAX_DEVICES; i++) {
         // Find devices of type FILE_LOCK.
-        if (!devices[i].is_linked || devices[i].device_type_kind != DEVICE_TYPE_FILE_LOCK)
+        if (!devices[i].is_ready || devices[i].device_type_kind != DEVICE_TYPE_FILE_LOCK)
             continue;
 
-        LOG_D("Comparing %s to %s", pathname, devices[i].device_type_data.file_lock.files);
-        
-        // TODO Treat locked filepaths as a list of paths.
-        if (!strncmp(pathname, devices[i].device_type_data.file_lock.files, strlen(pathname))) {
-            return &devices[i];
+        // Compare to each locked file specified by the device.
+        for (unsigned int s = 0; s < devices[i].device_type_data.file_lock->len; s++) {
+            LOG_D("Comparing %s to %s", pathname, devices[i].device_type_data.file_lock->paths[s]);
+            
+            // TODO Treat locked filepaths as a list of paths.
+            if (!strncmp(pathname, devices[i].device_type_data.file_lock->paths[s], strlen(pathname))) {
+                return &devices[i];
+            }
         }
     }
 

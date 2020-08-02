@@ -1,24 +1,15 @@
-/* An example of a broken `sunneed` device -- it does not define `power_consumption`. */
+// An example of a broken device -- it does not define a `get_device_type_data`.
 
 #include "../shared/sunneed_device_interface.h"
 #include "../shared/sunneed_testing.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#define UNUSED(X) (void)(X)
-
 int
 init(void) {
     return 0;
 }
 
-void *
-get(void *args) {
-    UNUSED(args);
-    return TEST_DEVICE_OUTPUT;
-}
+enum sunneed_device_type device_type_kind = DEVICE_TYPE_FILE_LOCK;
 
-unsigned int
-device_flags(void) {
-    return SUNNEED_DEVICE_FLAG_SILENT_FAIL;
-}
+unsigned int device_flags = SUNNEED_DEVICE_FLAG_SILENT_FAIL;

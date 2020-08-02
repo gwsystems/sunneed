@@ -6,16 +6,19 @@
  */
 static int
 assign_device_type_data_field(struct sunneed_device *dev, void *data) {
+    // We're gonna dereference a void pointer. Try not to worry about it.
     switch (dev->device_type_kind) {
         case DEVICE_TYPE_FILE_LOCK: ;
-            // This is just to get the size of the `files` field. 
-            size_t fieldsize = sizeof(((struct sunneed_device_type_file_lock *)0)->files);
-            if (sizeof(*data) > fieldsize) {
-                LOG_E("Data for device '%s' is too large", dev->identifier);
-                return 1;
+            // Copy each string from the data's `paths`.
+            struct sunneed_device_type_file_lock *file_lock = (struct sunneed_device_type_file_lock *)data;
+            dev->device_type_data.file_lock = (struct sunneed_device_type_file_lock *)malloc(sizeof(struct sunneed_device_type_file_lock) + sizeof(char *) * file_lock->len);
+            for (unsigned int i = 0; i < file_lock->len; i++) { 
+                // Copy the string, adding a null terminator.
+                size_t len = strlen(file_lock->paths[i]);
+                dev->device_type_data.file_lock->paths[i] = malloc(len + 1);
+                strncpy(dev->device_type_data.file_lock->paths[i], file_lock->paths[i], len);
+                dev->device_type_data.file_lock->paths[i][len] = '\0';
             }
-
-            strncpy(dev->device_type_data.file_lock.files, ((struct sunneed_device_type_file_lock *)data)->files, fieldsize);
             break;
 
         default:
@@ -37,6 +40,10 @@ is_object_file(char *path) {
 
 static int
 load_device(const char *device_path, const char *device_name, int handle, struct sunneed_device *dev) {
+    int retval = 0;
+
+    void *sym;
+
     // Load the object.
     void *dlhandle = dlopen(device_path, RTLD_LAZY | RTLD_LOCAL);
     if (!dlhandle) {
@@ -44,49 +51,96 @@ load_device(const char *device_path, const char *device_name, int handle, struct
         return 1;
     }
 
-    unsigned int (*flags)(void) = dlsym(dlhandle, "device_flags");
+    sym = dlsym(dlhandle, "device_flags");
+    if (!sym) {
+        LOG_E("Failed to load device flags: %s", dlerror()); 
+        retval = 1;
+        goto end;
+    }
+    unsigned int flags = *(unsigned int *)sym;
 
+    // Set up device flags.
     bool silent_fail = false;
     if (flags) {
-        silent_fail = flags() & SUNNEED_DEVICE_FLAG_SILENT_FAIL;      
+        silent_fail = flags & SUNNEED_DEVICE_FLAG_SILENT_FAIL;      
     }
 
-    // Initialize the device instance.
-    bool err = false;
+    char *identifier = malloc(DEVICE_IDENTIFIER_LEN);
+    if (!identifier) {
+        if (!silent_fail) LOG_E("Failed to allocate memory for device name.");
+        retval = 1;
+        goto end;
+    }
+
+    sym = dlsym(dlhandle, "device_type_kind");
+    if (!sym) {
+        if (!silent_fail) LOG_E("Getting `device_type_kind` failed: %s", dlerror());
+        retval = 1;
+        goto end;
+    }
+    enum sunneed_device_type kind = *(enum sunneed_device_type *)sym;
+    
+    // Write to struct.
     *dev = (struct sunneed_device) {
-            .dlhandle = dlhandle,
+            .is_ready = false,
             .handle = handle,
-            .identifier = malloc(DEVICE_PATH_LEN),
-            .get = dlsym(dlhandle, "get"),
-            .power_consumption = dlsym(dlhandle, "power_consumption"),
-            .is_linked = false
+            .identifier = identifier,
+            .device_type_kind = kind
     };
-    strncpy(dev->identifier, device_name, strlen(device_name));
+    strncpy(dev->identifier, device_name, DEVICE_IDENTIFIER_LEN);
+    dev->identifier[DEVICE_IDENTIFIER_LEN - 1] = '\0';
+
+    sym = dlsym(dlhandle, "init");
+    if (!sym) {
+        if (!silent_fail) LOG_E("Getting `init` failed: %s", dlerror());
+        retval = 1;
+        goto end;
+    }
+    int (*init)(void) = (int (*)(void))sym;
+
+    // Call `init`, failing on nonzero.
+    int init_val = init();
+    if (init_val != 0) {
+        if (!silent_fail && init_val > 0) LOG_E("`init` failed with %d", init_val);
+        retval = 1;
+        goto end;
+    } 
 
     // Set up device type data.
-    void *kindsym = dlsym(dlhandle, "device_type_kind");
-    if (kindsym) {
-        dev->device_type_kind = *(enum sunneed_device_type *)kindsym;
-
-        void *(*data_fn)(void) = dlsym(dlhandle, "get_device_type_data");
-        if (data_fn) {
-            void *data = data_fn();
-            if (assign_device_type_data_field(dev, data))
-                err = true;
-        } else err = true;
-    } else err = true;
-
-    // TODO Use gotos for handling different kinds of errors.
-    // Check for errors during loading.
-    if (!sunneed_device_is_linked(dev) || err) {
-        if (!silent_fail)
-            LOG_E("Error linking device '%s': %s", device_name, dlerror());
-        return 1;
+    sym = dlsym(dlhandle, "get_device_type_data");
+    if (!sym) {
+        if (!silent_fail) LOG_E("Getting `get_device_type_data` failed: %s", dlerror());
+        retval = 1;
+        goto end;
     }
 
-    dev->is_linked = true;
+    // Obtain the pointer to the device type data.
+    void *data = ((void *(*)(void))sym)();
+    if (!data) {
+        if (!silent_fail) LOG_E("No device type data returned!");
+        retval = 1;
+        goto end;
+    }
 
-    return 0;
+    // Write that data to the appropriate union field.
+    if (assign_device_type_data_field(dev, data)) {
+        if (!silent_fail) LOG_E("Failed to assign to device type data field.");
+        retval = 1;
+        goto end;
+    }
+
+    // Hooray!
+    dev->is_ready = true;
+
+end:
+    dlclose(dlhandle);
+
+    // Clean up if error.
+    if (retval != 0) {
+        if (identifier) free(identifier);
+    }
+
+    return retval;
 }
 
 /* Loads all objects in the device directory as sunneed devices, storing them in the `target` array. */
@@ -121,7 +175,7 @@ sunneed_load_devices(struct sunneed_device *target) {
             if ((res = load_device(device_path, device_name, device_count++, target)) != 0)
                 continue;
 
-            LOG_I("Loaded device \"%s\"", device_name);
+            LOG_I("Loaded device '%s'", device_name);
 
             target++;
         }
@@ -148,12 +202,6 @@ TEST_load_device(void) {
     
     if (strcmp(dev.identifier, "test") != 0)
         return 3;
-
-    if (dev.power_consumption(NULL) != 0)
-        return 4;
-
-    if (strcmp(dev.get(NULL), TEST_DEVICE_OUTPUT) != 0)
-        return 5;
 
     return 0;
 }

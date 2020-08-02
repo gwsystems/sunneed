@@ -8,6 +8,9 @@ enum sunneed_device_type {
 };
 
 struct sunneed_device_type_file_lock {
-    // Semicolon-separated list of files to lock on.
-    char files[1024];
+    /** The number of elements in `paths`. */
+    unsigned int len;
+
+    /** An array of strings; these are the paths to lock. */
+    char *paths[];
 };

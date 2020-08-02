@@ -75,45 +75,6 @@ sunneed_client_init(const char *name) {
     return 0;
 }
 
-int
-sunneed_client_get_device_handle(const char *name, sunneed_device_handle_t *handle) {
-    // TODO Check socket opened.
-
-    SunneedRequest req = SUNNEED_REQUEST__INIT;
-    req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_GET_DEVICE_HANDLE;
-    GetDeviceHandleRequest handle_req = GET_DEVICE_HANDLE_REQUEST__INIT;
-    handle_req.name = malloc(strlen(name));
-    if (!handle_req.name) {
-        FATAL(-1, "failed to allocate memory for client name");
-    }
-    strcpy(handle_req.name, name);
-    req.get_device_handle = &handle_req;
-
-    PACK_AND_SEND(req);
-    free(handle_req.name);
-
-    nng_msg *reply;
-
-    SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
-
-    SunneedResponse *resp = sunneed_response__unpack(NULL, nng_msg_len(reply), nng_msg_body(reply));
-
-    if (resp->status != 0) {
-        return resp->status;
-    } else if (resp->message_type_case != SUNNEED_RESPONSE__MESSAGE_TYPE_GET_DEVICE_HANDLE) {
-        FATAL(-1, "incorrect message type received");
-    }
-
-    GetDeviceHandleResponse *handle_resp = resp->get_device_handle;
-    printf("Handle is %d\n", handle_resp->device_handle);
-    *handle = handle_resp->device_handle;
-
-    nng_msg_free(reply);
-    sunneed_response__free_unpacked(resp, NULL);
-
-    return 0;
-}
-
 const char *
 sunneed_client_check_locked_file(const char *pathname) {
     // TODO Check socket opened.

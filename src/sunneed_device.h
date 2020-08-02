@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEVICE_IDENTIFIER_LEN 32
+
 #define MAX_DEVICES 64
 
 #define MAX_LOCKED_FILES 1024
@@ -18,21 +20,23 @@
 #define SUNNEED_DEVICE_FLAG_SILENT_FAIL (1 << 0)
 
 struct sunneed_device {
-    void *dlhandle;
-    int handle;
-    char *identifier;
-    void *(*get)(void *);
-    double (*power_consumption)(void *);
-    bool is_linked;
+    /** Set to true when all data has been prepared in this struct. */
+    bool is_ready;
 
+    /** Numerical identifier of the device. */
+    int handle;
+    
+    /** Human-readable name for the device (e.g. "camera"). */
+    char *identifier;
+
+    /** Specifices the union member to write to in `device_type_data`. */
     enum sunneed_device_type device_type_kind;
+
+    /** One of many different structs representing arbitrary data of the device interface. */
     union {
-        struct sunneed_device_type_file_lock file_lock;
+        struct sunneed_device_type_file_lock *file_lock;
     } device_type_data;
 };
-
-bool
-sunneed_device_is_linked(struct sunneed_device *device);
 
 struct sunneed_device *
 sunneed_device_file_locker(const char *pathname);

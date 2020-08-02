@@ -6,10 +6,8 @@ syntax = "proto3";
 message SunneedRequest {
     oneof message_type {
         RegisterClientRequest register_client = 1;
-        GetDeviceHandleRequest get_device_handle = 2;
-        GenericDeviceActionRequest device_action = 3;
-        UnregisterClientRequest unregister_client = 4;
-        OpenFileRequest open_file = 5;
+        UnregisterClientRequest unregister_client = 2;
+        OpenFileRequest open_file = 3;
     }
 }
 
@@ -18,15 +16,6 @@ message RegisterClientRequest {
 }
 
 message UnregisterClientRequest {}
-
-message GetDeviceHandleRequest {
-    string name = 1;
-}
-
-message GenericDeviceActionRequest {
-    int32 device_handle = 1;
-    bytes data = 2;
-}
 
 message OpenFileRequest {
     string path = 1;
@@ -39,20 +28,14 @@ message SunneedResponse {
     int32 status = 1;
     oneof message_type {
         GenericResponse generic = 2;
-        GetDeviceHandleResponse get_device_handle = 3;
-        DeviceResponse device = 4;
-        OpenFileResponse open_file = 5;
+        DeviceResponse device = 3;
+        OpenFileResponse open_file = 4;
     }
 }
 
 message GenericResponse {
     bytes data = 1;
 }
-
-// TODO Deprecated 
-message GetDeviceHandleResponse {
-    int32 device_handle = 1;
-};
 
 message OpenFileResponse {
     string path = 1;

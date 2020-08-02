@@ -126,61 +126,6 @@ serve_unregister_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe
 }
 
 static int
-serve_get_handle(
-        SunneedResponse *resp,
-        void *sub_resp_buf,
-        __attribute__((unused)) struct sunneed_tenant *tenant,
-        GetDeviceHandleRequest *request) {
-    struct sunneed_device *device = NULL;
-    
-    // Find the device with the name matching the request.
-    for (unsigned int device_index = 0; device_index < MAX_DEVICES; device_index++) {
-        if (!devices[device_index].is_linked)
-            continue;
-
-        if (strncmp(devices[device_index].identifier, request->name, strlen(devices[device_index].identifier)) == 0) {
-            device = &devices[device_index]; 
-            break;
-        }
-    }
-
-    if (!device) {
-        LOG_E("Unable to find requested device '%s'", request->name);
-        return 1;
-    }
-
-    // Respond with the handle.
-    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GET_DEVICE_HANDLE;
-    GetDeviceHandleResponse *sub_resp = sub_resp_buf;
-    *sub_resp = (GetDeviceHandleResponse)GET_DEVICE_HANDLE_RESPONSE__INIT;
-    sub_resp->device_handle = device->handle;
-    resp->get_device_handle = sub_resp;
-
-    return 0;
-}
-
-static int
-serve_generic_device_action(
-        __attribute__((unused)) SunneedResponse *resp,
-        void *sub_resp_buf,
-        __attribute__((unused)) struct sunneed_tenant *tenant,
-        GenericDeviceActionRequest *request) {
-    // TODO SAFETY (DON'T JUST ACCEPT ANY HANDLE)!!!!!
-    if (!devices[request->device_handle].is_linked) {
-        LOG_W("Action request sent for device %d, which is not linked", request->device_handle);
-        return 1;
-    }
-
-    LOG_I("Calling '%s' function 'get'", devices[request->device_handle].identifier);
-    devices[request->device_handle].get(request->data.data);
-
-    GenericResponse *sub_resp = sub_resp_buf;
-    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
-
-    return 0;
-}
-
-static int
 serve_open_file(
         SunneedResponse *resp,
         void *sub_resp_buf,
@@ -270,12 +215,6 @@ sunneed_listen(void) {
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_UNREGISTER_CLIENT:
                 ret = serve_unregister_client(&resp, sub_resp_buf, pipe, tenant);
-                break;
-            case SUNNEED_REQUEST__MESSAGE_TYPE_GET_DEVICE_HANDLE:
-                ret = serve_get_handle(&resp, sub_resp_buf, tenant, request->get_device_handle);
-                break;
-            case SUNNEED_REQUEST__MESSAGE_TYPE_DEVICE_ACTION:
-                ret = serve_generic_device_action(&resp, sub_resp_buf, tenant, request->device_action);
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE:
                 ret = serve_open_file(&resp, sub_resp_buf, tenant, request->open_file);

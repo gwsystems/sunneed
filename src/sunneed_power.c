@@ -98,8 +98,10 @@ sunneed_quantum_end(void) {
             // This is a CPU usage digest.
             // TODO Check CPU usage lol.
             power_consumed[ev->ev.tenant->id] += 0;
-        } else
-            power_consumed[ev->ev.tenant->id] += ev->ev.device->power_consumption(ev->ev.args);
+        } else {
+            // TODO Get power from event.
+            power_consumed[ev->ev.tenant->id] += 0;
+        }
         ev = ev->next;
     }
 
