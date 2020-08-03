@@ -8,7 +8,7 @@ sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_p
 
 #ifdef TESTING
 
-#include "sunneed_test.h"
+#include "sunneed_runtime_test_collection.h"
 
 int (*runtime_tests[])(void) = RUNTIME_TESTS;
 
@@ -28,7 +28,13 @@ run_testcase(unsigned int testcase) {
         return 1;
     }
 
-    return runtime_tests[testcase]();
+    int ret = runtime_tests[testcase]();
+    if (ret != 0) {
+        fprintf(stderr, "Failure: %s (%d)\n", sunneed_runtime_test_error, ret);
+        return ret;
+    }
+
+    return 0;
 }
 #endif
 

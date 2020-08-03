@@ -189,19 +189,19 @@ end:
 
 #ifdef TESTING
 
-int 
+int
 TEST_load_device(void) {
     int res;
 
     struct sunneed_device dev;  
     if ((res = load_device("build/device/test_file_lock.so", "test", 0, &dev)) != 0)
-        return 1;
+        return set_sunneed_error(1, "`load_device` failed: %d", res);
 
     if (dev.handle != 0)
-        return 2;
+        return set_sunneed_error(2, "invalid handle %d", dev.handle);
     
-    if (strcmp(dev.identifier, "test") != 0)
-        return 3;
+    if (strcmp(dev.identifier, "foo") != 0)
+        return set_sunneed_error(3, "incorrect identifier %s", dev.identifier);
 
     if (strcmp(dev.device_type_data.file_lock->paths[0], TEST_FILE_LOCK_FILE_PATH) != 0)
         return 4;

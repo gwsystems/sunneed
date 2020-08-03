@@ -1,3 +1,6 @@
+#ifndef _SUNNEED_LOADER_H_
+#define _SUNNEED_LOADER_H_
+
 #include <dirent.h>
 #include <dlfcn.h>
 #include <stdlib.h>
@@ -15,6 +18,7 @@ sunneed_load_devices(struct sunneed_device *target);
 #ifdef TESTING
 
 #include "shared/sunneed_testing.h"
+#include "sunneed_test.h"
 
 int TEST_load_device(void);
 int TEST_load_broken_device(void);
@@ -22,5 +26,7 @@ int TEST_load_broken_device(void);
 #define SUNNEED_RUNTIME_TESTS_LOADER \
     TEST_load_device, \
     TEST_load_broken_device
+
+#endif
 
 #endif
