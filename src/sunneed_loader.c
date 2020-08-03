@@ -200,11 +200,11 @@ TEST_load_device(void) {
     if (dev.handle != 0)
         return set_sunneed_error(2, "invalid handle %d", dev.handle);
     
-    if (strcmp(dev.identifier, "foo") != 0)
-        return set_sunneed_error(3, "incorrect identifier %s", dev.identifier);
+    if (strcmp(dev.identifier, "test") != 0)
+        return set_sunneed_error(3, "incorrect identifier '%s'", dev.identifier);
 
     if (strcmp(dev.device_type_data.file_lock->paths[0], TEST_FILE_LOCK_FILE_PATH) != 0)
-        return 4;
+        return set_sunneed_error(4, "wrong file lock path '%s'", dev.device_type_data.file_lock->paths[0]);
 
     return 0;
 }
@@ -216,7 +216,7 @@ TEST_load_broken_device(void) {
     struct sunneed_device dev;  
     if ((res = load_device("build/device/test_broken.so", "test", 0, &dev)) == 0)
         // Should fail.
-        return 1;
+        return set_sunneed_error(1, "loading broken device didn't fail");
 
     return 0;
 }
