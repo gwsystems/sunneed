@@ -12,6 +12,7 @@ assign_device_type_data_field(struct sunneed_device *dev, void *data) {
             // Copy each string from the data's `paths`.
             struct sunneed_device_type_file_lock *file_lock = (struct sunneed_device_type_file_lock *)data;
             dev->device_type_data.file_lock = (struct sunneed_device_type_file_lock *)malloc(sizeof(struct sunneed_device_type_file_lock) + sizeof(char *) * file_lock->len);
+            dev->device_type_data.file_lock->len = file_lock->len;
             for (unsigned int i = 0; i < file_lock->len; i++) { 
                 // Copy the string, adding a null terminator.
                 size_t len = strlen(file_lock->paths[i]);
@@ -205,6 +206,9 @@ TEST_load_device(void) {
 
     if (strcmp(dev.device_type_data.file_lock->paths[0], TEST_FILE_LOCK_FILE_PATH) != 0)
         return set_sunneed_error(4, "wrong file lock path '%s'", dev.device_type_data.file_lock->paths[0]);
+
+    if (dev.device_type_data.file_lock->len != 1)
+        return set_sunneed_error(5, "wrong number of locked files %d", dev.device_type_data.file_lock->len);
 
     return 0;
 }
