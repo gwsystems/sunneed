@@ -17,6 +17,8 @@
 
 #define MAX_LOCKED_FILES 1024
 
+#define DUMMY_FILE_PATH_LEN 128
+
 #define SUNNEED_DEVICE_FLAG_SILENT_FAIL (1 << 0)
 
 struct sunneed_device {

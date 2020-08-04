@@ -8,8 +8,6 @@
 // Imagine using non-"power of 2" numbers lmao.
 #define SUNNEED_RUNTIME_TEST_ERROR_DESC_BUFFER_LENGTH 1024
 
-extern char sunneed_runtime_test_error[];
-
 /**
  * A convenience method for testing.
  * Writes the given message to the error description buffer and returns the given value.

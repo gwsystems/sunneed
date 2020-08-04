@@ -1,12 +1,11 @@
 #include "sunneed_device.h"
 
-struct sunneed_device devices[MAX_DEVICES];
-// TODO FD's make no sense here!
+struct sunneed_device devices[MAX_DEVICES] = { { .is_ready = false } };
 struct {
-    int fd;
-    char pathname[64]; // TODO Don't hardcode.
-    char dummypath[64];
-} dummy_fd_map[MAX_LOCKED_FILES] = { { -1, { '\0' }, { '\0' } } };
+    bool init;
+    char pathname[DUMMY_FILE_PATH_LEN]; // TODO Don't hardcode.
+    char dummypath[DUMMY_FILE_PATH_LEN];
+} dummy_map[MAX_LOCKED_FILES] = { { false, { '\0' }, { '\0' } } };
 
 /** 
  * Check for devices locking the specified pathname.
@@ -37,12 +36,12 @@ char *
 sunneed_device_get_dummy_file(const char *orig_path) {
     // Try to find the already-created locked file with that name.
     for (int i = 0; i < MAX_LOCKED_FILES; i++) {
-        // TODO Hashmap or something.
-        if (dummy_fd_map[i].fd != -1)
-            if (strncmp(orig_path, dummy_fd_map[i].pathname, sizeof(dummy_fd_map[i].pathname)) == 0)
-                return dummy_fd_map[i].dummypath;
+        if (dummy_map[i].init)
+            if (strncmp(orig_path, dummy_map[i].pathname, sizeof(dummy_map[i].pathname)) == 0)
+                return dummy_map[i].dummypath;
     }
     
+    // We haven't made a dummy file for this yet.
     char template[] = "locked_XXXXXX";
     int dummy;
     if ((dummy = mkstemp(template)) == -1) {
@@ -53,13 +52,15 @@ sunneed_device_get_dummy_file(const char *orig_path) {
     LOG_I("Created dummy file '%s'", template);
     
     for (int i = 0; i < MAX_LOCKED_FILES; i++) {
-        if (dummy_fd_map[i].fd == -1) {
-            dummy_fd_map[i].fd = dummy;            
-            strncpy(dummy_fd_map[i].pathname, orig_path, sizeof(dummy_fd_map[i].pathname));
-            strncpy(dummy_fd_map[i].dummypath, template, sizeof(dummy_fd_map[i].dummypath));
-            return dummy_fd_map[i].dummypath;
+        if (!dummy_map[i].init) {
+            dummy_map[i].init = dummy;
+            strncpy(dummy_map[i].pathname, orig_path, DUMMY_FILE_PATH_LEN);
+            strncpy(dummy_map[i].dummypath, template, DUMMY_FILE_PATH_LEN);
+            return dummy_map[i].dummypath;
         }
     }
 
+    // Out of entires in dummy file table.
+    LOG_E("Cannot create dummy file mapping for '%s'", orig_path);
     return NULL;
 }
