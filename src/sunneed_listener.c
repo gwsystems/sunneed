@@ -145,7 +145,10 @@ serve_open_file(
         char *dummypath = sunneed_device_get_dummy_file(request->path);
         // TODO Free this
         sub_resp->path = malloc(strlen(dummypath));
-        strncpy(sub_resp->path, dummypath, strlen(dummypath));
+        strncpy(sub_resp->path, dummypath, strlen(dummypath) + 1);
+    } else {
+        // They requested a non-dummy file.
+        return 1;
     }
 
     return 0;
@@ -191,6 +194,11 @@ sunneed_listen(void) {
 
         // Get contents of message.
         SunneedRequest *request = sunneed_request__unpack(NULL, nng_msg_len(msg), nng_msg_body(msg));
+
+        if (request == NULL) {
+            LOG_W("Received null request from %d", pipe.id);
+            goto end;
+        }
 
         struct sunneed_tenant *tenant = NULL;
 
