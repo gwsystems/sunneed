@@ -193,7 +193,10 @@ sunneed_listen(void) {
         nng_pipe pipe = nng_msg_get_pipe(msg);
 
         // Get contents of message.
-        SunneedRequest *request = sunneed_request__unpack(NULL, nng_msg_len(msg), nng_msg_body(msg));
+        size_t msg_len = nng_msg_len(msg);
+        if ((msg_len / 2) % 2 == 1)
+            msg_len++;
+        SunneedRequest *request = sunneed_request__unpack(NULL, msg_len, nng_msg_body(msg));
 
         if (request == NULL) {
             LOG_W("Received null request from %d", pipe.id);
