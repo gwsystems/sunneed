@@ -1,5 +1,23 @@
 #include "sunneed_loader.h"
 
+/* Convenience array containing pointers to all locked file paths. It is generated as devices are loaded. */
+const char *locked_file_paths[MAX_LOCKED_FILES] = { NULL };
+
+static void
+add_locked_file_path(const char *path) {
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        if (locked_file_paths[i] == NULL) {
+            LOG_I("Adding locked file path %d: '%s'", i, path);
+            locked_file_paths[i] = path;
+            return;
+        }
+    }
+
+    LOG_E("No space left in locked file paths array.");
+    // TODO Real exit function.
+    exit(1);
+}
+
 /** 
  * Assign to the `device_type_data` member of a device struct, choosing the correct union member based on what has been assigned
  * to `device_type_kind`.
@@ -19,6 +37,8 @@ assign_device_type_data_field(struct sunneed_device *dev, void *data) {
                 dev->device_type_data.file_lock->paths[i] = malloc(len + 1);
                 strncpy(dev->device_type_data.file_lock->paths[i], file_lock->paths[i], len);
                 dev->device_type_data.file_lock->paths[i][len] = '\0';
+
+                add_locked_file_path(dev->device_type_data.file_lock->paths[i]);
             }
             break;
 
@@ -181,6 +201,8 @@ sunneed_load_devices(struct sunneed_device *target) {
             target++;
         }
     }
+
+       
 
 end:
     closedir(dir);

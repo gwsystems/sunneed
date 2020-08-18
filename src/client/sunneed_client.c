@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+char *locked_paths[MAX_LOCKED_FILES] = { NULL };
+
 nng_socket sunneed_socket;
 
 static void
@@ -74,14 +76,20 @@ sunneed_client_init(const char *name) {
     free(register_req.name);
 
     // Check the response.
-    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_REGISTER_CLIENT);
+    for (size_t i = 0; i < resp->register_client->n_locked_paths; i++) {
+        locked_paths[i] = malloc(strlen(resp->register_client->locked_paths[i]) + 1);
+        strcpy(locked_paths[i], resp->register_client->locked_paths[i]);
+        printf("Registered locked path '%s'\n", locked_paths[i]);
+    }
     sunneed_response__free_unpacked(resp, NULL);
 
     return 0;
 }
 
-const char *
-sunneed_client_check_locked_file(const char *pathname) {
+/** Allocate a string containing the path of the dummy file corresponding to the given path. */
+char *
+sunneed_client_open_locked_file(const char *pathname) {
     // TODO Check socket opened.
 
     SunneedRequest req = SUNNEED_REQUEST__INIT;
@@ -97,9 +105,8 @@ sunneed_client_check_locked_file(const char *pathname) {
     send_request(&req);
     free(open_file_req.path);
 
-    // TODO Get the *list* of locked files when we register, and then check here instead of making IPC request for
-    //  each `open` call.
-
+    // TODO Handle request of a path that isn't locked.
+    
     SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_OPEN_FILE);
     if (resp == NULL) {
         // TODO Gotos
@@ -107,10 +114,26 @@ sunneed_client_check_locked_file(const char *pathname) {
     }
 
     printf("Opening dummy path '%s'\n", resp->open_file->path);
+    char *path = malloc(strlen(resp->open_file->path) + 1);
+    if (!path)
+        FATAL(-1, "unable to allocate path");
+    strcpy(path, resp->open_file->path);
 
     sunneed_response__free_unpacked(resp, NULL);
 
-    return 0;
+    return path;
+}
+
+int
+sunneed_client_check_locked_file(const char *pathname) {
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        if (locked_paths[i] == NULL)
+            return -1;
+        else if (strncmp(pathname, locked_paths[i], strlen(pathname)) == 0)
+            return i; 
+    }
+
+    return -1;
 }
 
 int

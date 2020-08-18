@@ -30,7 +30,12 @@ message SunneedResponse {
         GenericResponse generic = 2;
         DeviceResponse device = 3;
         OpenFileResponse open_file = 4;
+        RegisterClientResponse register_client = 5;
     }
+}
+
+message RegisterClientResponse {
+    repeated string locked_paths = 1;
 }
 
 message GenericResponse {

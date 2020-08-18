@@ -7,6 +7,9 @@
 #include <nng/protocol/reqrep0/rep.h>
 #include <nng/protocol/reqrep0/req.h>
 
+// TODO Share
+#define MAX_LOCKED_FILES 1024
+
 #define PACK_AND_SEND(req)                                          \
     {                                                               \
         nng_msg *msg;                                               \
@@ -31,7 +34,10 @@ typedef unsigned int sunneed_device_handle_t;
 int
 sunneed_client_init(const char *name);
 
-const char *
+char *
+sunneed_client_open_locked_file(const char *pathname);
+
+int
 sunneed_client_check_locked_file(const char *pathname);
 
 int

@@ -6,6 +6,7 @@
 
 extern struct sunneed_device devices[];
 extern struct sunneed_tenant tenants[];
+extern const char *locked_file_paths[];
 
 // Control flow:
 // When a new pipe connects, we use this struct to make a mapping of its pipe ID to a tenant. Then, when further
@@ -71,11 +72,10 @@ register_client(nng_pipe pipe) {
 //  pipes to sunneed open.
 static int
 serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe) {
-    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
-
-    GenericResponse *sub_resp = sub_resp_buf;
-    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
-    resp->generic = sub_resp;
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_REGISTER_CLIENT;
+    RegisterClientResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (RegisterClientResponse)REGISTER_CLIENT_RESPONSE__INIT;
+    resp->register_client = sub_resp;
 
     struct sunneed_tenant *tenant = NULL;
 
@@ -84,6 +84,14 @@ serve_register_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe) 
         LOG_W("Registration failed for pipe %d", pipe.id);
         return 1;
     }
+
+    // Construct the list of locked file paths to send to the client.
+    size_t locked_paths_len = 0;
+    for (locked_paths_len = 0; locked_file_paths[locked_paths_len] != NULL; locked_paths_len++) ;
+    sub_resp->n_locked_paths = locked_paths_len;
+    sub_resp->locked_paths = malloc(sizeof(char *) * sub_resp->n_locked_paths);
+    for (size_t i = 0; i < sub_resp->n_locked_paths; i++)
+        sub_resp->locked_paths[i] = (char *)locked_file_paths[i];
 
     LOG_D("Registered pipe %d with tenant %d", pipe.id, tenant->id);
 
