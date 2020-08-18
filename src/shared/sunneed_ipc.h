@@ -69,6 +69,11 @@ void (*_sunneed_nng_error_func)(const char *nng_call_name, int rv);
     }
 #endif
 
+#define SUNNEED_NNG_MSG_LEN_FIX(LEN_VAR) \
+    if ((LEN_VAR / 2) % 2 == 1) \
+        LEN_VAR++;
+
+
 /****
  * IPC helpers
  ***/

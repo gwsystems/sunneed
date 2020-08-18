@@ -10,10 +10,11 @@
 
 // Just to get the CAMERA_PATH.
 #include "../shared/sunneed_device_type.h"
+#include "../shared/sunneed_testing.h"
 
 int
 main(void) {
-    int fd = open(CAMERA_PATH, O_CREAT | O_RDWR, 0666);
+    int fd = open("/tmp/test", O_CREAT | O_RDWR, 0666);
     if (fd == -1) {
         fprintf(stderr, "Failed to open file\n");
         return -1;

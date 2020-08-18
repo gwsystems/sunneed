@@ -40,12 +40,12 @@ sunneed_client_init(const char *name) {
     SunneedRequest req = SUNNEED_REQUEST__INIT;
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT;
     RegisterClientRequest register_req = REGISTER_CLIENT_REQUEST__INIT;
-    register_req.name = malloc(strlen(name));
+    register_req.name = malloc(strlen(name) + 1);
     if (!register_req.name) {
         fprintf(stderr, "failed to allocate memory for client name\n");
         return -1;
     }
-    strcpy(register_req.name, name);
+    strncpy(register_req.name, name, strlen(name) + 1);
     req.register_client = &register_req;
 
     int req_len = sunneed_request__get_packed_size(&req);
@@ -82,11 +82,11 @@ sunneed_client_check_locked_file(const char *pathname) {
     SunneedRequest req = SUNNEED_REQUEST__INIT;
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE;
     OpenFileRequest open_file_req = OPEN_FILE_REQUEST__INIT;
-    open_file_req.path = malloc(strlen(pathname));
+    open_file_req.path = malloc(strlen(pathname) + 1);
     if (!open_file_req.path) {
         FATAL(-1, "failed to allocated memory for path");
     }
-    strncpy(open_file_req.path, pathname, strlen(pathname));
+    strncpy(open_file_req.path, pathname, strlen(pathname) + 1);
     req.open_file = &open_file_req;
 
     PACK_AND_SEND(req);
@@ -97,7 +97,10 @@ sunneed_client_check_locked_file(const char *pathname) {
     nng_msg *reply;
     SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
 
-    SunneedResponse *resp = sunneed_response__unpack(NULL, nng_msg_len(reply), nng_msg_body(reply));
+    size_t msg_len = nng_msg_len(reply);
+    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+
+    SunneedResponse *resp = sunneed_response__unpack(NULL, msg_len, nng_msg_body(reply));
     if (resp == NULL) {
         printf("wtf\n");
         // TODO Gotos
