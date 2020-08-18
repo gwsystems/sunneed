@@ -11,10 +11,10 @@
 
 FILE *logfile;
 
-#define LOGL_DEBUG 'D'
-#define LOGL_INFO 'I'
-#define LOGL_WARN 'W'
-#define LOGL_ERROR 'E'
+#define LOGL_DEBUG "D\e[38;5;240m"
+#define LOGL_INFO "I"
+#define LOGL_WARN "W\e[0;33m"
+#define LOGL_ERROR "E\e[0;31m"
 
 #define LOG(LEVEL, MESSAGE, ...)                                                    \
     {                                                                               \
@@ -26,7 +26,7 @@ FILE *logfile;
         struct tm *_time = localtime(&_now);                                        \
         char _time_str[21];                                                         \
         strftime(_time_str, 21, "%Y-%m-%d %H:%M:%S", _time);                        \
-        fprintf(_logfile, "%c[%s] " MESSAGE "\n", LEVEL, _time_str, ##__VA_ARGS__); \
+        fprintf(_logfile, "%s[%s] " MESSAGE "\e[0m\n", LEVEL, _time_str, ##__VA_ARGS__); \
     }
 
 #define LOG_D(MESSAGE, ...) LOG(LOGL_DEBUG, MESSAGE, ##__VA_ARGS__);
