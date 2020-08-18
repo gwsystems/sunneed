@@ -12,12 +12,36 @@ nngfatal(const char *func, int rv) {
     exit(1);
 }
 
+/** 
+ * Packs the given SunneedRequest into an NNG message and sends it to sunneed. If any failures occur in the packing
+ *  or sending processes, this client will crash with a fatal error.
+ */
+static void
+send_request(SunneedRequest *req) {
+    nng_msg *msg;                                               
+
+    int req_len = sunneed_request__get_packed_size(req);
+    void *buf = malloc(req_len);
+    if (!buf)
+        FATAL(-1, "unable to allocate buffer for request");
+    sunneed_request__pack(req, buf);                           
+
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        
+    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
+    SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
+
+    free(buf);
+    nng_msg_free(msg);                                         
+}
+
 static SunneedResponse *
-receive_and_unpack(SunneedResponse__MessageTypeCase message_type) {
+receive_response(SunneedResponse__MessageTypeCase message_type) {
     nng_msg *reply;
     SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
 
-    SunneedResponse *resp = sunneed_response__unpack(NULL, nng_msg_len(reply), nng_msg_body(reply));
+    size_t msg_len = nng_msg_len(reply);
+    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+    SunneedResponse *resp = sunneed_response__unpack(NULL, msg_len, nng_msg_body(reply));
 
     if (resp->status != 0) {
         return NULL;
@@ -35,8 +59,7 @@ sunneed_client_init(const char *name) {
     SUNNEED_NNG_TRY(nng_req0_open, != 0, &sunneed_socket);
     SUNNEED_NNG_TRY(nng_dial, != 0, sunneed_socket, SUNNEED_LISTENER_URL, NULL, 0);
 
-    nng_msg *msg;
-
+    // Register this client with sunneed.
     SunneedRequest req = SUNNEED_REQUEST__INIT;
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT;
     RegisterClientRequest register_req = REGISTER_CLIENT_REQUEST__INIT;
@@ -47,29 +70,11 @@ sunneed_client_init(const char *name) {
     }
     strncpy(register_req.name, name, strlen(name) + 1);
     req.register_client = &register_req;
-
-    int req_len = sunneed_request__get_packed_size(&req);
-    void *buf = malloc(req_len);
-    sunneed_request__pack(&req, buf);
-
-    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);
-    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);
-    SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
-
-    nng_msg *reply;
-
-    SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
-
-    SunneedResponse *resp = sunneed_response__unpack(NULL, nng_msg_len(reply), nng_msg_body(reply));
-
-    if (resp->status != 0) {
-        return resp->status;
-    }
-
-    nng_msg_free(msg);
-    nng_msg_free(reply);
+    send_request(&req);
     free(register_req.name);
-    free(buf);
+
+    // Check the response.
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
     sunneed_response__free_unpacked(resp, NULL);
 
     return 0;
@@ -89,27 +94,20 @@ sunneed_client_check_locked_file(const char *pathname) {
     strncpy(open_file_req.path, pathname, strlen(pathname) + 1);
     req.open_file = &open_file_req;
 
-    PACK_AND_SEND(req);
+    send_request(&req);
     free(open_file_req.path);
 
-    printf("Sent\n");
+    // TODO Get the *list* of locked files when we register, and then check here instead of making IPC request for
+    //  each `open` call.
 
-    nng_msg *reply;
-    SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
-
-    size_t msg_len = nng_msg_len(reply);
-    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
-
-    SunneedResponse *resp = sunneed_response__unpack(NULL, msg_len, nng_msg_body(reply));
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_OPEN_FILE);
     if (resp == NULL) {
-        printf("wtf\n");
         // TODO Gotos
         return 0;
     }
 
     printf("Opening dummy path '%s'\n", resp->open_file->path);
 
-    nng_msg_free(reply);
     sunneed_response__free_unpacked(resp, NULL);
 
     return 0;
@@ -123,14 +121,14 @@ sunneed_client_disconnect(void) {
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_UNREGISTER_CLIENT;
     UnregisterClientRequest unregister_req = UNREGISTER_CLIENT_REQUEST__INIT;
     req.unregister_client = &unregister_req;
+    send_request(&req);
 
-    PACK_AND_SEND(req);
-
-    SunneedResponse *resp = receive_and_unpack(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
     if (resp == NULL) {
         // TODO Handle
         printf("Disconnect response was NULL\n");
     }
+    sunneed_response__free_unpacked(resp, NULL);
 
     printf("Unregistered.\n");
     return 0;
