@@ -5,6 +5,7 @@
 #include "log.h"
 
 #include "shared/sunneed_device_type.h"
+#include "shared/sunneed_files.h"
 #include "protobuf/c/device.pb-c.h"
 
 #include <stdio.h>
@@ -14,8 +15,6 @@
 #define DEVICE_IDENTIFIER_LEN 32
 
 #define MAX_DEVICES 64
-
-#define MAX_LOCKED_FILES 1024
 
 #define DUMMY_FILE_PATH_LEN 128
 

@@ -2,13 +2,11 @@
 
 #include "../protobuf/c/server.pb-c.h"
 #include "../shared/sunneed_ipc.h"
+#include "../shared/sunneed_files.h"
 
 #include <nng/nng.h>
 #include <nng/protocol/reqrep0/rep.h>
 #include <nng/protocol/reqrep0/req.h>
-
-// TODO Share
-#define MAX_LOCKED_FILES 1024
 
 #define PACK_AND_SEND(req)                                          \
     {                                                               \
