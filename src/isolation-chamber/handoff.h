@@ -48,11 +48,11 @@ struct sock_filter filter[] = {
 
     /* list of allowed syscalls */
     ALLOW(exit_group),  /* exits a processs */
-    ALLOW(brk),     /* for malloc(), inside libc */
+    //ALLOW(brk),     /* for malloc(), inside libc */
     // ALLOW(mmap),        /* also for malloc() */
-    ALLOW(munmap),      /* for free(), inside libc */
-    ALLOW(write),       /* called by printf */
-    ALLOW(fstat),
+    //ALLOW(munmap),      /* for free(), inside libc */
+    //ALLOW(write),       /* called by printf */
+    //ALLOW(fstat),
     ALLOW(execve),      /* called by parent to create child */
     #include "filter.gen.h"
 

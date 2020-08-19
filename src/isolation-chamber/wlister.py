@@ -3,11 +3,43 @@ import os
 import sys
 from time import sleep
 import fileinput as fi
-from handoff import mount_tenant,umount_tenant
+import json
+
 
 def printR(skk): print("\033[91m {}\033[00m" .format(skk)) 
 def printG(skk): print("\033[92m {}\033[00m" .format(skk)) 
 def printY(skk): print("\033[93m {}\033[00m" .format(skk)) 
+
+
+def find_tenant(tid):
+	with open('/root/isochamber/containers.json', 'r') as file:
+		containers_dict = json.load(file)
+
+	for c in containers_dict:
+		# print(c['tid'])
+		if(c['tid'] == tid):
+			return c
+
+	return -1
+
+def mount_tenant(tid):
+	# create container c
+	c = find_tenant(tid)
+	if c == -1:
+		printR("--- tenant not found, tenant must be onboarded ---")
+		sys.exit(1)
+
+	if( os.system('mount -t overlay -o lowerdir=/root/isochamber/base_fs,upperdir=/root/isochamber/tenants_fs/'+tid+'/upper,workdir=/root/isochamber/tenants_fs/'+tid+'/workdir none /root/isochamber/tenants_fs/'+tid+'/overlay') != 0 ):
+		printR("--- Failed to mount overlay filesystem ---")
+		sys.exit(1)
+
+	c_path = "/root/isochamber/tenants_fs/"+tid+"/overlay"    #container path
+	return c_path#,p_path
+
+def umount_tenant(c_path, tid):
+	os.system('umount -f '+c_path)
+	os.system('rm -rf /root/isochamber/tenants_fs/'+tid+'/upper/*')
+	os.system('rm -rf /root/isochamber/tenants_fs/'+tid+'/workdir/*')
 
 
 def allow_calls(obj,syscalls):
@@ -28,7 +60,6 @@ def allow_calls(obj,syscalls):
 	check_prog(obj)
 
 def check_call(syscall):
-	# print("checking call!")
 	for i in blklist:
 		x = i.strip()
 		if syscall == x:
@@ -42,9 +73,8 @@ def check_prog(obj):
 
 	c_path = mount_tenant(tid)
 
-
+	sleep(1)
 	os.system('(sudo strace -o procdump -f ./handoff '+tid+' '+ obj + ") &")
-
 	sleep(5)
 
 	umount_tenant(c_path,tid)
@@ -79,6 +109,11 @@ def check_prog(obj):
 	else:
 		printG("\n--- Program is fully white listed! Recompiling without debug mode...")
 		os.system('make clean && make')
+		if( os.system('cp -f ./filter.gen.h /root/isochamber/tenants_persist/'+tid+'/filter.gen.h') !=0 ):
+			printR("--- Failed to copy tenant filter ---")
+			sys.exit(1)
+
+
 
 
 
@@ -95,6 +130,10 @@ blkfile = open("default_docker_blacklist.txt", "r")
 blklist = blkfile.readlines()
 
 
-# os.system('rm -f filter.gen.h && echo //--EndOfAllows-- > filter.gen.h')
+os.system('rm -f filter.gen.h && echo //--EndOfAllows-- > filter.gen.h')
 os.system('cp ' + obj_name + ' tenroot/bin/' + obj_name)
+
+
+
+
 check_prog(obj_name)

@@ -10,15 +10,15 @@ static char child_stack[1048576];
 
 char **args;
 char *tid;
-char data_dir[75];
-char new_mount_dir[75];
-char child_fs[75];//if we have more than 10^4 tenants 50 could be a problem for char amount 
-char old_dir[75];
-char ipc_dir[75];
-char child_home[75];
+char data_dir[100];
+char new_mount_dir[100];
+char child_fs[100];//if we have more than 10^4 tenants 50 could be a problem for char amount 
+char old_dir[100];
+char ipc_dir[100];
+char child_home[100];
 char executable[100]; //global path to executable
 
-char hostname[25];
+char hostname[34];
 int  hn_len;
 
 
@@ -109,7 +109,7 @@ int ns_config(){
 
     return 0;
 }
-
+ 
 //inspiration from: https://blog.lizzie.io/linux-containers-in-500-loc/contained.c
 int drop_caps(){
 
@@ -196,8 +196,8 @@ static int child_fn(){
 }
 
 int build_paths(char *prog){
-    char tenants_fs[] = "/opt/isochamber/tenants_fs/";
-    char tenants_persist[] = "/opt/isochamber/tenants_persist/";
+    char tenants_fs[] = "/root/isochamber/tenants_fs/";
+    char tenants_persist[] = "/root/isochamber/tenants_persist/";
 
     //build new_mount_dir path where child fs lies
     strcpy(new_mount_dir,tenants_fs);
