@@ -35,7 +35,7 @@ def download_dependencies():
 printY("--- install isochamber directory structure ---")
 # set up container managementstructure
 if( os.system('mkdir /root/isochamber && \
-			   echo [] > /root/iochamber/containers.json && \
+			   echo [] > /root/isochamber/containers.json && \
 			   mkdir /root/isochamber/new_tenants && \
 			   mkdir /root/isochamber/base_fs && \
 			   mkdir /root/isochamber/tenants_fs && \

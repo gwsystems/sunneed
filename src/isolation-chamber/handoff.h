@@ -40,7 +40,13 @@
 struct sock_filter filter[] = {
     /* validate arch */
     BPF_STMT(BPF_LD+BPF_W+BPF_ABS, ARCHFIELD),
-    BPF_JUMP( BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_X86_64, 1, 0),
+
+#if __x86_64__    
+	BPF_JUMP( BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_X86_64, 1, 0),
+#elif __arm__
+	BPF_JUMP( BPF_JMP+BPF_JEQ+BPF_K, AUDIT_ARCH_ARM, 1, 0),
+#endif
+
     BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL),
 
     /* load syscall */
@@ -48,11 +54,11 @@ struct sock_filter filter[] = {
 
     /* list of allowed syscalls */
     ALLOW(exit_group),  /* exits a processs */
-    //ALLOW(brk),     /* for malloc(), inside libc */
-    // ALLOW(mmap),        /* also for malloc() */
-    //ALLOW(munmap),      /* for free(), inside libc */
-    //ALLOW(write),       /* called by printf */
-    //ALLOW(fstat),
+//    ALLOW(brk),     /* for malloc(), inside libc */
+//    ALLOW(mmap2),        /* also for malloc() */
+//    ALLOW(munmap),      /* for free(), inside libc */
+//    ALLOW(write),       /* called by printf */
+//    ALLOW(fstat),
     ALLOW(execve),      /* called by parent to create child */
     #include "filter.gen.h"
 
