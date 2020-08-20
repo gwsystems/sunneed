@@ -2,25 +2,11 @@ import os
 import sys
 import uuid
 import json
-
-def printR(skk): print("\033[91m {}\033[00m" .format(skk)) 
-def printG(skk): print("\033[92m {}\033[00m" .format(skk)) 
-def printY(skk): print("\033[93m {}\033[00m" .format(skk)) 
-
-
-
+from tenant import printR, printG, printY
 
 #TENANT ONBOARD
 # sudo tenant_config.py /path/to/tenant/program/files
 # store these in /root/isochamber/new_tenants
-
-
-	
-
-
-
-
-
 
 argn = len(sys.argv)
 if(argn < 2 ):
@@ -36,7 +22,7 @@ tid = id.hex
 
 ten_config = ten_dir + "/config.json"
 
-print(tid)
+print("tid: " + tid)
 
 with open('/root/isochamber/containers.json', 'r') as file:
 		containers_dict = json.load(file)
@@ -50,7 +36,7 @@ config_dict['tid'] = tid
 
 
 containers_dict.append(config_dict)
-print(containers_dict)
+# print(containers_dict)
 update = open('/root/isochamber/containers.json', 'w') 
 json.dump(containers_dict, update, indent=4)
 update.close()
@@ -83,4 +69,4 @@ if( os.system('echo //--EndOfAllows-- > /root/isochamber/tenants_persist/'+tid+'
 # 	printR("--- Failed to remove " + ten_dir)
 # 	sys.exit(1)
 
-
+printG("--- Tenant Configured! ---")

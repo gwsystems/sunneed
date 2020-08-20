@@ -40,7 +40,7 @@ int ns_config(){
 
     //self binding creates mount point
     if(mount(child_fs, child_fs,"bind", MS_BIND | MS_REC,"") < 0){
-        printf("error mounting in pivot_root\n");
+        printf("error creating child mount point\n");
     }
     if(mkdir(old_dir,0755) < 0){
         printf("error mkdir: /.old/\n");
@@ -49,13 +49,13 @@ int ns_config(){
 
     //bind shared home directory to save tenant working directory
     if(mount(data_dir,data_dir,NULL,MS_BIND,NULL)){
-        perror("error binding /tmp/tenant_ipc");
+        perror("error binding to /home directory");
     }
     if(mount(NULL,data_dir,NULL,MS_SHARED,NULL)){
-        perror("error marking shared mount");
+        perror("error marking shared mount (/home)");
     }
     if(mount(data_dir,child_home,NULL,MS_BIND,NULL)){
-        perror("error binding /tmp/tenant_ipc -> /tenroot/tmp/ipc");
+        perror("error binding tenant /home to persistant saved /home directory");
     }
 
 
@@ -78,17 +78,18 @@ int ns_config(){
 
 
     //bind sunneed's tenant_ipc directory to a read only mount on tenants fs:
+    //NOTE - these will fail if sunneed as host doesn't have /tmp/tenant_ipc/ directory
     if(mount("/.old/tmp/tenant_ipc/","/.old/tmp/tenant_ipc/",NULL,MS_BIND,NULL)){
         perror("error binding /tmp/tenant_ipc");
     }
     if(mount(NULL,"/.old/tmp/tenant_ipc/",NULL,MS_SHARED,NULL)){
-        perror("error marking shared mount");
+        perror("error marking shared mount .../tenant_ipc");
     }
     if(mkdir("/tmp/ipc",0777) < 0){
         perror("error mkdir: /tmp/ipc/\n");
     }
     if(mount("/.old/tmp/tenant_ipc/","/tmp/ipc",NULL,MS_BIND,NULL)){
-        perror("error binding /tmp/tenant_ipc -> /tenroot/tmp/ipc");
+        perror("error binding sunneed's /tmp/tenant_ipc -> /overlay/tmp/ipc");
     }
     if(mount("/.old/tmp/tenant_ipc/","/tmp/ipc",NULL,MS_REMOUNT | MS_BIND | MS_RDONLY,NULL)){
         perror("error remounting read-only");
@@ -210,7 +211,7 @@ int build_paths(char *prog){
     strcat(data_dir,"/home");
 
     //create executable path w/ user input
-    strcpy(executable,"/bin/");
+    // strcpy(executable,"/bin/");
     strcat(executable, prog);
 
     //save mount dir to global child_fs var
@@ -239,7 +240,7 @@ int build_paths(char *prog){
 int main(int argc, char **argv) {
     int n = (sizeof argv) / (sizeof *argv);
     if(argc <= 2){
-        printf("USAGE: sudo ./handoff <tid> <prog>   - exiting\n");
+        printf("USAGE: sudo ./handoff <tid> <prog path>  \n");
         return 0;
     }else if(argc > 2){
         args = argv + 2;

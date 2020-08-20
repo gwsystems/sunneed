@@ -28,12 +28,8 @@ def download_dependencies():
 		sys.exit(1)#error exit
 
 
-error = 0
-
-# download_dependencies()
-
 	
-printY("--- Installing Debian Buster to ./tenroot/ ...")
+
 
 
 printY("--- install isochamber directory structure ---")
@@ -51,6 +47,7 @@ if( os.system('mkdir /root/isochamber && \
 # install debian to /root/isochamber/base_fs
 # (can define architecture specifically but it will automatically choose 
 # if dpkg is installed, which it usually is by default, specify if this breaks)
+printY("--- Installing Debian Buster to .../base_fs/ ...")
 if(os.system('debootstrap buster /root/isochamber/base_fs/ http://ftp.us.debian.org/debian') != 0):
 	printR("--- Failed to install Debian to /root/isochamber/base_fs/ ---")
 	sys.exit(1)#error exit
