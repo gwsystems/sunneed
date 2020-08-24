@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+testcount=$(build/sunneed -c)
+
+if [[ $testcount == 0 ]]; then
+    echo "No runtime tests available." >&2
+    exit
+fi
+
+echo "Found $testcount tests"
+
+for i in `seq 0 $((testcount - 1))`; do
+    echo -n "Running test #$i... "
+    build/sunneed -t $i 2>&1 | sed "s/Failure:.*/$(tput setaf 1)\\0$(tput sgr0)/"
+    code=${PIPESTATUS[0]} # Gets us the return value of sunneed (since sed is always 0). Pretty cool huh?
+    if [[ $code == 0 ]]; then
+        echo "$(tput setaf 2)Success!$(tput sgr0)"
+    fi
+done

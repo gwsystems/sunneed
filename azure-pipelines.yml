@@ -1,0 +1,59 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+variables:
+- name: IS_AZURE_PIPELINE
+  value: true
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-18.04'
+
+container: grahamschock/suneed_env:latest
+
+steps:
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+        git clone https://github.com/gwsystems/sunneed.git
+        git submodule update --init --recursive
+        ls -la
+  displayName: 'Clone system'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      mkdir build
+      make
+  displayName: 'Build sunneed'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      rm /usr/bin/gcc
+      ln -s /usr/bin/gcc-8 /usr/bin/gcc
+      make tests
+  displayName: 'Build unit tests'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      ls -la
+      make test
+  displayName: 'Run unit tests'
+
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      cd src/sunneed
+      make runtime_test
+  displayName: 'Run runtime tests'

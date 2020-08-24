@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+// {{{1 Request
+
+// Generic container type for messages sent from client to server.
+message SunneedRequest {
+    oneof message_type {
+        RegisterClientRequest register_client = 1;
+        UnregisterClientRequest unregister_client = 2;
+        OpenFileRequest open_file = 3;
+    }
+}
+
+message RegisterClientRequest {
+    string name = 1;
+}
+
+message UnregisterClientRequest {}
+
+message OpenFileRequest {
+    string path = 1;
+}
+
+// {{{1 Response
+
+// Generic container type for messages sent from server to client.
+message SunneedResponse {
+    int32 status = 1;
+    oneof message_type {
+        GenericResponse generic = 2;
+        DeviceResponse device = 3;
+        OpenFileResponse open_file = 4;
+        RegisterClientResponse register_client = 5;
+    }
+}
+
+message RegisterClientResponse {
+    repeated string locked_paths = 1;
+}
+
+message GenericResponse {
+    bytes data = 1;
+}
+
+message OpenFileResponse {
+    string path = 1;
+}
+
+import "device.proto";
+
+// Dear whoever is reading this, I hope you like the word "Device"...
+message DeviceResponse {
+
+    oneof message_type {
+        DeviceRandomResponse random = 1;
+    }
+};
+
+// }}}
+
+// vim: fdm=marker :

@@ -1,4 +1,4 @@
-apt install cmake
-apt install ninja-build
-apt install libprotobuf-c-dev protobuf-c-compiler
-apt install libi2c-dev
+apt install -y cmake
+apt install -y ninja-build
+apt install -y libprotobuf-c-dev protobuf-c-compiler
+apt install -y libi2c-dev
