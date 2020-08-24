@@ -1,13 +1,8 @@
 # first program to run within isochamber
 # - set up tenant filesystem
-
 import os
 import sys
-
-def printR(skk): print("\033[91m {}\033[00m" .format(skk)) 
-def printG(skk): print("\033[92m {}\033[00m" .format(skk)) 
-def printY(skk): print("\033[93m {}\033[00m" .format(skk)) 
-
+from tenant import printR, printG, printY
 
 def download_dependencies():
 	printY("--- Downloading dependencies...")
@@ -27,9 +22,8 @@ def download_dependencies():
 		printR("--- Failed to install build-essential ---")
 		sys.exit(1)#error exit
 
-
 	
-
+download_dependencies()
 
 
 printY("--- install isochamber directory structure ---")
@@ -51,16 +45,6 @@ printY("--- Installing Debian Buster to .../base_fs/ ...")
 if(os.system('debootstrap buster /root/isochamber/base_fs/ http://ftp.us.debian.org/debian') != 0):
 	printR("--- Failed to install Debian to /root/isochamber/base_fs/ ---")
 	sys.exit(1)#error exit
-
-
-
-# if( os.system() != 0 ):
-# 	printR("--- Failed to ---")
-# 	sys.exit(1)
-
-# if( os.system() != 0 ):
-# 	printR("--- Failed to ---")
-# 	sys.exit(1)
 
 
 printG("--- Build Complete ---")

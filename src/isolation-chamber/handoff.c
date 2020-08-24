@@ -1,13 +1,8 @@
-/*
-USAGE:
-    sudo ./handoff <tenant program>
-*/
-
 #include "handoff.h"
  
 static char child_stack[1048576];
 
-
+//global variables used throughout
 char **args;
 char *tid;
 char data_dir[100];
@@ -17,7 +12,6 @@ char old_dir[100];
 char ipc_dir[100];
 char child_home[100];
 char executable[100]; //global path to executable
-
 char hostname[34];
 int  hn_len;
 
@@ -27,6 +21,13 @@ int pivot_root(char *a, char *b){
     return syscall(SYS_pivot_root,a,b);
 }
 
+/* 
+    Configure tenant namespaces - 
+    Right now this is mostly fs configuration
+    It also sets UTS namespace
+    Any additional namespaces needing to be configured 
+    could be inserted here
+*/
 int ns_config(){
     printf("Setting up new namespaces...\n");
     //mount rprivate to ensure fs is private to processes outside mount namespace
@@ -112,6 +113,7 @@ int ns_config(){
 }
  
 //inspiration from: https://blog.lizzie.io/linux-containers-in-500-loc/contained.c
+//Function drops root capabilities from tenant process
 int drop_caps(){
 
     printf("Dropping capabilities...\n");
@@ -196,6 +198,16 @@ static int child_fn(){
     return 0;
 }
 
+static int child_config(){
+    //isolation ns code:
+    ns_config();
+
+    
+    printf("Downloading dependencies:\n\n");
+    execv(executable, args);
+    return 0;
+}
+
 int build_paths(char *prog){
     char tenants_fs[] = "/root/isochamber/tenants_fs/";
     char tenants_persist[] = "/root/isochamber/tenants_persist/";
@@ -239,15 +251,14 @@ int build_paths(char *prog){
 
 int main(int argc, char **argv) {
     int n = (sizeof argv) / (sizeof *argv);
+
     if(argc <= 2){
         printf("USAGE: sudo ./handoff <tid> <prog path>  \n");
         return 0;
     }else if(argc > 2){
         args = argv + 2;
     }
-
     tid = argv[1];
-    
     build_paths(argv[2]);
 
     //host process mounts fs with rprivate for its own safety from untrusted tenant
@@ -255,8 +266,16 @@ int main(int argc, char **argv) {
         printf("error mounting private\n");
     }
 
+    
+#ifdef CONFIG 
+#if CONFIG==1
+    //clone child with new namespaces except NET to ease development & run @ child_config()
+    pid_t child_pid = clone(child_config, child_stack+1048576, CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD, NULL);
+#endif
+#else
     //clone child into new namespaces and run @ child_fn()
     pid_t child_pid = clone(child_fn, child_stack+1048576, CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD, NULL);
+#endif
 
     if(child_pid < 0){
         printf("clone failed\n");

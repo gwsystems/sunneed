@@ -5,8 +5,7 @@ from time import sleep
 import fileinput as fi
 from tenant import mount_tenant, umount_tenant, printR, printG, printY
 
-
-
+# allow calls by adding system calls to filter file
 def allow_calls(syscalls):
 	printY("\n--- White listing system calls...\n")
 	allowstring = ""
@@ -22,14 +21,21 @@ def allow_calls(syscalls):
 
 		print(line, end='')
 
-	check_prog()
+	check_prog() # recursively keep checking program
 
+# check to see if program is malicious by comparing
+# against default Docker blacklist
+# (Right now this only prints a warning but fail/error
+# logic could be added here)
 def check_call(syscall):
 	for i in blklist:
 		x = i.strip()
 		if syscall == x:
 			printR("-- Warning! The " + syscall + " system call is potentially dangerous!")
 
+# function recursively compiles and straces program
+# until the program stops trapping and it is fully
+# whitelisted
 def check_prog():
 	global tid
 	printY("--- Compiling and strace-ing program...\n")
@@ -70,34 +76,25 @@ def check_prog():
 				syscalls.add("\tALLOW_ARM(" + armresult.group(1) + "),\n")
 
 	if trapflag == True:
-		allow_calls(syscalls)
+		allow_calls(syscalls) # this is essentially recursion (allow_calls calls check_prog)
 	else:
 		printG("\n--- Program is fully white listed! Recompiling without debug mode...")
 		os.system('make clean && make')
 		if( os.system('cp -f ./filter.gen.h /root/isochamber/tenants_persist/'+tid+'/filter.gen.h') !=0 ):
 			printR("--- Failed to copy tenant filter ---")
 			sys.exit(1)
+# --------------------------------------------------------------
 
-
-
-
-
+# PROGRAM START
 if(len(sys.argv) < 2 ):
 	printR("--- ERROR - Usage: sudo python3 wlister.py <tid>")
 	sys.exit(1)
 
 tid      = sys.argv[1]
-# obj_name = sys.argv[2]
-
-
 
 blkfile = open("default_docker_blacklist.txt", "r")
 blklist = blkfile.readlines()
 
-
 os.system('rm -f filter.gen.h && echo //--EndOfAllows-- > filter.gen.h')
-
-
-
 
 check_prog()
