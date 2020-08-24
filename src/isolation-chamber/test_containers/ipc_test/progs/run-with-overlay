@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+gdb --args env LD_PRELOAD=/home/carl/Desktop/sunneed/build/sunneed_overlay_testing.so $@

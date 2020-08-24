@@ -1,0 +1,7 @@
+{
+	"tid":"",
+	"cname": "ipc_test",
+	"dependencies":"/home/install_deps.sh",
+	"init":"/home/run-with-overlay /home/overlay_tester"
+}
+

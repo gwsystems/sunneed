@@ -4,7 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define SUNNEED_LISTENER_URL "ipc:///tmp/sunneed.ipc"
+#define SUNNEED_TENANT_IPC_DIR "tenant_ipc"
+#define SUNNEED_LISTENER_URL "ipc:///tmp/" SUNNEED_TENANT_IPC_DIR "/sunneed.ipc"
 
 void (*_sunneed_nng_error_func)(const char *nng_call_name, int rv);
 

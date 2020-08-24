@@ -128,6 +128,12 @@ main(int argc, char *argv[]) {
         goto end;
     }
 
+    if (mkdir("/tmp/"SUNNEED_TENANT_IPC_DIR,0777)!=0){
+	LOG_E("Error occurred while creating tenant_ipc dir");
+	ret = 1;
+	goto end;
+    }
+
     if ((ret = sunneed_listen()) != 0) {
         LOG_E("sunneed listener encountered a fatal error. Exiting.");
         ret = 1;
