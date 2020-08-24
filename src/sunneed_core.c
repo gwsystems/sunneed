@@ -128,10 +128,15 @@ main(int argc, char *argv[]) {
         goto end;
     }
 
-    if (mkdir("/tmp/"SUNNEED_TENANT_IPC_DIR,0777)!=0){
-	LOG_E("Error occurred while creating tenant_ipc dir");
-	ret = 1;
-	goto end;
+    struct stat sb;
+    if ( !(stat("/tmp/"SUNNEED_TENANT_IPC_DIR,&sb) == 0 && S_ISDIR(sb.st_mode)) ){
+    
+  	  printf("hmm\n");
+	    if (mkdir("/tmp/"SUNNEED_TENANT_IPC_DIR,0777)!=0){
+		LOG_E("Error occurred while creating tenant_ipc dir");
+		ret = 1;
+		goto end;
+    	  }
     }
 
     if ((ret = sunneed_listen()) != 0) {
