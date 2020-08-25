@@ -86,13 +86,13 @@ int ns_config(){
     if(mount(NULL,"/.old/tmp/tenant_ipc/",NULL,MS_SHARED,NULL)){
         perror("error marking shared mount .../tenant_ipc");
     }
-    if(mkdir("/tmp/ipc",0777) < 0){
-        perror("error mkdir: /tmp/ipc/\n");
+    if(mkdir("/tmp/tenant_ipc",0777) < 0){
+        perror("error mkdir: /tmp/tenant_ipc/\n");
     }
-    if(mount("/.old/tmp/tenant_ipc/","/tmp/ipc",NULL,MS_BIND,NULL)){
+    if(mount("/.old/tmp/tenant_ipc/","/tmp/tenant_ipc",NULL,MS_BIND,NULL)){
         perror("error binding sunneed's /tmp/tenant_ipc -> /overlay/tmp/ipc");
     }
-    if(mount("/.old/tmp/tenant_ipc/","/tmp/ipc",NULL,MS_REMOUNT | MS_BIND | MS_RDONLY,NULL)){
+    if(mount("/.old/tmp/tenant_ipc/","/tmp/tenant_ipc",NULL,MS_REMOUNT | MS_BIND | MS_RDONLY,NULL)){
         perror("error remounting read-only");
     }
     
@@ -237,7 +237,7 @@ int build_paths(char *prog){
 
     //create ipc dir to mount shared on sunneed's ipc folder in /tmp/tenant_ipc
     memcpy(ipc_dir, child_fs, len + 1);
-    strcat(ipc_dir, "/tmp/ipc");
+    strcat(ipc_dir, "/tmp/tenant_ipc");
 
     //this directory is where tenant data persists
     memcpy(child_home, child_fs, len + 1); 

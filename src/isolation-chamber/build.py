@@ -48,7 +48,9 @@ if(os.system('debootstrap buster /root/isochamber/base_fs/ http://ftp.us.debian.
 if(os.system('cp -p ../../build/client/libsunneedclient.so /root/isochamber/base_fs/lib/') != 0):
 	printR("--- Failed to copy libsunneedclient.so -> base_fs/lib/---")
 	sys.exit(1)#error exit
-
+if(os.system('cp -p ../../build/sunneed_overlay_testing.so /root/isochamber/base_fs/lib/') != 0):
+	printR("--- Failed to copy libsunneedclient.so -> base_fs/lib/---")
+	sys.exit(1)#error exit
 
 
 printG("--- Build Complete ---")
