@@ -138,7 +138,7 @@ format:
 	$(MAKE) -C $(test_home) format
 
 tags:
-	ctags src/*
+	ctags -R src/*
 
 ext:
 	$(call section_title,dependencies)
