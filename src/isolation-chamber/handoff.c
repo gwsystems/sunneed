@@ -12,7 +12,7 @@ char old_dir[100];
 char ipc_dir[100];
 char child_home[100];
 char executable[100]; //global path to executable
-char hostname[34];
+char hostname[33];
 int  hn_len;
 
 
@@ -244,7 +244,6 @@ int build_paths(char *prog){
     strcat(child_home, "/home");
 
     //create hostname for tenant (for UTS NS)
-    hostname[0] = 't';
     strcat(hostname,tid);
     hn_len = strlen(hostname);
 }

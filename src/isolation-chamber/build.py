@@ -45,6 +45,10 @@ printY("--- Installing Debian Buster to .../base_fs/ ...")
 if(os.system('debootstrap buster /root/isochamber/base_fs/ http://ftp.us.debian.org/debian') != 0):
 	printR("--- Failed to install Debian to /root/isochamber/base_fs/ ---")
 	sys.exit(1)#error exit
+if(os.system('cp -p ../../build/client/libsunneedclient.so /root/isochamber/base_fs/lib/') != 0):
+	printR("--- Failed to copy libsunneedclient.so -> base_fs/lib/---")
+	sys.exit(1)#error exit
+
 
 
 printG("--- Build Complete ---")

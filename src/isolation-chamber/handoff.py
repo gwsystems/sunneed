@@ -38,7 +38,7 @@ def handoff_shell():
 
 	c_path,c_init= mount_tenant(tid)
 
-	if( os.system('./handoff '+tid+" /bin/sh") != 0 ):
+	if( os.system('./handoff '+tid+" /bin/bash") != 0 ):
 		printR("--- handoff.c failed ---")
 
 	return c_path
