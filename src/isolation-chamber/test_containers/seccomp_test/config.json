@@ -1,0 +1,7 @@
+{
+	"tid":"",
+	"cname": "seccomp_test",
+	"dependencies":"",
+	"init":"/home/test_seccomp"
+}
+
