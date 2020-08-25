@@ -33,10 +33,16 @@ int
 sunneed_client_init(const char *name);
 
 char *
-sunneed_client_open_locked_file(const char *pathname);
+sunneed_client_fetch_locked_file_path(const char *pathname);
 
 int
 sunneed_client_check_locked_file(const char *pathname);
 
 int
 sunneed_client_disconnect(void);
+
+int
+sunneed_client_on_locked_path_open(int i, char *pathname, int fd);
+
+void
+sunneed_client_debug_print_locked_path_table(void);

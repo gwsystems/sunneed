@@ -4,7 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 
-char *locked_paths[MAX_LOCKED_FILES] = { NULL };
+struct {
+    char *path;
+    int fd;
+} locked_paths[MAX_LOCKED_FILES] = { { NULL, 0 } };
 
 nng_socket sunneed_socket;
 
@@ -78,9 +81,9 @@ sunneed_client_init(const char *name) {
     // Check the response.
     SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_REGISTER_CLIENT);
     for (size_t i = 0; i < resp->register_client->n_locked_paths; i++) {
-        locked_paths[i] = malloc(strlen(resp->register_client->locked_paths[i]) + 1);
-        strcpy(locked_paths[i], resp->register_client->locked_paths[i]);
-        printf("Registered locked path '%s'\n", locked_paths[i]);
+        locked_paths[i].path = malloc(strlen(resp->register_client->locked_paths[i]) + 1);
+        strcpy(locked_paths[i].path, resp->register_client->locked_paths[i]);
+        printf("Registered locked path '%s'\n", locked_paths[i].path);
     }
     sunneed_response__free_unpacked(resp, NULL);
 
@@ -89,7 +92,7 @@ sunneed_client_init(const char *name) {
 
 /** Allocate a string containing the path of the dummy file corresponding to the given path. */
 char *
-sunneed_client_open_locked_file(const char *pathname) {
+sunneed_client_fetch_locked_file_path(const char *pathname) {
     // TODO Check socket opened.
 
     SunneedRequest req = SUNNEED_REQUEST__INIT;
@@ -127,13 +130,28 @@ sunneed_client_open_locked_file(const char *pathname) {
 int
 sunneed_client_check_locked_file(const char *pathname) {
     for (int i = 0; i < MAX_LOCKED_FILES; i++) {
-        if (locked_paths[i] == NULL)
+        if (locked_paths[i].path == NULL)
             return -1;
-        else if (strncmp(pathname, locked_paths[i], strlen(pathname)) == 0)
+        else if (strncmp(pathname, locked_paths[i].path, strlen(pathname)) == 0)
             return i; 
     }
 
     return -1;
+}
+
+int
+sunneed_client_on_locked_path_open(int i, char *pathname, int fd) {
+    if (i < 0 || i >= MAX_LOCKED_FILES)
+        FATAL(-1, "locked-file array index out of bounds");
+    if (pathname == NULL)
+        FATAL(-1, "pathname is null");
+    if (fd <= 0)
+        FATAL(-1, "illegal FD");
+
+    locked_paths[i].path = pathname;
+    locked_paths[i].fd = fd;
+
+    return 0;
 }
 
 int
@@ -155,4 +173,14 @@ sunneed_client_disconnect(void) {
 
     printf("Unregistered.\n");
     return 0;
+}
+
+void
+sunneed_client_debug_print_locked_path_table(void) {
+    printf("Client locked files: [\n");
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        if (locked_paths[i].path != NULL)
+            printf("    FD %d : '%s'\n", locked_paths[i].fd, locked_paths[i].path);
+    }
+    printf("]\n");
 }

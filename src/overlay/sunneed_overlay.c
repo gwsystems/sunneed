@@ -3,6 +3,8 @@
 void
 on_load() {
     sunneed_client_init("TODO");
+
+    printf("Overlay: Client init\n");
 }
 
 void
@@ -19,14 +21,18 @@ open(const char *pathname, int flags, mode_t mode) {
         printf("'%s' is not locked; opening normally\n", pathname);
     } else {
         printf("'%s' is locked; opening via dummy\n", pathname);
-        char *dummy_path = sunneed_client_open_locked_file(pathname);
+        char *dummy_path = sunneed_client_fetch_locked_file_path(pathname);
         pathname = dummy_path;
     }
 
     int fd;
     SUPER(fd, open, int, (pathname, flags, mode), const char *, int, mode_t);
 
-    printf("Got file handle %d\n", fd);
+    // TODO Handle errors from open
+
+    sunneed_client_on_locked_path_open(locked, (char *)pathname, fd);
+
+    sunneed_client_debug_print_locked_path_table();
 
     return fd;
 }

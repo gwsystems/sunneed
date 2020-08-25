@@ -43,3 +43,6 @@ void __attribute__((constructor)) on_load();
 
 // ...and likewise, this one when unlinked (program end).
 void __attribute__((destructor)) on_unload();
+
+int
+open(const char *pathname, int flags, mode_t mode);

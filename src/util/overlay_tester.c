@@ -14,6 +14,8 @@
 
 int
 main(void) {
+    printf("Starting main overlay tester\n");
+
     int fd = open("/tmp/test", O_CREAT | O_RDWR, 0666);
     if (fd == -1) {
         fprintf(stderr, "Failed to open file\n");
@@ -21,6 +23,8 @@ main(void) {
     }
 
     close(fd);
+
+    printf("Opened and closed file\n");
 
     return 0;
 }
