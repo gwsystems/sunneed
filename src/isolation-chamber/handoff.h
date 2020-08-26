@@ -25,7 +25,7 @@
 #include <linux/capability.h>
 #include <sys/capability.h>
 
-
+#include "../shared/sunneed_ipc.h"
 
 #define ARCHFIELD offsetof(struct seccomp_data, arch)
 

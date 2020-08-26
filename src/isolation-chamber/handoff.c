@@ -80,19 +80,19 @@ int ns_config(){
 
     //bind sunneed's tenant_ipc directory to a read only mount on tenants fs:
     //NOTE - these will fail if sunneed as host doesn't have /tmp/tenant_ipc/ directory
-    if(mount("/.old/tmp/tenant_ipc/","/.old/tmp/tenant_ipc/",NULL,MS_BIND,NULL)){
+    if(mount("/.old/tmp/"SUNNEED_TENANT_IPC_DIR,"/.old/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_BIND,NULL)){
         perror("error binding /tmp/tenant_ipc");
     }
-    if(mount(NULL,"/.old/tmp/tenant_ipc/",NULL,MS_SHARED,NULL)){
+    if(mount(NULL,"/.old/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_SHARED,NULL)){
         perror("error marking shared mount .../tenant_ipc");
     }
-    if(mkdir("/tmp/tenant_ipc",0777) < 0){
+    if(mkdir("/tmp/"SUNNEED_TENANT_IPC_DIR,0777) < 0){
         perror("error mkdir: /tmp/tenant_ipc/\n");
     }
-    if(mount("/.old/tmp/tenant_ipc/","/tmp/tenant_ipc",NULL,MS_BIND,NULL)){
+    if(mount("/.old/tmp/"SUNNEED_TENANT_IPC_DIR,"/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_BIND,NULL)){
         perror("error binding sunneed's /tmp/tenant_ipc -> /overlay/tmp/ipc");
     }
-    if(mount("/.old/tmp/tenant_ipc/","/tmp/tenant_ipc",NULL,MS_REMOUNT | MS_BIND | MS_RDONLY,NULL)){
+    if(mount("/.old/tmp/"SUNNEED_TENANT_IPC_DIR,"/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_REMOUNT | MS_BIND | MS_RDONLY,NULL)){
         perror("error remounting read-only");
     }
     
@@ -237,7 +237,7 @@ int build_paths(char *prog){
 
     //create ipc dir to mount shared on sunneed's ipc folder in /tmp/tenant_ipc
     memcpy(ipc_dir, child_fs, len + 1);
-    strcat(ipc_dir, "/tmp/tenant_ipc");
+    strcat(ipc_dir, "/tmp/"SUNNEED_TENANT_IPC_DIR);//this macro is defined in: ../shared/sunneed_ipc.h
 
     //this directory is where tenant data persists
     memcpy(child_home, child_fs, len + 1); 
