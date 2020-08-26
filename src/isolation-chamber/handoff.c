@@ -193,7 +193,7 @@ static int child_fn(){
         perror("Could not start seccomp:");
         exit(1);
     }
-    printf("exec tenant program:\n\n");
+    printf("exec tenant program\n\n");
     execv(executable, args);
     return 0;
 }
@@ -201,9 +201,6 @@ static int child_fn(){
 static int child_config(){
     //isolation ns code:
     ns_config();
-
-    
-    printf("Downloading dependencies:\n\n");
     execv(executable, args);
     return 0;
 }
