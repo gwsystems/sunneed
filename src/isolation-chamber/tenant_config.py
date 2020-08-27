@@ -65,13 +65,14 @@ if( os.system('make clean && make config') !=0 ):
 	sys.exit(1)
 
 c_path,c_init= mount_tenant_config(tid)
-
+error = 0
 if c_init != "":
 	if( os.system('./handoff '+tid+" "+c_init) != 0 ):
 		printR("--- handoff.c failed ---")
-		sys.exit(1)
+		error = 1
 
 umount_tenant(c_path,tid)
 
-printG("--- Tenant Configured! ---")
-printG("tid: " + tid)
+if error == 0:
+	printG("--- Tenant Configured! ---")
+	printG("tid: " + tid)

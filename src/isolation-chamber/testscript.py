@@ -1,5 +1,19 @@
 from tenant import os,sys,json,printR,printG,find_tid,delete_tenant
 
+def cleanup(ecode):
+	global tid_list
+	for t in tid_list:
+		if delete_tenant(t) == -1:
+			ecode = 1
+
+	os.system('sudo rm -f output.txt')
+
+	if ecode == 0:
+		printG("--- Testing complete! No errors to report ---")
+	
+	sys.exit(ecode)
+
+
 def test_filter():
 	default_filter   = open("simplefilter.txt", "r")
 	generated_filter = open("filter.gen.h"    , "r")
@@ -9,7 +23,7 @@ def test_filter():
 
 	if len(default_list) != len(gen_list):
 		printR("--- Filter test failed: Generated filter is the wrong length ---")
-		sys.exit(1)#error exit
+		cleanup(1)#error exit
 
 	# whitelist should have same syscalls but not necessarily in same order so
 	# we can't just check for equality of the files
@@ -17,7 +31,7 @@ def test_filter():
 		if i not in gen_list:
 			printR("--- Filter test failed: Missing syscall from filter ---")
 			printR(i)
-			sys.exit(1)#error exit
+			cleanup(1)#error exit
 
 
 
@@ -53,7 +67,7 @@ def test_seccomp():
 	# "Assertion" will appear if an assertion failed
 	if "child_exit_status: failed" not in dump:
 		printR("--- Seccomp test failed: Process not killed ---")
-		sys.exit(1)#error exit
+		cleanup(1)#error exit
 
 
 def test_capabilities():
@@ -76,7 +90,7 @@ def test_capabilities():
 	# "Assertion" will appear if an assertion failed
 	if "child_exit_status: failed" in dump:
 		printR("--- Capabilities test failed: Assertion failed ---")
-		sys.exit(1)#error exit
+		cleanup(1)#error exit
 
 
 def test_ipc():
@@ -94,7 +108,7 @@ def test_ipc():
 	# "Assertion" will appear if an assertion failed
 	if "Got file handle" not in dump:
 		printR("--- IPC test failed: connection refused ---")
-		sys.exit(1)#error exit
+		cleanup(1)#error exit
 
 
 
@@ -104,12 +118,5 @@ test_seccomp()
 test_capabilities()
 test_ipc()
 
-for t in tid_list:
-	if delete_tenant(t) == -1:
-		sys.exit(1)
-
-os.system('sudo rm -f output.txt')
-
-printG("--- Testing complete! No errors to report ---")
-sys.exit(0)#clean exit
+cleanup(0)
 
