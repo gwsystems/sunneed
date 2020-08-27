@@ -16,11 +16,22 @@ def find_tenant(tid):
 		containers_dict = json.load(file)
 
 	for c in containers_dict:
-		# print(c['tid'])
 		if(c['tid'] == tid):
 			return c
 
 	return -1
+
+# function takes container name and returns tid
+def find_tid(cname):
+	with open('/root/isochamber/containers.json', 'r') as file:
+		containers_dict = json.load(file)
+
+	for c in containers_dict:
+		if(c['cname'] == cname):
+			return c['tid']
+	printR("tenant wasn't configured properly")
+	sys.exit(1)
+
 
 # This function is important as it is what mounts the tenant's
 # root filesystem (.../overlay/)
@@ -65,3 +76,27 @@ def umount_tenant(c_path, tid):
 	# should go here. 
 	# os.system('rm -rf /root/isochamber/tenants_fs/'+tid+'/upper/*')
 	# os.system('rm -rf /root/isochamber/tenants_fs/'+tid+'/workdir/*')
+
+
+def delete_tenant(tid):
+	with open('/root/isochamber/containers.json', 'r') as file:
+		containers_dict = json.load(file)
+
+	deleted = 0
+	for c in containers_dict:
+		if(c['tid'] == tid):
+			containers_dict.remove(c)
+			update = open('/root/isochamber/containers.json', 'w') 
+			json.dump(containers_dict, update, indent=4)
+			update.close()
+
+			deleted = 1
+			continue
+	if deleted == 0:
+		printR("--- tenant not found, cannot delete ---")
+		return -1
+
+	os.system('rm -rf /root/isochamber/tenants_fs/'+tid)
+	os.system('rm -rf /root/isochamber/tenants_persist/'+tid)
+
+	return 0

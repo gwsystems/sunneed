@@ -1,28 +1,6 @@
-import os
-import sys
-import json
-
-
-def printR(skk): print("\033[91m {}\033[00m" .format(skk)) 
-def printG(skk): print("\033[92m {}\033[00m" .format(skk)) 
-def printY(skk): print("\033[93m {}\033[00m" .format(skk)) 
-
-
-def find_tid(cname):
-	with open('/root/isochamber/containers.json', 'r') as file:
-		containers_dict = json.load(file)
-
-	for c in containers_dict:
-		# print(c['tid'])
-		if(c['cname'] == cname):
-			return c['tid']
-	printR("tenant wasn't configured properly")
-	sys.exit(1)
-
+from tenant import os,sys,json,printR,printG,find_tid,delete_tenant
 
 def test_filter():
-	global error
-	global errCount
 	default_filter   = open("simplefilter.txt", "r")
 	generated_filter = open("filter.gen.h"    , "r")
 
@@ -44,8 +22,6 @@ def test_filter():
 
 
 def test_seccomp():
-	global error
-	global errCount
 	# test_simple.c just prints and exits
 	# creating the seccomp filter based on this program
 	# gives an ideal minimal whitelist for testing
@@ -54,6 +30,7 @@ def test_seccomp():
 	os.system('python3 tenant_config.py simple_test')
 
 	tid = find_tid("simple_test")
+	tid_list.append(tid)
 	
 	os.system('python3 wlister.py ' + tid +' > output.txt')
 
@@ -66,6 +43,7 @@ def test_seccomp():
 	os.system('cp -rp ./test_containers/seccomp_test /root/isochamber/new_tenants/')
 	os.system('python3 tenant_config.py seccomp_test')
 	tid = find_tid("seccomp_test")
+	tid_list.append(tid)
 	
 	os.system('python3 handoff.py '+tid+' > output.txt')
 
@@ -79,8 +57,6 @@ def test_seccomp():
 
 
 def test_capabilities():
-	global error
-	global errCount
 	# whitelist test_capabilities which has two system calls
 	# that are potentially harmful, this will let the power 
 	# of dropping capabilities for the process even if somehow
@@ -89,6 +65,7 @@ def test_capabilities():
 	os.system('cp -rp ./test_containers/cap_test /root/isochamber/new_tenants/')
 	os.system('python3 tenant_config.py cap_test')
 	tid = find_tid("cap_test")
+	tid_list.append(tid)
 
 	os.system('python3 wlister.py '+tid+' > output.txt')
 	os.system('python3 handoff.py '+tid+' > output.txt')
@@ -102,8 +79,34 @@ def test_capabilities():
 		sys.exit(1)#error exit
 
 
+def test_ipc():
+	os.system('cp -rp ./test_containers/ipc_test /root/isochamber/new_tenants/')
+	os.system('python3 tenant_config.py ipc_test')
+	tid = find_tid("ipc_test")
+	tid_list.append(tid)
+
+	os.system('python3 wlister.py '+tid+' > output.txt')
+	os.system('python3 handoff.py '+tid+' > output.txt')
+
+	outdump = open("output.txt", "r")
+	dump = outdump.read()
+
+	# "Assertion" will appear if an assertion failed
+	if "child_exit_status: failed" in dump:
+		printR("--- IPC test failed: connection refused ---")
+		sys.exit(1)#error exit
+
+
+
+tid_list = []
+
 test_seccomp()
 test_capabilities()
+test_ipc()
+
+for t in tid_list:
+	if delete_tenant(t) == -1:
+		sys.exit(1)
 
 os.system('sudo rm -f output.txt')
 
