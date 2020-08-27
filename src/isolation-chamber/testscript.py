@@ -92,7 +92,7 @@ def test_ipc():
 	dump = outdump.read()
 
 	# "Assertion" will appear if an assertion failed
-	if "child_exit_status: failed" in dump:
+	if "Got file handle" not in dump:
 		printR("--- IPC test failed: connection refused ---")
 		sys.exit(1)#error exit
 
