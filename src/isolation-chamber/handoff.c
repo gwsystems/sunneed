@@ -22,41 +22,48 @@ int pivot_root(char *a, char *b){
 }
 
 /* 
-    Configure tenant namespaces - 
-    Right now this is mostly fs configuration
-    It also sets UTS namespace
-    Any additional namespaces needing to be configured 
-    could be inserted here
-*/
+ * Configure tenant namespaces
+ * return:
+ *      success:  0
+ *      failure: -1
+ */
 int ns_config(){
     printf("Setting up new namespaces...\n");
+    int err = 0; //keep error status
     //mount rprivate to ensure fs is private to processes outside mount namespace
     if(mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0){
-        printf("error mounting private\n");
+        perror("error mounting private\n");
+        err = 1;
     }
     //umount proc because we need to mount new /proc for new PID namespace
     if(umount2("/proc", MNT_DETACH) < 0){
-        printf("error unmounting /proc\n");
+        perror("error unmounting /proc\n");
+        err = 1;
     }
 
     //self binding creates mount point
     if(mount(child_fs, child_fs,"bind", MS_BIND | MS_REC,"") < 0){
-        printf("error creating child mount point\n");
+        perror("error creating child mount point\n");
+        err = 1;
     }
     if(mkdir(old_dir,0755) < 0){
-        printf("error mkdir: /.old/\n");
+        perror("error mkdir: /.old/\n");
+        err = 1;
     }
 
 
     //bind shared home directory to save tenant working directory
     if(mount(data_dir,data_dir,NULL,MS_BIND,NULL)){
         perror("error binding to /home directory");
+        err = 1;
     }
     if(mount(NULL,data_dir,NULL,MS_SHARED,NULL)){
         perror("error marking shared mount (/home)");
+        err = 1;
     }
     if(mount(data_dir,child_home,NULL,MS_BIND,NULL)){
         perror("error binding tenant /home to persistant saved /home directory");
+        err = 1;
     }
 
 
@@ -64,17 +71,21 @@ int ns_config(){
     //switches namespace's root / to child_fs
     if(pivot_root(child_fs, old_dir) < 0){
         perror("error pivoting root");
+        err = 1;
     }
     
     //mounting important pieces of fs
     if(mount("tmpfs","/tmp", "tmpfs", 0, NULL) < 0){ //create temporary fs for tmp to be mounted on
-        printf("error mounting tmpfs\n");
+        perror("error mounting tmpfs\n");
+        err = 1;
     }
     if(mount("proc","/proc", "proc",0,NULL) < 0){//mount /proc to access PID namespace relevant info
-        printf("error mounting /proc\n");
+        perror("error mounting /proc\n");
+        err = 1;
     }
     if(mount("t","/sys","sysfs", 0, NULL) < 0){//mount /sys to have access to kernel abstractions
-        printf("error mounting /sys\n");
+        perror("error mounting /sys\n");
+        err = 1;
     }
 
 
@@ -82,38 +93,50 @@ int ns_config(){
     //NOTE - these will fail if sunneed as host doesn't have /tmp/tenant_ipc/ directory
     if(mount("/.old/tmp/"SUNNEED_TENANT_IPC_DIR,"/.old/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_BIND,NULL)){
         perror("error binding /tmp/tenant_ipc");
+        err = 1;
     }
     if(mount(NULL,"/.old/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_SHARED,NULL)){
         perror("error marking shared mount .../tenant_ipc");
+        err = 1;
     }
     if(mkdir("/tmp/"SUNNEED_TENANT_IPC_DIR,0777) < 0){
         perror("error mkdir: /tmp/tenant_ipc/\n");
+        err = 1;
     }
     if(mount("/.old/tmp/"SUNNEED_TENANT_IPC_DIR,"/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_BIND,NULL)){
         perror("error binding sunneed's /tmp/tenant_ipc -> /overlay/tmp/ipc");
+        err = 1;
     }
     if(mount("/.old/tmp/"SUNNEED_TENANT_IPC_DIR,"/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_REMOUNT | MS_BIND | MS_RDONLY,NULL)){
         perror("error remounting read-only");
+        err = 1;
     }
     
     chdir("/");
 
     // detatch from host fs
     if(umount2("/.old", MNT_DETACH) < 0){
-        printf("error unmounting old\n");
+        perror("error unmounting old\n");
+        err = 1;
     }
     if(rmdir("/.old") == -1){
         perror("rmdir");
+        err = 1;
     }
 
     //set up uts ns
     sethostname(hostname, hn_len);
 
-    return 0;
+    return err;
 }
  
-//inspiration from: https://blog.lizzie.io/linux-containers-in-500-loc/contained.c
-//Function drops root capabilities from tenant process
+/* inspiration from: https://blog.lizzie.io/linux-containers-in-500-loc/contained.c */
+/*
+ * Drop root capabilities
+ * return:
+ *      success:  0
+ *      failure: -1
+ */
 int drop_caps(){
 
     printf("Dropping capabilities...\n");
@@ -171,10 +194,17 @@ int drop_caps(){
     return 0;
 }
 
-
+/*
+ * cloned child process starts here
+ * and execs tenant program
+ * no return
+ */
 static int child_fn(){
     //isolation ns code:
-    ns_config();
+    if(ns_config() != 0){
+        printf("Failed to set up namespaces\n");
+        exit(1);
+    }
 
     if(drop_caps() != 0){
         printf("failed dropping capabilities\n");
@@ -198,13 +228,27 @@ static int child_fn(){
     return 0;
 }
 
+/*
+ * cloned child process starts here in configuration mode
+ * and execs tenant program
+ * no return
+ */
 static int child_config(){
     //isolation ns code:
-    ns_config();
+    if(ns_config() != 0){
+        printf("Failed to set up namespaces\n");
+        exit(1);
+    }
     execv(executable, args);
     return 0;
 }
 
+/*
+ * Build directory path names used in
+ * namespace setup
+ * Parameter:
+ *      char* - tenant executable passed in command line args
+ */
 int build_paths(char *prog){
     char tenants_fs[] = "/root/isochamber/tenants_fs/";
     char tenants_persist[] = "/root/isochamber/tenants_persist/";
@@ -220,7 +264,6 @@ int build_paths(char *prog){
     strcat(data_dir,"/home");
 
     //create executable path w/ user input
-    // strcpy(executable,"/bin/");
     strcat(executable, prog);
 
     //save mount dir to global child_fs var
@@ -243,6 +286,8 @@ int build_paths(char *prog){
     //create hostname for tenant (for UTS NS)
     strcat(hostname,tid);
     hn_len = strlen(hostname);
+
+    return 0;
 }
 
 int main(int argc, char **argv) {

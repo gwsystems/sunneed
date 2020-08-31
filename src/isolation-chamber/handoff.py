@@ -3,12 +3,15 @@ import sys
 from tenant import mount_tenant,umount_tenant,printR
 
 # function runs to handoff a tenant in normal operation
-# NOTE: First line manually hard copies tenant's filter
+# TODO: First line manually hard copies tenant's filter
 # to filter.gen.h within sunneed/isochamber/ and this
 # is what requires recompilation during handoff. This
 # is less than ideal and should be changed so that 
 # tenant filters are serialized so that handoff.h doesn't
 # need to be recompiled with the correct filter
+# return:
+# 		success: c_path
+# 		failure: none - exit with failure
 def handoff_tenant():
 	if( os.system('cp -f /root/isochamber/tenants_persist/'+tid+'/filter.gen.h ./filter.gen.h') !=0 ):
 		printR("--- Failed to copy tenant filter ---")
@@ -31,6 +34,9 @@ def handoff_tenant():
 # acccess for more complicated debugging, testing,
 # and downloading needs... (i.e. only way so far to 
 # download a git repo within container)
+# return:
+# 		success: c_path
+# 		failure: none - exit with failure
 def handoff_shell():
 	if( os.system('make clean && make config') !=0 ):
 		printR("--- Failed to compile handoff.c ---")

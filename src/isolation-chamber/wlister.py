@@ -6,6 +6,8 @@ import fileinput as fi
 from tenant import mount_tenant, umount_tenant, printR, printG, printY
 
 # allow calls by adding system calls to filter file
+# return:
+#		no return value
 def allow_calls(syscalls):
 	printY("\n--- White listing system calls...\n")
 	allowstring = ""
@@ -27,6 +29,8 @@ def allow_calls(syscalls):
 # against default Docker blacklist
 # (Right now this only prints a warning but fail/error
 # logic could be added here)
+# return:
+# 		no return value
 def check_call(syscall):
 	for i in blklist:
 		x = i.strip()
@@ -36,6 +40,8 @@ def check_call(syscall):
 # function recursively compiles and straces program
 # until the program stops trapping and it is fully
 # whitelisted
+# return:
+#		no return value
 def check_prog():
 	global tid
 	printY("--- Compiling and strace-ing program...\n")
@@ -83,6 +89,9 @@ def check_prog():
 		if( os.system('cp -f ./filter.gen.h /root/isochamber/tenants_persist/'+tid+'/filter.gen.h') !=0 ):
 			printR("--- Failed to copy tenant filter ---")
 			sys.exit(1)
+		# TODO: change this hard copy filter process to one that serializes different tenant filters
+		# 		into a file to avoid recompilation during handoff.py
+
 # --------------------------------------------------------------
 
 # PROGRAM START

@@ -22,6 +22,9 @@ def find_tenant(tid):
 	return -1
 
 # function takes container name and returns tid
+# return:
+#		success: tid
+# 		failure: none - exit with error
 def find_tid(cname):
 	with open('/root/isochamber/containers.json', 'r') as file:
 		containers_dict = json.load(file)
@@ -35,6 +38,9 @@ def find_tid(cname):
 
 # This function is important as it is what mounts the tenant's
 # root filesystem (.../overlay/)
+# return:
+#		success: c_path, c_init
+# 		failure: none - exit with error
 def mount_tenant(tid):
 	c = find_tenant(tid)
 	if c == -1:
@@ -49,9 +55,13 @@ def mount_tenant(tid):
 	c_init = c['init']
 	return c_path,c_init
 
+
 # This function only differs from above in that
 # it returns the location of the dependencies 
 # script rather than the init program
+# return:
+#		success: c_path, c_init
+# 		failure: none - exit with error
 def mount_tenant_config(tid):
 	c = find_tenant(tid)
 	if c == -1:
@@ -66,7 +76,10 @@ def mount_tenant_config(tid):
 	c_init = c['dependencies']
 	return c_path,c_init
 
+
 # unmount the tenant filesystem
+# return:
+# 		no return value
 def umount_tenant(c_path, tid):
 	os.system('umount -f '+c_path)
 	# NOTE: below commented out lines were for deleting contents
@@ -78,6 +91,10 @@ def umount_tenant(c_path, tid):
 	# os.system('rm -rf /root/isochamber/tenants_fs/'+tid+'/workdir/*')
 
 
+# uninstall tenant container and all records of it
+# return:
+# 		success:  0
+# 		failure: -1
 def delete_tenant(tid):
 	with open('/root/isochamber/containers.json', 'r') as file:
 		containers_dict = json.load(file)
