@@ -33,37 +33,37 @@ int ns_config(){
     //mount rprivate to ensure fs is private to processes outside mount namespace
     if(mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0){
         perror("error mounting private\n");
-        err = 1;
+        err = -1;
     }
     //umount proc because we need to mount new /proc for new PID namespace
     if(umount2("/proc", MNT_DETACH) < 0){
         perror("error unmounting /proc\n");
-        err = 1;
+        err = -1;
     }
 
     //self binding creates mount point
     if(mount(child_fs, child_fs,"bind", MS_BIND | MS_REC,"") < 0){
         perror("error creating child mount point\n");
-        err = 1;
+        err = -1;
     }
     if(mkdir(old_dir,0755) < 0){
         perror("error mkdir: /.old/\n");
-        err = 1;
+        err = -1;
     }
 
 
     //bind shared home directory to save tenant working directory
     if(mount(data_dir,data_dir,NULL,MS_BIND,NULL)){
         perror("error binding to /home directory");
-        err = 1;
+        err = -1;
     }
     if(mount(NULL,data_dir,NULL,MS_SHARED,NULL)){
         perror("error marking shared mount (/home)");
-        err = 1;
+        err = -1;
     }
     if(mount(data_dir,child_home,NULL,MS_BIND,NULL)){
         perror("error binding tenant /home to persistant saved /home directory");
-        err = 1;
+        err = -1;
     }
 
 
@@ -71,21 +71,21 @@ int ns_config(){
     //switches namespace's root / to child_fs
     if(pivot_root(child_fs, old_dir) < 0){
         perror("error pivoting root");
-        err = 1;
+        err = -1;
     }
     
     //mounting important pieces of fs
     if(mount("tmpfs","/tmp", "tmpfs", 0, NULL) < 0){ //create temporary fs for tmp to be mounted on
         perror("error mounting tmpfs\n");
-        err = 1;
+        err = -1;
     }
     if(mount("proc","/proc", "proc",0,NULL) < 0){//mount /proc to access PID namespace relevant info
         perror("error mounting /proc\n");
-        err = 1;
+        err = -1;
     }
     if(mount("t","/sys","sysfs", 0, NULL) < 0){//mount /sys to have access to kernel abstractions
         perror("error mounting /sys\n");
-        err = 1;
+        err = -1;
     }
 
 
@@ -93,23 +93,23 @@ int ns_config(){
     //NOTE - these will fail if sunneed as host doesn't have /tmp/tenant_ipc/ directory
     if(mount("/.old/tmp/"SUNNEED_TENANT_IPC_DIR,"/.old/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_BIND,NULL)){
         perror("error binding /tmp/tenant_ipc");
-        err = 1;
+        err = -1;
     }
     if(mount(NULL,"/.old/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_SHARED,NULL)){
         perror("error marking shared mount .../tenant_ipc");
-        err = 1;
+        err = -1;
     }
     if(mkdir("/tmp/"SUNNEED_TENANT_IPC_DIR,0777) < 0){
         perror("error mkdir: /tmp/tenant_ipc/\n");
-        err = 1;
+        err = -1;
     }
     if(mount("/.old/tmp/"SUNNEED_TENANT_IPC_DIR,"/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_BIND,NULL)){
         perror("error binding sunneed's /tmp/tenant_ipc -> /overlay/tmp/ipc");
-        err = 1;
+        err = -1;
     }
     if(mount("/.old/tmp/"SUNNEED_TENANT_IPC_DIR,"/tmp/"SUNNEED_TENANT_IPC_DIR,NULL,MS_REMOUNT | MS_BIND | MS_RDONLY,NULL)){
         perror("error remounting read-only");
-        err = 1;
+        err = -1;
     }
     
     chdir("/");
@@ -117,11 +117,11 @@ int ns_config(){
     // detatch from host fs
     if(umount2("/.old", MNT_DETACH) < 0){
         perror("error unmounting old\n");
-        err = 1;
+        err = -1;
     }
     if(rmdir("/.old") == -1){
         perror("rmdir");
-        err = 1;
+        err = -1;
     }
 
     //set up uts ns
