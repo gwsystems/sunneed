@@ -1,6 +1,6 @@
 # System overview:
 
-This overview is meant to provide a higher level understanding of the Isochamber system structure. To understand how to use the program see the [README.md](../README.md). To dive deeper into the code, see the [system overview](./isochamber_system_overview.md).
+This overview is meant to provide a higher level understanding of the Isochamber system structure. To understand how to use the program see the [README.md](../README.md). To dive deeper into the code, see the [code documentation](./isochamber_documentation.md).
 
 ![Isochamber_design](./imgs/Isochamber_design.png)
 
