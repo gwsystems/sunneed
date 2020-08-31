@@ -108,9 +108,9 @@ So you want to set up / use isochamber with Sunneed? This is a detailed set of s
 
    `wlister.py` compiles `handoff.c` in debug mode and reads the strace output to find system calls to 	whitelist. This whitelist is saved in `/root/isochamber/tenants_persist/<tid>/filter.gen.h`. Whitelisting happens in a loop until no system calls cause the program to trap. This will produce output similar to below if everything works:
 
-   ![wlister-a](./imgs/wlister-a.png)
+   ![wlister-a](./isochamber_documentation/imgs/wlister-a.png)
 
-   ![wlister-b](./imgs/wlister-b.png)
+   ![wlister-b](./isochamber_documentation/imgs/wlister-b.png)
 
    Note: potentially malicious system calls being whitelisted will produce red warnings during whitelisting.
 
