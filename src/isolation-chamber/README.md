@@ -1,6 +1,7 @@
 # - Isochamber -
 
 So you want to set up / use isochamber with Sunneed? This is a detailed set of steps to get you on your way!
+Note: Use a Debian 10 environment/VM!
 
 ## Build and Use:
 
