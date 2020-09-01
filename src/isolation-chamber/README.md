@@ -1,6 +1,7 @@
 # - Isochamber -
+Isochamber is a lightweight container solution to provide tenant isolation on a multi-tenant computing environment. Isochamber is meant to protect system and tenant resources from other, potentially malicious, tenants. Isochamber uses a number of techniques to provide security including, but not limited to, namespace isolation, system call filtering, and capability control. Sunneed is in charge of monitoring and distributing system resources to tenants. Tenant code runs within Isochamber containers, and relies on Sunneed to obtain resources those resources. Sunneed uses IPC to communicate with the tenant, along with LD Preload to modify program calling behavior to monitor the tenant and system resources. If the tenant has already used up their power budget for example, the tenant will be denied resources. This is implemented in an interposition layer that lets the developer write tenant code in normal convention using standard POSIX. Since this will be run on a power constrained system, tenants have to assume they can't run their code past their power budget and be able to account for this. 
 
-So you want to set up / use isochamber with Sunneed? This is a detailed set of steps to get you on your way!
+So you want to set up / use Isochamber with Sunneed? This is a detailed set of steps to get you on your way!
 
 Note: Use a Debian 10 environment/VM!
 
