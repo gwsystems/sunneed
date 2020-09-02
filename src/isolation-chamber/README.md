@@ -36,7 +36,7 @@ Note: Use a Debian 10 environment/VM!
 
    --------------
 
-3. Now that the isochamber strucures have been installed, we can begin to configure tenant containers. So how do we get take an executable from a tenant and run it within a container? We give them a defined template in which to place their programs and dependencies needed. We will give tenants this blank template in the form of a folder (see `test_containers/sample_container/`...
+3. Now that the isochamber strucures have been installed, we can begin to configure tenant containers. So how do we get take an executable from a tenant and run it within a container? We give them a defined template in which to place their programs and dependencies needed. We will give tenants this blank template in the form of a folder (see `test_containers/sample_container/`)...
 
    ```
    sample_container/
