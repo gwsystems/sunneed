@@ -13,8 +13,7 @@ nng_socket sunneed_socket;
 
 static void
 nngfatal(const char *func, int rv) {
-    fprintf(stderr, "%s: %s\n", func, nng_strerror(rv));
-    exit(1);
+    FATAL(rv, "%s: %s\n", func, nng_strerror(rv));
 }
 
 /** 
@@ -70,7 +69,7 @@ sunneed_client_init(const char *name) {
     RegisterClientRequest register_req = REGISTER_CLIENT_REQUEST__INIT;
     register_req.name = malloc(strlen(name) + 1);
     if (!register_req.name) {
-        fprintf(stderr, "failed to allocate memory for client name\n");
+        FATAL(-1, "failed to allocate memory for client name");
         return -1;
     }
     strncpy(register_req.name, name, strlen(name) + 1);
@@ -83,7 +82,7 @@ sunneed_client_init(const char *name) {
     for (size_t i = 0; i < resp->register_client->n_locked_paths; i++) {
         locked_paths[i].path = malloc(strlen(resp->register_client->locked_paths[i]) + 1);
         strcpy(locked_paths[i].path, resp->register_client->locked_paths[i]);
-        printf("Registered locked path '%s'\n", locked_paths[i].path);
+        client_printf(-1, "Registered locked path '%s'", locked_paths[i].path);
     }
     sunneed_response__free_unpacked(resp, NULL);
 
@@ -116,7 +115,7 @@ sunneed_client_fetch_locked_file_path(const char *pathname) {
         return 0;
     }
 
-    printf("Opening dummy path '%s'\n", resp->open_file->path);
+    client_printf("Opening dummy path '%s'\n", resp->open_file->path);
     char *path = malloc(strlen(resp->open_file->path) + 1);
     if (!path)
         FATAL(-1, "unable to allocate path");
@@ -154,6 +153,56 @@ sunneed_client_on_locked_path_open(int i, char *pathname, int fd) {
     return 0;
 }
 
+bool
+sunneed_client_fd_is_locked(int fd) {
+    for (int i = 0; i < MAX_LOCKED_FILES; i++)
+        if (locked_paths[i].fd == fd)
+            return true;
+    return false;
+}
+
+ssize_t
+sunneed_client_remote_write(int fd, const void *data, size_t n_bytes) {
+    // Get the dummy path corresponding to the FD.
+    int locked_file_i;
+    char *dummy_path = NULL;
+    for (locked_file_i = 0; locked_file_i < MAX_LOCKED_FILES; locked_file_i++)
+        if (locked_paths[locked_file_i].fd == fd) {
+            dummy_path = locked_paths[locked_file_i].path;
+            break;
+        }
+
+    if (dummy_path == NULL)
+        FATAL(-1, "cannot remote write a non-dummy file");
+
+    SunneedRequest req = SUNNEED_REQUEST__INIT;
+    req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_WRITE;
+
+    WriteRequest write_req = WRITE_REQUEST__INIT;
+    write_req.dummy_path = malloc(strlen(dummy_path) + 1);
+    write_req.data.data = malloc(n_bytes);
+    if (!write_req.dummy_path || !write_req.data.data)
+        FATAL(-1, "failed to allocate write request data");
+    strncpy((char *)write_req.data.data, data, n_bytes);
+    strncpy(write_req.dummy_path, dummy_path, strlen(dummy_path) + 1);
+    write_req.data.len = n_bytes;
+
+    req.write = &write_req;
+    send_request(&req);
+
+    free(write_req.dummy_path);
+    free(write_req.data.data);
+
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
+    if (resp == NULL) {
+        // TODO Handle
+        FATAL(-1, "write response was NULL");
+    }
+    sunneed_response__free_unpacked(resp, NULL);
+
+    return 0;
+}
+
 int
 sunneed_client_disconnect(void) {
     // TODO Check socket opened.
@@ -167,20 +216,20 @@ sunneed_client_disconnect(void) {
     SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
     if (resp == NULL) {
         // TODO Handle
-        printf("Disconnect response was NULL\n");
+        FATAL(-1, "Disconnect response was NULL\n");
     }
     sunneed_response__free_unpacked(resp, NULL);
 
-    printf("Unregistered.\n");
+    client_printf("Unregistered.\n");
     return 0;
 }
 
 void
 sunneed_client_debug_print_locked_path_table(void) {
-    printf("Client locked files: [\n");
+    client_printf("locked files: [\n");
     for (int i = 0; i < MAX_LOCKED_FILES; i++) {
         if (locked_paths[i].path != NULL)
-            printf("    FD %d : '%s'\n", locked_paths[i].fd, locked_paths[i].path);
+            client_printf("    FD %d : '%s'\n", locked_paths[i].fd, locked_paths[i].path);
     }
-    printf("]\n");
+    client_printf("]\n");
 }

@@ -8,6 +8,7 @@ message SunneedRequest {
         RegisterClientRequest register_client = 1;
         UnregisterClientRequest unregister_client = 2;
         OpenFileRequest open_file = 3;
+        WriteRequest write = 4;
     }
 }
 
@@ -21,6 +22,11 @@ message OpenFileRequest {
     string path = 1;
 }
 
+message WriteRequest {
+    string dummy_path = 1;
+    bytes data = 2; 
+}
+
 // {{{1 Response
 
 // Generic container type for messages sent from server to client.
@@ -31,6 +37,7 @@ message SunneedResponse {
         DeviceResponse device = 3;
         OpenFileResponse open_file = 4;
         RegisterClientResponse register_client = 5;
+        WriteResponse call_write = 6;
     }
 }
 
@@ -44,6 +51,15 @@ message GenericResponse {
 
 message OpenFileResponse {
     string path = 1;
+}
+
+message WriteResponse {
+    // Zero if no error.
+    int32 errno_value = 1;
+
+    // This is only set from values of type `size_t`, so don't worry about data loss when converting it back from
+    // uint64.
+    uint64 bytes_written = 2;
 }
 
 import "device.proto";

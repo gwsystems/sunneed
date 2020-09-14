@@ -22,6 +22,8 @@ main(void) {
         return -1;
     }
 
+    write(fd, "foo", 3);
+
     close(fd);
 
     printf("Opened and closed file\n");

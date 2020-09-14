@@ -46,3 +46,6 @@ void __attribute__((destructor)) on_unload();
 
 int
 open(const char *pathname, int flags, mode_t mode);
+
+ssize_t
+write(int fd, const void *buf, size_t count);

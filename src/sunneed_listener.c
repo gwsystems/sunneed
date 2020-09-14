@@ -8,6 +8,23 @@ extern struct sunneed_device devices[];
 extern struct sunneed_tenant tenants[];
 extern const char *locked_file_paths[];
 
+/** 
+ * Maps dummy paths (typically sent by clients during a read or write) to FDs pointing to the real device, held by
+ * sunneed.
+ */
+struct {
+    char *path;
+    int fd;
+} dummy_path_fd_map[MAX_LOCKED_FILES] = { { NULL, 0 } };
+
+static int
+get_fd_from_dummy_path(char *path) {
+    for (int i = 0; i < MAX_LOCKED_FILES; i++)
+        if (dummy_path_fd_map[i].path && strncmp(dummy_path_fd_map[i].path, path, strlen(path)) == 0)
+            return dummy_path_fd_map[i].fd;
+    return -1;
+}
+
 // Control flow:
 // When a new pipe connects, we use this struct to make a mapping of its pipe ID to a tenant. Then, when further
 //  requests are made, the pipe ID is used to identify a tenant to the request.
@@ -146,11 +163,36 @@ serve_open_file(
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_OPEN_FILE;
     resp->open_file = sub_resp;
 
+    // TODO Take flags!!
+
     struct sunneed_device *locker;
     if ((locker = sunneed_device_file_locker(request->path)) != NULL) {
         // TODO Wait for availability, perform power calcs, etc.
-        
+
+        // Open the real file and save its FD.
+        int real_fd = open(request->path, O_RDWR); // TODO Use flags given by client.
         char *dummypath = sunneed_device_get_dummy_file(request->path);
+
+        int i;
+        for (i = 0; i < MAX_LOCKED_FILES; i++) {
+            // Find open slot.
+            if (dummy_path_fd_map[i].path == NULL) {
+                dummy_path_fd_map[i].path = malloc(strlen(dummypath) + 1);
+                strncpy(dummy_path_fd_map[i].path, dummypath, strlen(dummypath) + 1);
+                dummy_path_fd_map[i].fd = real_fd;
+
+                LOG_I("Opened locked path '%s' as '%s' (FD %d)", request->path, dummypath, real_fd);
+
+                break;
+            }
+        }
+        if (i == MAX_LOCKED_FILES) {
+            // Theoretically this should never happen (since MAX_LOCKED_FILES also bounds the number of possible locked
+            //  paths) but good to check.
+            LOG_E("No slots remaining in dummy_path_fd_map");
+            return 1;
+        }
+        
         // TODO Free this
         sub_resp->path = malloc(strlen(dummypath));
         strncpy(sub_resp->path, dummypath, strlen(dummypath) + 1);
@@ -158,6 +200,39 @@ serve_open_file(
         // They requested a non-dummy file.
         return 1;
     }
+
+    return 0;
+}
+
+static int
+serve_write(
+        SunneedResponse *resp,
+        void *sub_resp_buf,
+        struct sunneed_tenant *tenant,
+        WriteRequest *request) {
+    LOG_D("Got request from %d to write %ld bytes to '%s' (real file FD %d)", tenant->id, request->data.len, request->dummy_path, get_fd_from_dummy_path(request->dummy_path));
+
+    WriteResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (WriteResponse)WRITE_RESPONSE__INIT;
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_CALL_WRITE;
+    resp->call_write = sub_resp;
+
+    // Perform the write.
+    ssize_t bytes_written;
+    if ((bytes_written = write(get_fd_from_dummy_path(request->dummy_path), request->data.data, request->data.len)) 
+            < 0) {
+        int errno_val = errno;
+
+        sub_resp->errno_value = errno_val;
+        sub_resp->bytes_written = bytes_written;
+
+        LOG_E("`write` for client %d failed with: %s", tenant->id, strerror(errno_val));
+
+        return 1;
+    }
+
+    sub_resp->bytes_written = bytes_written;
+    sub_resp->errno_value = 0;
 
     return 0;
 }
@@ -236,6 +311,9 @@ sunneed_listen(void) {
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE:
                 ret = serve_open_file(&resp, sub_resp_buf, tenant, request->open_file);
+                break;
+            case SUNNEED_REQUEST__MESSAGE_TYPE_WRITE:
+                ret = serve_write(&resp, sub_resp_buf, tenant, request->write);
                 break;
             default:
                 LOG_W("Received request with invalid type %d", request->message_type_case);

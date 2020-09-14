@@ -36,3 +36,20 @@ open(const char *pathname, int flags, mode_t mode) {
 
     return fd;
 }
+
+ssize_t
+write(int fd, const void *buf, size_t count) {
+    printf("Overlay write %d\n", fd);
+    int ret;
+
+    if (!sunneed_client_fd_is_locked(fd)) {
+        // Perform the write as normal.
+        SUPER(ret, write, int, (fd, buf, count), int, const void *, size_t);
+        return ret;
+    }
+    
+    // Ask sunneed to do the write for us.
+    sunneed_client_remote_write(fd, buf, count);
+
+    return 0;
+}

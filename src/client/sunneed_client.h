@@ -4,28 +4,20 @@
 #include "../shared/sunneed_ipc.h"
 #include "../shared/sunneed_files.h"
 
+#include <stdbool.h>
+
 #include <nng/nng.h>
 #include <nng/protocol/reqrep0/rep.h>
 #include <nng/protocol/reqrep0/req.h>
-
-#define PACK_AND_SEND(req)                                          \
-    {                                                               \
-        nng_msg *msg;                                               \
-        int req_len = sunneed_request__get_packed_size(&req);       \
-        void *buf = malloc(req_len);                                \
-        sunneed_request__pack(&req, buf);                           \
-        SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        \
-        SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   \
-        SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0); \
-        free(buf);                                                  \
-        nng_msg_free(msg);                                          \
-    }
 
 #define FATAL(CODE, FMT, ...)                                          \
     {                                                                  \
         fprintf(stderr, "fatal (%d): " FMT "\n", CODE, ##__VA_ARGS__); \
         exit(CODE);                                                    \
     }
+
+#define client_printf(FMT, ...) \
+    printf("\e[38;5;240mclient:\e[0m " FMT, ##__VA_ARGS__)
 
 typedef unsigned int sunneed_device_handle_t;
 
@@ -37,6 +29,12 @@ sunneed_client_fetch_locked_file_path(const char *pathname);
 
 int
 sunneed_client_check_locked_file(const char *pathname);
+
+bool
+sunneed_client_fd_is_locked(int fd);
+
+ssize_t
+sunneed_client_remote_write(int fd, const void *data, size_t n_bytes);
 
 int
 sunneed_client_disconnect(void);
