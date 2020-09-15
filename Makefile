@@ -176,5 +176,5 @@ endef
 ifeq ($(SUNNEED_BUILD_TYPE),devel)
 	overlay_runscript_content := "gdb --args env LD_PRELOAD=$(abspath $(overlay_testing_obj)) $$\@"
 else
-	overlay_runscript_content := "LD_PRELOAD=$(abspath $(overlay_obj)) $$@"
+	overlay_runscript_content := "LD_PRELOAD=$(abspath $(overlay_obj)) $$\@"
 endif
