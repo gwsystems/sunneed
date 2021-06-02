@@ -16,7 +16,9 @@
 
 ## Wiring
 
-![img](./SunneeD_Wiring_v1.png)
+![img](./SunneeD_Wiring_Diagram.png)
+
+**Note: the system should be powered by the battery babysitter and not a micro-usb connection to the Pi. Otherwise the i2c connection between the babysitter and Pi may not work.**
 
 
 ### Raspberry Pi 0w Pinmap
@@ -26,11 +28,13 @@
 
 | Pi pin | Connection |
 | :----- | :-------   |
-| 1      | 3.3v in (from battery)    |
 | 2      | 5v out (to stepper driver) |
-| 6      | GND (in from battery) |
+| 3      | SDA (from babysitter)   |
+| 5      | SCL (from babysitter)  |
 | 9      | GND (out to stepper driver)|
 | 16     | Stepper driver In1 |
+| 17     | 3.3v In (battery)  |
 | 18     | Stepper driver In2 |
 | 19     | Stepper driver In4 |
+| 20     | GND (battery)      |
 | 22     | Stepper driver In3 |
