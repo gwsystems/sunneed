@@ -21,7 +21,7 @@ open(const char *pathname, int flags, mode_t mode) {
         printf("'%s' is not locked; opening normally\n", pathname);
     } else {
         printf("'%s' is locked; opening via dummy\n", pathname);
-        char *dummy_path = sunneed_client_fetch_locked_file_path(pathname);
+        char *dummy_path = sunneed_client_fetch_locked_file_path(pathname, flags);
         pathname = dummy_path;
     }
 

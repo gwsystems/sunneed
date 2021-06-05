@@ -165,13 +165,21 @@ serve_open_file(
 
     // TODO Take flags!!
 
+
     struct sunneed_device *locker;
     if ((locker = sunneed_device_file_locker(request->path)) != NULL) {
         // TODO Wait for availability, perform power calcs, etc.
 
         // Open the real file and save its FD.
-        int real_fd = open(request->path, O_RDWR); // TODO Use flags given by client.
-        char *dummypath = sunneed_device_get_dummy_file(request->path);
+//        int real_fd = open(request->path, O_RDWR); // TODO Use flags given by client.
+	int real_fd = open(request->path, request->flags);
+
+	if (real_fd == -1) {
+	    LOG_E("Failed to open file '%s'", request->path);
+	    return 1;
+	}
+
+	char *dummypath = sunneed_device_get_dummy_file(request->path);
 
         int i;
         for (i = 0; i < MAX_LOCKED_FILES; i++) {
@@ -310,7 +318,7 @@ sunneed_listen(void) {
                 ret = serve_unregister_client(&resp, sub_resp_buf, pipe, tenant);
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE:
-                ret = serve_open_file(&resp, sub_resp_buf, tenant, request->open_file);
+		ret = serve_open_file(&resp, sub_resp_buf, tenant, request->open_file);
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_WRITE:
                 ret = serve_write(&resp, sub_resp_buf, tenant, request->write);
