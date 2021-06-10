@@ -59,6 +59,13 @@ device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
 all: pre-all main overlay util
+
+log_pwr: pre-all main_log_pwr overlay util
+
+main_log_pwr: ext protobuf pip devices
+	$(call section_title,main executable)
+	$(CC) $(CFLAGS) -DTESTING -DLOG_PWR $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+
 pre-all:
 	@echo "Starting all build..."
 

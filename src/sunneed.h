@@ -5,6 +5,11 @@
 
 #define APP_NAME "sunneed"
 
-typedef void* sunneed_worker_thread_result_t; 
+#ifdef LOG_PWR
+    #define REQS_PER_LOG 10
+    int last_capacity, curr_capacity, reqs_since_last_log;
+#endif
+
+typedef void* sunneed_worker_thread_result_t;
 
 #endif

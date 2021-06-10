@@ -8,4 +8,5 @@ pip_info() {
 unsigned int
 present_power() {
     return 0;
+   // return bq27441_nominal_avail_cap();
 }
