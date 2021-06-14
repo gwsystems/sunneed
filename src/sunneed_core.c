@@ -66,12 +66,18 @@ spawn_worker_threads(void) {
 void
 sunneed_init(void) {
     pip = pip_info();
+    last_capacity = present_power();
 }
 
 int
 main(int argc, char *argv[]) {
     int opt;
     extern int optopt;
+#ifdef LOG_PWR
+    LOG_D("Recording power\n");
+    stepper_pwr_logfile = fopen("stepper_pwr_log.txt", "w+");
+    reqs_since_last_log = 0;
+#endif
 
 #ifdef TESTING
     const char *optstring = ":ht:c";
