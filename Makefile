@@ -16,7 +16,7 @@ SUNNEED_BUILD_OVERLAY_LIB_NAME ?= sunneed_overlay
 
 export SOURCE_FORMATTER = clang-format -style=file -i
 
-export cflags_deps = -I$(PWD)/$(ext_dir)/nng/include -L$(PWD)/$(ext_dir)/nng/build -lnng -lpthread -ldl -lprotobuf-c -latomic
+export cflags_deps = -I$(PWD)/$(ext_dir)/nng/include -L$(PWD)/$(ext_dir)/nng/build -lnng -lpthread -ldl -lprotobuf-c -latomic -I$(PWD)/$(ext_dir)/libbq27441 -lbq27441 -li2c
 
 ifeq ($(SUNNEED_BUILD_TYPE),devel)
 	util_cflags = -Wl,-rpath,$(CURDIR)/$(clientlib_out_dir)
@@ -62,12 +62,19 @@ all: pre-all main overlay util
 pre-all:
 	@echo "Starting all build..."
 
+log_pwr: pre-all main_pwr_data overlay util
+
+
 main: ext protobuf pip devices
 	$(call section_title,main executable)
 	$(CC) $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
  
+main_pwr_data: ext protobuf pip devices
+	$(call section_title, main executable)
+	$(CC) $(CFLAGS) -DTESTING -DLOG_PWR $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+
 pip: pre-pip $(src_dir)/pip/$(pip_name).c
-	$(CC) $(CFLAGS) -c $(src_dir)/pip/$(pip_name).c -o $(pip_obj)
+	$(CC) $(CFLAGS) -o $(pip_obj) -c $(src_dir)/pip/$(pip_name).c
 pre-pip:
 	$(call section_title,pip)
 

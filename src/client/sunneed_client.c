@@ -147,7 +147,7 @@ sunneed_client_on_locked_path_open(int i, char *pathname, int fd) {
     if (pathname == NULL)
         FATAL(-1, "pathname is null");
     if (fd <= 0)
-        FATAL(-1, "illegal FD");
+	FATAL(-1, "illegal FD");
 
     locked_paths[i].path = pathname;
     locked_paths[i].fd = fd;

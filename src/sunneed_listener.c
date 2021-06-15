@@ -225,6 +225,20 @@ serve_write(
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_CALL_WRITE;
     resp->call_write = sub_resp;
 
+
+    #ifdef LOG_PWR
+    char buf[1024];
+    char real_path[1024];
+
+    sprintf(buf, "/proc/self/fd/%d", get_fd_from_dummy_path(request->dummy_path));
+    memset(real_path, 0, sizeof(real_path));
+    readlink(buf, real_path, sizeof(real_path));
+    printf("real path: %s\n", real_path);
+    if (strcmp(real_path, "/dev/stepper") == 0) {
+	LOG_D("writing to stepper motor driver");
+    }
+    #endif
+
     // Perform the write.
     ssize_t bytes_written;
     if ((bytes_written = write(get_fd_from_dummy_path(request->dummy_path), request->data.data, request->data.len)) 
