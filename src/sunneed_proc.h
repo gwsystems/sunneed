@@ -2,7 +2,9 @@
 #define _SUNNEED_PROC_H_
 
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "log.h"
 #include "sunneed.h"
@@ -48,5 +50,8 @@ sunneed_get_tenant_cpu_usage(sunneed_tenant_id_t tenant_id);
 
 sunneed_worker_thread_result_t
 sunneed_proc_monitor(void *args);
+
+sunneed_worker_thread_result_t
+sunneed_stepperMotor_driver(void *args);
 
 #endif

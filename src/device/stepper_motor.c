@@ -5,7 +5,7 @@
 
 struct sunneed_device_type_file_lock data = {
 	.len = 1,
-	.paths = {"/dev/stepper"}
+	.paths = {"/tmp/stepper"}
 };
 
 int

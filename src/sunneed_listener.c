@@ -230,12 +230,18 @@ serve_write(
     char buf[1024];
     char real_path[1024];
 
-    sprintf(buf, "/proc/self/fd/%d", get_fd_from_dummy_path(request->dummy_path));
-    memset(real_path, 0, sizeof(real_path));
-    readlink(buf, real_path, sizeof(real_path));
-    printf("real path: %s\n", real_path);
-    if (strcmp(real_path, "/dev/stepper") == 0) {
-	LOG_D("writing to stepper motor driver");
+    if (sprintf(buf, "/proc/self/fd/%d", get_fd_from_dummy_path(request->dummy_path)) >= 0) {
+	    memset(real_path, 0, sizeof(real_path));
+	    readlink(buf, real_path, sizeof(real_path));
+	    ///// temp
+	    LOG_D("Real path: %s\n", real_path);
+	    /////
+	    if (strcmp(real_path, "/tmp/stepper") == 0) {
+		
+    	}
+    } else {
+	LOG_E("Cannot log power events for write to invalid FD(%d)", get_fd_from_dummy_path(request->dummy_path));
+    	return 1;
     }
     #endif
 

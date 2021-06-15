@@ -117,3 +117,21 @@ sunneed_proc_monitor(__attribute__((unused)) void *args) {
         sleep(5);
     }
 }
+
+sunneed_worker_thread_result_t
+sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
+    int pid, status;
+    const char *executable_path = "./ext/SunneeD_dev_drivers/StepperDriver/stepper_driver";
+    
+    LOG_I("Starting stepper motor driver: tenants can write to /tmp/stepper");
+    
+    if ( (pid = fork()) == 0) { /* child proc -- stepper motor driver */
+        execl(executable_path, executable_path, NULL);
+	    LOG_E("Stepper driver could not execute: errno %s", strerror(errno));
+   	return NULL; /* shouldn't be reached -- driver runs on infinite loop */
+    } else { /* parent (pthread) -- doesn't do anything */
+	wait(&status);
+		LOG_E("Stepper driver could not execute: errno %s", strerror(errno));
+	return NULL;
+    }
+}

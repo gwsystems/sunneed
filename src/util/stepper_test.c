@@ -7,7 +7,7 @@
 int
 main(void)
 {
-	int fd = open("/dev/stepper", O_WRONLY);
+	int fd = open("/tmp/stepper", O_WRONLY);
 	if (fd == -1) {
 		fprintf(stderr, "couldn't open file\n");
 		return -1;
