@@ -237,8 +237,11 @@ serve_write(
 	    LOG_D("Real path: %s\n", real_path);
 	    /////
 	    if (strcmp(real_path, "/tmp/stepper") == 0) {
-		
-    	}
+		LOG_E("Wrote %d bytes to stepper motor driver",write(stepper_signalPipe[1], "o", 1));	
+    		if ( read(stepper_dataPipe[0], &stepperMotor_orientation, sizeof(stepperMotor_orientation)) > 0) {
+		    LOG_E("Stepper orientation: %d\n", stepperMotor_orientation);
+		}
+	    }
     } else {
 	LOG_E("Cannot log power events for write to invalid FD(%d)", get_fd_from_dummy_path(request->dummy_path));
     	return 1;

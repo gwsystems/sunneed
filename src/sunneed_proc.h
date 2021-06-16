@@ -8,6 +8,7 @@
 
 #include "log.h"
 #include "sunneed.h"
+#include "sunneed_device.h" /* for setting up pipes to stepper motor driver */
 
 #define MAX_TENANTS 2
 

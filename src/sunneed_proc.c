@@ -124,14 +124,35 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
     const char *executable_path = "./ext/SunneeD_dev_drivers/StepperDriver/stepper_driver";
     
     LOG_I("Starting stepper motor driver: tenants can write to /tmp/stepper");
-    
+   
+    if (pipe(stepper_signalPipe) == -1) {
+	LOG_E("Could not create signal pipe to stepper motor driver");
+	return NULL;
+    }
+    if (pipe(stepper_dataPipe) == -1) {
+	LOG_E("Could not create data pipe to stepper motor driver");
+    }
+
     if ( (pid = fork()) == 0) { /* child proc -- stepper motor driver */
-        execl(executable_path, executable_path, NULL);
+	close(stepper_signalPipe[1]);
+	close(stepper_dataPipe[0]);
+	char *exec_args[4];
+	for (int i = 0; i < 4; i++) exec_args[i] = (char*)malloc(sizeof(char)*2);
+	sprintf(exec_args[0],"%d",stepper_signalPipe[0]);
+	sprintf(exec_args[1],"%d",stepper_signalPipe[1]);
+	sprintf(exec_args[2],"%d",stepper_dataPipe[0]);
+	sprintf(exec_args[3],"%d",stepper_dataPipe[1]);
+        
+	printf("%d, %d	%d,%d\n",stepper_signalPipe[0], stepper_signalPipe[1], stepper_dataPipe[0], stepper_dataPipe[1]);
+	
+	execl(executable_path, executable_path, exec_args[0], exec_args[1], exec_args[2], exec_args[3], NULL);
 	    LOG_E("Stepper driver could not execute: errno %s", strerror(errno));
    	return NULL; /* shouldn't be reached -- driver runs on infinite loop */
     } else { /* parent (pthread) -- doesn't do anything */
-	wait(&status);
-		LOG_E("Stepper driver could not execute: errno %s", strerror(errno));
+	close(stepper_signalPipe[0]);
+	close(stepper_dataPipe[1]);
+   	wait(&status);
+	LOG_E("ERR stepper driver exited");
 	return NULL;
     }
 }
