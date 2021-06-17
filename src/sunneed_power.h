@@ -19,6 +19,10 @@
 
 #define PASSIVE_PWR_PER_MIN PASSIVE_PWR_PER_SEC * 60
 
+#ifdef LOG_PWR
+#define REQUESTS_PER_PWR_LOG 20
+#endif
+
 // TODO This is waaaaaaaaaaaaaaaaaaaaay too big.
 #define QUANTUM_DURATION_MS 5000
 
@@ -52,4 +56,8 @@ struct sunneed_power_usage_event *power_usage_evs;
 
 struct sunneed_device devices[MAX_DEVICES];
 
+#ifdef LOG_PWR
+int requests_since_last_log;
+int requests_arr_dirty[REQUESTS_PER_PWR_LOG]; /* holds requests intercepted by sunneed until REQUESTS_PER_PWR_LOG requests hit, then will be flushed to logfile */
+#endif
 #endif

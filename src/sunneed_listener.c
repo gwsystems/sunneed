@@ -227,25 +227,23 @@ serve_write(
 
 
     #ifdef LOG_PWR
-    char buf[1024];
-    char real_path[1024];
-
-    if (sprintf(buf, "/proc/self/fd/%d", get_fd_from_dummy_path(request->dummy_path)) >= 0) {
-	    memset(real_path, 0, sizeof(real_path));
-	    readlink(buf, real_path, sizeof(real_path));
+    char command = 'o';
+    char *real_path = get_path_from_dummy_path(request->dummy_path);
+    int old_orientation;
 	    ///// temp
 	    LOG_D("Real path: %s\n", real_path);
 	    /////
 	    if (strcmp(real_path, "/tmp/stepper") == 0) {
-		LOG_E("Wrote %d bytes to stepper motor driver",write(stepper_signalPipe[1], "o", 1));	
-    		if ( read(stepper_dataPipe[0], &stepperMotor_orientation, sizeof(stepperMotor_orientation)) > 0) {
+	  	LOG_E("wrote %d bytes to stepper",write(stepper_signal_fd, &command, 1));	
+    		fsync(stepper_signal_fd);		
+		if ( read(stepper_dataPipe[0], &stepperMotor_orientation, sizeof(stepperMotor_orientation)) > 0) {
 		    LOG_E("Stepper orientation: %d\n", stepperMotor_orientation);
+		    old_orientation = stepperMotor_orientation;
+		} else {
+		    LOG_E("Could not get stepper motor orientation");
+		    return 1;
 		}
 	    }
-    } else {
-	LOG_E("Cannot log power events for write to invalid FD(%d)", get_fd_from_dummy_path(request->dummy_path));
-    	return 1;
-    }
     #endif
 
     // Perform the write.
@@ -265,6 +263,26 @@ serve_write(
     sub_resp->bytes_written = bytes_written;
     sub_resp->errno_value = 0;
 
+    if (strcmp(real_path, "/tmp/stepper") == 0) fsync(stepper_signal_fd);
+
+    #ifdef LOG_PWR
+    if (strcmp(real_path, "/tmp/stepper") == 0) {
+        LOG_E("wrote %d bytes to stepper",write(stepper_signal_fd, &command, 1));
+	if (read(stepper_dataPipe[0], &stepperMotor_orientation, sizeof(stepperMotor_orientation)) > 0) {	
+            LOG_E("new orientation: %d\n",stepperMotor_orientation);
+	    if (requests_since_last_log < REQUESTS_PER_PWR_LOG) {
+                requests_arr_dirty[requests_since_last_log] = abs(stepperMotor_orientation - old_orientation);
+		LOG_E("Change in orientation: %d\n", requests_arr_dirty[requests_since_last_log]);
+            } else {
+		LOG_E("hi");
+	    }
+	} else {
+	    LOG_E("Could not get stepper motor orientation");
+	    return 1;
+	}
+    }
+    requests_since_last_log++;
+    #endif
     return 0;
 }
 
@@ -342,10 +360,11 @@ sunneed_listen(void) {
                 break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE:
 		ret = serve_open_file(&resp, sub_resp_buf, tenant, request->open_file);
-                break;
+		break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_WRITE:
                 ret = serve_write(&resp, sub_resp_buf, tenant, request->write);
-                break;
+                LOG_E("FINISHED WRITE");
+      		break;
             default:
                 LOG_W("Received request with invalid type %d", request->message_type_case);
                 ret = -1;

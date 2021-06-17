@@ -12,6 +12,13 @@ sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_p
 
 int (*runtime_tests[])(void) = RUNTIME_TESTS;
 
+void
+handle_exit(void) {
+    LOG_I("Killing stepper motr driver");
+    kill(stepper_driver_pid, SIGTERM);
+    LOG_I("Sunneed exiting");
+}
+
 static unsigned int
 testcase_count(void) {
     unsigned int testcases = 0;
@@ -65,7 +72,15 @@ spawn_worker_threads(void) {
 
 void
 sunneed_init(void) {
+    if (pip_init()) {
+	LOG_E("Error initializing power management hardware");
+	exit(1);
+    }
     pip = pip_info();
+
+    #ifdef LOG_PWR
+    requests_since_last_log = 0;
+    #endif
 }
 
 int
@@ -73,8 +88,10 @@ main(int argc, char *argv[]) {
     int opt;
     extern int optopt;
 
+    atexit(handle_exit);
+
 #ifdef LOG_PWR
-    logfile_pwr = fopen("sunneed_pwr_log.txt", "w+");
+    logfile_pwr = fopen("sunneed_pwr_log.csv", "w+");
 #endif
 
 #ifdef TESTING

@@ -120,39 +120,56 @@ sunneed_proc_monitor(__attribute__((unused)) void *args) {
 
 sunneed_worker_thread_result_t
 sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
-    int pid, status;
+    int status, stepper_new_stdin;
     const char *executable_path = "./ext/SunneeD_dev_drivers/StepperDriver/stepper_driver";
     
     LOG_I("Starting stepper motor driver: tenants can write to /tmp/stepper");
-   
-    if (pipe(stepper_signalPipe) == -1) {
-	LOG_E("Could not create signal pipe to stepper motor driver");
-	return NULL;
-    }
-    if (pipe(stepper_dataPipe) == -1) {
-	LOG_E("Could not create data pipe to stepper motor driver");
+    stepper_new_stdin = open("/tmp/stepper", O_RDONLY);
+    mkfifo("/tmp/stepper", S_IRWXU | S_IROTH | S_IWOTH);
+    //    stepper_signal_fd = open("/tmp/stepper", O_RDWR | O_CREAT, S_IRWXU | S_IROTH | S_IWOTH);
+    if (stepper_new_stdin == -1) {
+        if (mkfifo("/tmp/stepper", S_IRWXU | S_IWOTH) == -1) {
+	    LOG_E("Could not create FIFO");	
+	    return NULL;
+	}
+	stepper_new_stdin = open("/tmp/stepper", O_RDONLY);
     }
 
-    if ( (pid = fork()) == 0) { /* child proc -- stepper motor driver */
-	close(stepper_signalPipe[1]);
+    if (pipe(stepper_dataPipe) == -1) {
+	LOG_E("Could not create data pipe to stepper motor driver");
+	return NULL;
+    }
+
+    if ( (stepper_driver_pid = fork()) == 0) { /* child proc -- stepper motor driver */
 	close(stepper_dataPipe[0]);
-	char *exec_args[4];
-	for (int i = 0; i < 4; i++) exec_args[i] = (char*)malloc(sizeof(char)*2);
-	sprintf(exec_args[0],"%d",stepper_signalPipe[0]);
-	sprintf(exec_args[1],"%d",stepper_signalPipe[1]);
-	sprintf(exec_args[2],"%d",stepper_dataPipe[0]);
-	sprintf(exec_args[3],"%d",stepper_dataPipe[1]);
-        
-	printf("%d, %d	%d,%d\n",stepper_signalPipe[0], stepper_signalPipe[1], stepper_dataPipe[0], stepper_dataPipe[1]);
-	
-	execl(executable_path, executable_path, exec_args[0], exec_args[1], exec_args[2], exec_args[3], NULL);
+	if (close(0) == -1) {
+	    LOG_E("Error closing stdin for stepper driver: %s\n",strerror(errno));
+	    return NULL;
+	}
+	if (dup2(stepper_new_stdin, 0) == -1) {
+	    LOG_E("Error duping stepper_signal_fd: %s\n", strerror(errno));
+	    return NULL;
+	}
+	close(stepper_new_stdin);
+
+	if (close(1) == -1) {
+	    LOG_E("Error closing stdin for stepper driver: %s\n",strerror(errno));
+	    return NULL;
+	}
+	if (dup2(stepper_dataPipe[1], 1) == -1) {
+	    LOG_E("Error duping stepper_signal_fd: %s\n", strerror(errno));
+	    return NULL;
+	}
+	close(stepper_dataPipe[1]);
+
+	execl(executable_path, executable_path, NULL);
 	    LOG_E("Stepper driver could not execute: errno %s", strerror(errno));
    	return NULL; /* shouldn't be reached -- driver runs on infinite loop */
     } else { /* parent (pthread) -- doesn't do anything */
-	close(stepper_signalPipe[0]);
 	close(stepper_dataPipe[1]);
+	stepper_signal_fd = open("/tmp/stepper", O_WRONLY);
    	wait(&status);
-	LOG_E("ERR stepper driver exited");
+	LOG_E("ERR stepper driver exited with status %d -- errno: %s", status,strerror(errno));
 	return NULL;
     }
 }

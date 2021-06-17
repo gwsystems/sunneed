@@ -12,10 +12,8 @@ main(void)
 		fprintf(stderr, "couldn't open file\n");
 		return -1;
 	}
-	int dir = 90;
+	int dir = 200;
 	write(fd, &dir, sizeof(dir));
-
-	close(fd);
 
 	return 0;
 }

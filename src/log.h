@@ -16,12 +16,14 @@ FILE *logfile, *logfile_pwr;
 #define LOGL_WARN "W\e[0;33m"
 #define LOGL_ERROR "E\e[0;31m"
 
+#ifdef LOG_PWR
 
-#define LOG_PWR(LEVEL, MESSAGE, ...)                                                \
+#ifndef LOG_PWR_EVENT
+#define LOG_PWR_EVENT(LEVEL, MESSAGE, ...)                                          \
     {                                                                               \
         FILE *_logfile = logfile_pwr;                                               \
         if (logfile_pwr) {							    \
-		_logfile = fopen("sunneed_pwr_log.txt", "w+");			    \
+		_logfile = fopen("sunneed_pwr_log.csv", "w+");			    \
 	}									    \
 	time_t _now = time(NULL);                                                   \
         struct tm *_time = localtime(&_now);                                        \
@@ -30,6 +32,9 @@ FILE *logfile, *logfile_pwr;
         fprintf(_logfile, "%s[%s] " MESSAGE "\e[0m\n", LEVEL, _time_str, ##__VA_ARGS__); \
 	fflush(_logfile);							    \
     }
+#endif
+
+#endif
 
 #define LOG(LEVEL, MESSAGE, ...)                                                    \
     {                                                                               \
@@ -48,5 +53,5 @@ FILE *logfile, *logfile_pwr;
 #define LOG_I(MESSAGE, ...) LOG(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
 #define LOG_W(MESSAGE, ...) LOG(LOGL_WARN, MESSAGE, ##__VA_ARGS__);
 #define LOG_E(MESSAGE, ...) LOG(LOGL_ERROR, MESSAGE, ##__VA_ARGS__);
-#define LOG_P(MESSAGE, ...) LOG_PWR(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
+#define LOG_P(MESSAGE, ...) LOG_PWR_EVENT(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
 #endif
