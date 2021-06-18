@@ -57,7 +57,8 @@ struct sunneed_power_usage_event *power_usage_evs;
 struct sunneed_device devices[MAX_DEVICES];
 
 #ifdef LOG_PWR
-int requests_since_last_log;
+clock_t last_pwr_log_t, curr_pwr_log_t;
+int requests_since_last_log, last_logged_pwr;
 int requests_arr_dirty[REQUESTS_PER_PWR_LOG]; /* holds requests intercepted by sunneed until REQUESTS_PER_PWR_LOG requests hit, then will be flushed to logfile */
 #endif
 #endif

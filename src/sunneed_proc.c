@@ -125,7 +125,6 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
     
     LOG_I("Starting stepper motor driver: tenants can write to /tmp/stepper");
     stepper_new_stdin = open("/tmp/stepper", O_RDONLY);
-    mkfifo("/tmp/stepper", S_IRWXU | S_IROTH | S_IWOTH);
     //    stepper_signal_fd = open("/tmp/stepper", O_RDWR | O_CREAT, S_IRWXU | S_IROTH | S_IWOTH);
     if (stepper_new_stdin == -1) {
         if (mkfifo("/tmp/stepper", S_IRWXU | S_IWOTH) == -1) {

@@ -227,17 +227,19 @@ serve_write(
 
 
     #ifdef LOG_PWR
-    char command = 'o';
+    char get_orientation_command = 'o';
     char *real_path = get_path_from_dummy_path(request->dummy_path);
     int old_orientation;
 	    ///// temp
 	    LOG_D("Real path: %s\n", real_path);
 	    /////
 	    if (strcmp(real_path, "/tmp/stepper") == 0) {
-	  	LOG_E("wrote %d bytes to stepper",write(stepper_signal_fd, &command, 1));	
+	  	if (write(stepper_signal_fd, &get_orientation_command, 1) <= 0) {
+		    LOG_E("Could not write to stepper driver to get orientation");
+		    return 1;
+		}	
     		fsync(stepper_signal_fd);		
 		if ( read(stepper_dataPipe[0], &stepperMotor_orientation, sizeof(stepperMotor_orientation)) > 0) {
-		    LOG_E("Stepper orientation: %d\n", stepperMotor_orientation);
 		    old_orientation = stepperMotor_orientation;
 		} else {
 		    LOG_E("Could not get stepper motor orientation");
@@ -263,25 +265,39 @@ serve_write(
     sub_resp->bytes_written = bytes_written;
     sub_resp->errno_value = 0;
 
-    if (strcmp(real_path, "/tmp/stepper") == 0) fsync(stepper_signal_fd);
+//    if (strcmp(real_path, "/tmp/stepper") == 0) fsync(stepper_signal_fd);
 
     #ifdef LOG_PWR
     if (strcmp(real_path, "/tmp/stepper") == 0) {
-        LOG_E("wrote %d bytes to stepper",write(stepper_signal_fd, &command, 1));
+        if (write(stepper_signal_fd, &get_orientation_command, 1) <= 0) {
+	    LOG_E("Could not write to stepper driver to get orientation");
+	    return 1;
+	}
 	if (read(stepper_dataPipe[0], &stepperMotor_orientation, sizeof(stepperMotor_orientation)) > 0) {	
-            LOG_E("new orientation: %d\n",stepperMotor_orientation);
 	    if (requests_since_last_log < REQUESTS_PER_PWR_LOG) {
-                requests_arr_dirty[requests_since_last_log] = abs(stepperMotor_orientation - old_orientation);
-		LOG_E("Change in orientation: %d\n", requests_arr_dirty[requests_since_last_log]);
-            } else {
-		LOG_E("hi");
+    		if (requests_since_last_log == 0 && last_logged_pwr == -1) { /* first log since boot - need to initialize pwr record */
+		    last_logged_pwr = present_power();
+		    last_pwr_log_t = clock();
+		}		
+		requests_arr_dirty[requests_since_last_log] = abs(stepperMotor_orientation - old_orientation);
+
+		requests_since_last_log++;
+	    } else {
+		for (int i = 0; i < REQUESTS_PER_PWR_LOG; i++) {
+		    LOG_D("%d, ",requests_arr_dirty[i]);
+		    LOG_P("%d, ",requests_arr_dirty[i]);
+		}
+		memset(requests_arr_dirty, -1, REQUESTS_PER_PWR_LOG * sizeof(int));
+		requests_since_last_log = 0;
+		double pwr_change = ((double) last_logged_pwr - present_power()) - ( ((double) (clock() - last_pwr_log_t) / CLOCKS_PER_SEC) * PASSIVE_PWR_PER_SEC);
+		LOG_P("%f\n", pwr_change);
+		LOG_D("%f\n", pwr_change);
 	    }
 	} else {
 	    LOG_E("Could not get stepper motor orientation");
 	    return 1;
 	}
     }
-    requests_since_last_log++;
     #endif
     return 0;
 }
@@ -317,9 +333,9 @@ sunneed_listen(void) {
     // Await messages.
     for (;;) {
         nng_msg *msg;
-
-        SUNNEED_NNG_TRY_RET(nng_recvmsg, != 0, sock, &msg, NNG_FLAG_ALLOC);
-
+	LOG_D("start listener loop");
+  	SUNNEED_NNG_TRY_RET(nng_recvmsg, != 0, sock, &msg, NNG_FLAG_ALLOC);
+	LOG_D("got msg");
         // TODO They claim nng_msg_get_pipe() returns -1 on error, but its return type is nng_pipe, which can't
         //  be compared to an integer.
         nng_pipe pipe = nng_msg_get_pipe(msg);
@@ -328,7 +344,7 @@ sunneed_listen(void) {
         size_t msg_len = nng_msg_len(msg);
         SUNNEED_NNG_MSG_LEN_FIX(msg_len);
         SunneedRequest *request = sunneed_request__unpack(NULL, msg_len, nng_msg_body(msg));
-
+	LOG_D("unpacked msg");
         if (request == NULL) {
             LOG_W("Received null request from %d", pipe.id);
             goto end;
@@ -342,7 +358,7 @@ sunneed_listen(void) {
             LOG_W("Received message from %d, who is not registered.", pipe.id);
             goto end;
         }
-
+	LOG_D("got tenant from pipe");
         // Begin setting up our response.
         SunneedResponse resp = SUNNEED_RESPONSE__INIT;
         int ret = -1;
@@ -363,7 +379,6 @@ sunneed_listen(void) {
 		break;
             case SUNNEED_REQUEST__MESSAGE_TYPE_WRITE:
                 ret = serve_write(&resp, sub_resp_buf, tenant, request->write);
-                LOG_E("FINISHED WRITE");
       		break;
             default:
                 LOG_W("Received request with invalid type %d", request->message_type_case);

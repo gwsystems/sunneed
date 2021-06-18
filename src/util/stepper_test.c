@@ -13,8 +13,13 @@ main(void)
 		return -1;
 	}
 	int dir = 200;
+	printf("test: wrote %d bytes\n",write(fd, &dir, sizeof(dir)));
+
+	dir = 300;
 	write(fd, &dir, sizeof(dir));
 
+	dir = 90;
+	write(fd, &dir, sizeof(dir));
 	return 0;
 }
 

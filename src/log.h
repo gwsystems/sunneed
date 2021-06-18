@@ -29,7 +29,7 @@ FILE *logfile, *logfile_pwr;
         struct tm *_time = localtime(&_now);                                        \
         char _time_str[21];                                                         \
         strftime(_time_str, 21, "%Y-%m-%d %H:%M:%S", _time);                        \
-        fprintf(_logfile, "%s[%s] " MESSAGE "\e[0m\n", LEVEL, _time_str, ##__VA_ARGS__); \
+        fprintf(_logfile, MESSAGE "\e[0m", ##__VA_ARGS__); \
 	fflush(_logfile);							    \
     }
 #endif
