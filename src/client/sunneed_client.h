@@ -5,6 +5,8 @@
 #include "../shared/sunneed_files.h"
 
 #include <stdbool.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include <nng/nng.h>
 #include <nng/protocol/reqrep0/rep.h>
@@ -19,6 +21,7 @@
 #define client_printf(FMT, ...) \
     printf("\e[38;5;240mclient:\e[0m " FMT, ##__VA_ARGS__)
 
+int client_init = 0;
 typedef unsigned int sunneed_device_handle_t;
 
 int
@@ -44,3 +47,17 @@ sunneed_client_on_locked_path_open(int i, char *pathname, int fd);
 
 void
 sunneed_client_debug_print_locked_path_table(void);
+
+int
+sunneed_client_socket(int domain, int type, int protocol);
+
+int
+sunneed_client_is_dummysocket(int sockfd);
+
+int
+sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+
+ssize_t
+sunneed_client_remote_send(int sockfd, const void *data, size_t n_bytes, int flags);
+
+

@@ -17,6 +17,12 @@ struct {
     int fd;
 } dummy_path_fd_map[MAX_LOCKED_FILES] = { { NULL, 0 } };
 
+struct {
+    int id;
+    int sockfd;
+    int domain;
+} dummy_socket_map[MAX_TENANT_SOCKETS] = { {0, 0, 0} };
+
 static int
 get_fd_from_dummy_path(char *path) {
     for (int i = 0; i < MAX_LOCKED_FILES; i++)
@@ -245,6 +251,123 @@ serve_write(
     return 0;
 }
 
+static int
+serve_socket(SunneedResponse *resp, void *sub_response_buf, SocketRequest *request)
+{
+	LOG_D("Got request to open a new socket\n");
+
+	SocketResponse *sock_resp = sub_response_buf;
+	*sock_resp = (SocketResponse)SOCKET_RESPONSE__INIT;
+	resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_SOCKET;
+	resp->socket = sock_resp;
+	//TODO: checks on the request?
+	
+	//find open spot in socket table
+	int i, new_id, sockfd;
+	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
+	{
+		new_id = i;
+		if(dummy_socket_map[i].id == 0)
+		{
+			sockfd = socket(request->domain, request->type, request->protocol);
+			if(sockfd)
+			{
+				dummy_socket_map[i].id = new_id;
+				dummy_socket_map[i].sockfd = sockfd;
+				dummy_socket_map[i].domain = request->domain;
+				LOG_D("Socket created successfully\n");
+				break;
+			}else{
+				LOG_E("Failed to create socket. domain %d type %d protocol %d\n", request->domain, request->type, request->protocol);
+				return 1;
+			}
+		}
+	}
+
+	if(new_id == MAX_TENANT_SOCKETS)
+	{
+		LOG_E("no more sockets can be created\n");
+		sock_resp->dummy_sockfd = -1;
+		return 1;
+	}
+
+	sock_resp->dummy_sockfd = new_id;
+	return 0;
+}
+
+static int
+serve_connect(nng_pipe pipe, ConnectRequest *request)
+{
+	//lookup real sockfd in dummy_socket_map and create new socket
+	LOG_D("got connect request\n");
+	int i, sockfd, domain;
+	struct sockaddr_in remote_addr;
+	sockfd = 0;
+	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
+	{
+		if(dummy_socket_map[i].id == request->sockfd)
+		{
+			LOG_D("found socket for pipe %d\n", pipe.id);
+			sockfd = dummy_socket_map[i].sockfd;
+			domain = dummy_socket_map[i].domain;
+			break;
+		}
+	}
+	if(!(sockfd))
+	{
+		LOG_E("failed to find socket for pipe %d\n", pipe.id);
+		return 1;
+	}
+
+	remote_addr.sin_family = domain;
+	remote_addr.sin_port = htons(request->port);
+
+	//TODO: check address/port
+	if(inet_pton(domain, request->address, &remote_addr.sin_addr) <= 0)
+	{
+		LOG_E("invalid address/domain or failed to convert\n");
+		return 1;
+	}
+
+	if(connect(sockfd, (struct sockaddr *)&remote_addr, sizeof(remote_addr)) < 0)
+	{
+		LOG_E("Failed to connect to %s\n", request->address);
+		 return 1;
+	}
+
+	LOG_D("connected to remote host: %s\n", request->address);
+
+	return 0;
+
+
+}
+
+static int 
+serve_send(struct sunneed_tenant *tenant, SendRequest *request)
+{
+	//TODO: formulate response, for now just log and call send
+	
+	LOG_D("Got request from %d to send %ld bytes", tenant->id, sizeof(request->data.len));
+
+	//TODO: probably want more checks here as well
+	
+	int sockfd = request->sockfd;
+	if(!(sockfd))
+	{
+		LOG_E("Bad socket descriptor: %d\n", sockfd);
+		return 1;
+	}
+	if(!(request->data.data))
+	{
+		LOG_E("couldnt get data from request\n");
+		return 1;
+	}
+	send(sockfd, request->data.data, request->data.len, request->flags);
+
+	LOG_D("Sent data from tenant %d\n", tenant->id);
+
+	return 0;
+}
 static void
 report_nng_error(const char *func, int rv) {
     LOG_E("nng error: (%s) %s", func, nng_strerror(rv));
@@ -344,6 +467,15 @@ sunneed_listen(void) {
                 #endif
                 ret = serve_write(&resp, sub_resp_buf, tenant, request->write);
                 break;
+	    case SUNNEED_REQUEST__MESSAGE_TYPE_SOCKET:
+		ret = serve_socket(&resp, sub_resp_buf, request->socket);
+		break;
+	    case SUNNEED_REQUEST__MESSAGE_TYPE_CONNECT:
+		ret = serve_connect(pipe, request->connect);
+		break;
+	    case SUNNEED_REQUEST__MESSAGE_TYPE_SEND:
+		ret = serve_send(tenant, request->send);
+		break;
             default:
                 LOG_W("Received request with invalid type %d", request->message_type_case);
                 ret = -1;

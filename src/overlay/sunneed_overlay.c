@@ -53,3 +53,82 @@ write(int fd, const void *buf, size_t count) {
 
     return 0;
 }
+
+int
+socket(int domain, int type, int protocol)
+{
+
+	int sockfd;
+
+	if(!(client_init))
+	{
+		int ret;
+		SUPER(ret, socket, int, (domain, type, protocol), int, int, int);
+		return ret;
+	}
+
+
+
+	if((domain == AF_INET) || (domain == AF_INET6))
+	{
+		if((type == SOCK_STREAM) || (type == SOCK_DGRAM))
+		{
+			printf("calling sunneed_client_socket\n");
+			sockfd = sunneed_client_socket(domain, type, protocol);
+			printf("got back sockfd %d\n", sockfd);
+			return sockfd;
+
+		}
+	}
+	
+	printf("calling SUPER for socket\n");
+	int ret2;
+	SUPER(ret2, socket, int, (domain, type, protocol), int, int, int);
+	return ret2;
+
+}
+
+int
+connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	char addr_string[1024];
+	printf("OVERLAY CONNECT\n");
+	if(!(client_init))
+	{
+		printf("client not init-ed\n");
+		int fd;
+		SUPER(fd, connect, int, (sockfd, addr, addrlen), int, const struct sockaddr *, socklen_t);
+		return fd;
+	}
+
+	if(sunneed_client_is_dummysocket(sockfd))
+	{
+		//struct sockaddr_in *in_addr = (struct sockaddr_in *)addr;
+		//inet_pton(AF_INET, in_addr->sin_addr, addr_string);
+		//printf("overlay connect: destination ip = %s\n",addr_string);
+
+		//getnameinfo(addr, addrlen, addr_string, strlen(addr_string), NULL, 0, 0); 
+		//printf("overlay connect: addr: %s\n", addr_string); 
+		printf("overlay connect: calling sunneed_client_connect\n");
+		return sunneed_client_connect(sockfd, addr, addrlen);
+	}else if(sockfd){
+		printf("overlay connect: calling SUPER\n");
+		int ret;
+		SUPER(ret, connect, int, (sockfd, addr, addrlen), int, const struct sockaddr *, socklen_t);
+		return ret;
+	}else{
+		perror("overlay connect: bad socketfd and not a dummy socket\n");
+		return 0;
+	}
+
+}
+
+ssize_t
+send(int sockfd, const void *buf, size_t len, int flags)
+{
+	printf("overlay send %d\n", sockfd);
+
+	sunneed_client_remote_send(sockfd, buf, len, flags);
+
+	return 0;
+}
