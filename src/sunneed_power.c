@@ -72,6 +72,7 @@ sunneed_quantum_begin(void) {
         LOG_E("Failed to allocate space for power usage events!");
         return 1;
     }
+    power_usage_evs->next = NULL;
 
     LOG_I("Started quantum %d", current_quantum.id);
     current_quantum.is_active = true;
@@ -131,6 +132,7 @@ sunneed_quantum_end(void) {
 sunneed_worker_thread_result_t
 sunneed_quantum_worker(__attribute__((unused)) void *args) {
     int ret;
+    power_usage_evs = NULL;
     while (true) {
         if ((ret = sunneed_quantum_begin()) != 0) {
             goto end;

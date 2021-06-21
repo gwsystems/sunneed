@@ -202,7 +202,7 @@ serve_open_file(
         }
         
         // TODO Free this
-        sub_resp->path = malloc(strlen(dummypath));
+        sub_resp->path = malloc(strlen(dummypath) + 1);
         strncpy(sub_resp->path, dummypath, strlen(dummypath) + 1);
     } else {
         // They requested a non-dummy file.
