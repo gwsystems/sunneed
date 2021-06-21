@@ -160,7 +160,7 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
 	    return NULL;
 	}
 	close(stepper_dataPipe[1]);
-
+	LOG_I("Calling execl");
 	execl(executable_path, executable_path, NULL);
 	    LOG_E("Stepper driver could not execute: errno %s", strerror(errno));
    	return NULL; /* shouldn't be reached -- driver runs on infinite loop */

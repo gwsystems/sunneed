@@ -77,9 +77,10 @@ sunneed_init(void) {
 	exit(1);
     }
     pip = pip_info();
-
+    stepperMotor_orientation = -1;
     #ifdef LOG_PWR
     requests_since_last_log = 0;
+    last_logged_pwr = -1;
     #endif
 }
 

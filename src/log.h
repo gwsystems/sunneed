@@ -22,15 +22,11 @@ FILE *logfile, *logfile_pwr;
 #define LOG_PWR_EVENT(LEVEL, MESSAGE, ...)                                          \
     {                                                                               \
         FILE *_logfile = logfile_pwr;                                               \
-        if (logfile_pwr) {							    \
+        if (!logfile_pwr) {							    \
 		_logfile = fopen("sunneed_pwr_log.csv", "w+");			    \
 	}									    \
-	time_t _now = time(NULL);                                                   \
-        struct tm *_time = localtime(&_now);                                        \
-        char _time_str[21];                                                         \
-        strftime(_time_str, 21, "%Y-%m-%d %H:%M:%S", _time);                        \
-        fprintf(_logfile, MESSAGE "\e[0m", ##__VA_ARGS__); \
-	fflush(_logfile);							    \
+        fprintf(_logfile, MESSAGE, ##__VA_ARGS__); 			    \
+        fflush(_logfile);							    \
     }
 #endif
 

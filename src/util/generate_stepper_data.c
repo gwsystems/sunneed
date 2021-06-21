@@ -17,6 +17,7 @@ main(void)
 	return -1;
     }
 
+    write(fd, "+90", 1);
     for (i = 0; i < NUM_REQUESTS; i++) {
 	orientation = rand() % 360;
 	write(fd, &orientation, sizeof(orientation));

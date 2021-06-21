@@ -224,26 +224,29 @@ serve_write(
     *sub_resp = (WriteResponse)WRITE_RESPONSE__INIT;
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_CALL_WRITE;
     resp->call_write = sub_resp;
-
-
     #ifdef LOG_PWR
-    char get_orientation_command = 'o';
     char *real_path = get_path_from_dummy_path(request->dummy_path);
-    int old_orientation;
-	    ///// temp
+    int orientation_change;
+    char stepper_sig = 'z';
+            ///// temp
 	    LOG_D("Real path: %s\n", real_path);
 	    /////
 	    if (strcmp(real_path, "/tmp/stepper") == 0) {
-	  	if (write(stepper_signal_fd, &get_orientation_command, 1) <= 0) {
-		    LOG_E("Could not write to stepper driver to get orientation");
-		    return 1;
-		}	
-    		fsync(stepper_signal_fd);		
-		if ( read(stepper_dataPipe[0], &stepperMotor_orientation, sizeof(stepperMotor_orientation)) > 0) {
-		    old_orientation = stepperMotor_orientation;
+   		if (stepperMotor_orientation == -1) {
+			/* TODO: read orientation file */
+			stepperMotor_orientation = 0;
+		}
+		
+	        if (request->data.data[0] == '+' || request->data.data[0] == '-') {
+		    orientation_change = (int)request->data.data[2] << 8 | (int)request->data.data[1]; 
+		    if (request->data.data[0] == '+') {
+			stepperMotor_orientation += orientation_change;
+		    } else {
+			stepperMotor_orientation -= orientation_change;
+		    }
 		} else {
-		    LOG_E("Could not get stepper motor orientation");
-		    return 1;
+		    orientation_change = abs(stepperMotor_orientation - ( ((int)request->data.data[1] << 8) | (int) request->data.data[0])); 
+		    stepperMotor_orientation = ((int)request->data.data[1] << 8) | (int)request->data.data[0];
 		}
 	    }
     #endif
@@ -269,33 +272,31 @@ serve_write(
 
     #ifdef LOG_PWR
     if (strcmp(real_path, "/tmp/stepper") == 0) {
-        if (write(stepper_signal_fd, &get_orientation_command, 1) <= 0) {
-	    LOG_E("Could not write to stepper driver to get orientation");
-	    return 1;
-	}
-	if (read(stepper_dataPipe[0], &stepperMotor_orientation, sizeof(stepperMotor_orientation)) > 0) {	
-	    if (requests_since_last_log < REQUESTS_PER_PWR_LOG) {
-    		if (requests_since_last_log == 0 && last_logged_pwr == -1) { /* first log since boot - need to initialize pwr record */
-		    last_logged_pwr = present_power();
-		    last_pwr_log_t = clock();
-		}		
-		requests_arr_dirty[requests_since_last_log] = abs(stepperMotor_orientation - old_orientation);
+	LOG_I("Waiting for stepper driver to finish");
 
-		requests_since_last_log++;
-	    } else {
-		for (int i = 0; i < REQUESTS_PER_PWR_LOG; i++) {
-		    LOG_D("%d, ",requests_arr_dirty[i]);
-		    LOG_P("%d, ",requests_arr_dirty[i]);
-		}
-		memset(requests_arr_dirty, -1, REQUESTS_PER_PWR_LOG * sizeof(int));
-		requests_since_last_log = 0;
-		double pwr_change = ((double) last_logged_pwr - present_power()) - ( ((double) (clock() - last_pwr_log_t) / CLOCKS_PER_SEC) * PASSIVE_PWR_PER_SEC);
-		LOG_P("%f\n", pwr_change);
-		LOG_D("%f\n", pwr_change);
-	    }
+	while (read(stepper_dataPipe[0], &stepper_sig, 1) == 0 || stepper_sig != 'a'); /* wait for stepper motor to finish turning */
+	stepper_sig = 'z';
+
+	LOG_I("Requests so far: %d", requests_since_last_log);
+	if (requests_since_last_log < REQUESTS_PER_PWR_LOG) {
+    	    if (requests_since_last_log == 0 && last_logged_pwr == -1) { /* first log since boot - need to initialize pwr record */
+		last_logged_pwr = present_power();
+		last_pwr_log_t = clock();
+            }		
+	    requests_arr_dirty[requests_since_last_log] = orientation_change;
+	    requests_since_last_log++;
 	} else {
-	    LOG_E("Could not get stepper motor orientation");
-	    return 1;
+            for (int i = 0; i < REQUESTS_PER_PWR_LOG; i ++) {
+		LOG_D("%d, ",requests_arr_dirty[i]);
+           	LOG_P("%d, ",requests_arr_dirty[i]);
+	    }
+
+	    memset(requests_arr_dirty, -1, REQUESTS_PER_PWR_LOG * sizeof(int));
+	    requests_since_last_log = 0;
+	    double pwr_change = ((double) last_logged_pwr - present_power()) - ( ((double) (clock() - last_pwr_log_t) / CLOCKS_PER_SEC) * PASSIVE_PWR_PER_SEC);
+	    LOG_P("%f\n",pwr_change); 
+	    last_logged_pwr = present_power();
+	    last_pwr_log_t = clock();
 	}
     }
     #endif
