@@ -19,7 +19,7 @@ main(void)
 {
 	int remote_fd, read_val;
 	struct sockaddr_in remote_addr;
-	char msg[64] = {'A'};
+	char *msg = "heyo";
 	float downtime = 0.5;
 
 	//create UDP socket, change SOCK_DGRAM to SOCK_STREAM to create TCP sockets
@@ -41,20 +41,18 @@ main(void)
 		exit(0);
 	}
 	
-	printf("pi_send: calling connect\n");
 	if(connect(remote_fd, (struct sockaddr *)&remote_addr, sizeof(remote_addr)) < 0)
 	{
 		perror("failed to connect\n");
 		exit(0);
 	}
 
-	printf("connected to remote host\n");
 
 	int i;
 	for (i = 0; i < 20; i++)
 	{
-		printf("sending msg\n");
-		send(remote_fd, msg, sizeof(msg), 0);
+		printf("sending msg %s\n", msg);
+		send(remote_fd, msg, strlen(msg), 0);
 
 		sleep(downtime);
 

@@ -7,6 +7,9 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
 
 #include <nng/nng.h>
 #include <nng/protocol/reqrep0/rep.h>

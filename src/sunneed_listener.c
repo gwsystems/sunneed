@@ -7,8 +7,8 @@
 extern struct sunneed_device devices[];
 extern struct sunneed_tenant tenants[];
 extern const char *locked_file_paths[];
-
-/** 
+extern int errno;
+/*n
  * Maps dummy paths (typically sent by clients during a read or write) to FDs pointing to the real device, held by
  * sunneed.
  */
@@ -21,7 +21,7 @@ struct {
     int id;
     int sockfd;
     int domain;
-} dummy_socket_map[MAX_TENANT_SOCKETS] = { {0, 0, 0} };
+} dummy_socket_map[MAX_TENANT_SOCKETS] = { {-1, -1, 0} };
 
 static int
 get_fd_from_dummy_path(char *path) {
@@ -48,6 +48,17 @@ tenant_of_pipe(int pipe_id) {
         if (nng_pipe_id(tenant_pipes[i].pipe) == pipe_id)
             return tenant_pipes[i].tenant;
     return NULL;
+}
+
+int
+lookup_socket(sockfd)
+{
+	int i;
+	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
+		if(dummy_socket_map[i].id == sockfd)
+			return dummy_socket_map[i].sockfd;
+	return 0;
+	
 }
 
 // Get the PID of a pipe and use that to create a new sunneed tenant with that ID.
@@ -208,7 +219,7 @@ serve_open_file(
         }
         
         // TODO Free this
-        sub_resp->path = malloc(strlen(dummypath));
+        sub_resp->path = malloc(strlen(dummypath) + 1);
         strncpy(sub_resp->path, dummypath, strlen(dummypath) + 1);
     } else {
         // They requested a non-dummy file.
@@ -267,7 +278,7 @@ serve_socket(SunneedResponse *resp, void *sub_response_buf, SocketRequest *reque
 	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
 	{
 		new_id = i;
-		if(dummy_socket_map[i].id == 0)
+		if(dummy_socket_map[i].id == -1)
 		{
 			sockfd = socket(request->domain, request->type, request->protocol);
 			if(sockfd)
@@ -276,23 +287,17 @@ serve_socket(SunneedResponse *resp, void *sub_response_buf, SocketRequest *reque
 				dummy_socket_map[i].sockfd = sockfd;
 				dummy_socket_map[i].domain = request->domain;
 				LOG_D("Socket created successfully\n");
-				break;
+				sock_resp->dummy_sockfd = new_id;
+				return 0;
 			}else{
 				LOG_E("Failed to create socket. domain %d type %d protocol %d\n", request->domain, request->type, request->protocol);
 				return 1;
 			}
 		}
 	}
+	LOG_E("Maximum tenant sockets have been created\n");
+	return 1;
 
-	if(new_id == MAX_TENANT_SOCKETS)
-	{
-		LOG_E("no more sockets can be created\n");
-		sock_resp->dummy_sockfd = -1;
-		return 1;
-	}
-
-	sock_resp->dummy_sockfd = new_id;
-	return 0;
 }
 
 static int
@@ -300,6 +305,9 @@ serve_connect(nng_pipe pipe, ConnectRequest *request)
 {
 	//lookup real sockfd in dummy_socket_map and create new socket
 	LOG_D("got connect request\n");
+	
+	//TODO: figure out getting the port from the tenant, hardcoded to get data from network
+
 	int i, sockfd, domain;
 	struct sockaddr_in remote_addr;
 	sockfd = 0;
@@ -320,7 +328,7 @@ serve_connect(nng_pipe pipe, ConnectRequest *request)
 	}
 
 	remote_addr.sin_family = domain;
-	remote_addr.sin_port = htons(request->port);
+	remote_addr.sin_port = htons(9999);
 
 	//TODO: check address/port
 	if(inet_pton(domain, request->address, &remote_addr.sin_addr) <= 0)
@@ -348,10 +356,10 @@ serve_send(struct sunneed_tenant *tenant, SendRequest *request)
 	//TODO: formulate response, for now just log and call send
 	
 	LOG_D("Got request from %d to send %ld bytes", tenant->id, sizeof(request->data.len));
-
+	LOG_D("Msg to send %s\n", request->data.data);
 	//TODO: probably want more checks here as well
 	
-	int sockfd = request->sockfd;
+	int sockfd = lookup_socket(request->sockfd);
 	if(!(sockfd))
 	{
 		LOG_E("Bad socket descriptor: %d\n", sockfd);
@@ -362,9 +370,14 @@ serve_send(struct sunneed_tenant *tenant, SendRequest *request)
 		LOG_E("couldnt get data from request\n");
 		return 1;
 	}
-	send(sockfd, request->data.data, request->data.len, request->flags);
+	if((send(sockfd, request->data.data, request->data.len, request->flags)) < 0)
+	{
+		LOG_E("Failed to send data for tenant %d error %d\n", tenant->id, errno);
+	}else{
 
-	LOG_D("Sent data from tenant %d\n", tenant->id);
+		LOG_D("Sent data from tenant %d\n", tenant->id);
+	}
+
 
 	return 0;
 }

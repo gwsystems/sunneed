@@ -81,7 +81,6 @@ socket(int domain, int type, int protocol)
 		}
 	}
 	
-	printf("calling SUPER for socket\n");
 	int ret2;
 	SUPER(ret2, socket, int, (domain, type, protocol), int, int, int);
 	return ret2;
@@ -91,11 +90,8 @@ socket(int domain, int type, int protocol)
 int
 connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
-	char addr_string[1024];
-	printf("OVERLAY CONNECT\n");
 	if(!(client_init))
 	{
-		printf("client not init-ed\n");
 		int fd;
 		SUPER(fd, connect, int, (sockfd, addr, addrlen), int, const struct sockaddr *, socklen_t);
 		return fd;
@@ -109,10 +105,8 @@ connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 
 		//getnameinfo(addr, addrlen, addr_string, strlen(addr_string), NULL, 0, 0); 
 		//printf("overlay connect: addr: %s\n", addr_string); 
-		printf("overlay connect: calling sunneed_client_connect\n");
 		return sunneed_client_connect(sockfd, addr, addrlen);
 	}else if(sockfd){
-		printf("overlay connect: calling SUPER\n");
 		int ret;
 		SUPER(ret, connect, int, (sockfd, addr, addrlen), int, const struct sockaddr *, socklen_t);
 		return ret;
@@ -126,9 +120,17 @@ connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 ssize_t
 send(int sockfd, const void *buf, size_t len, int flags)
 {
-	printf("overlay send %d\n", sockfd);
-
-	sunneed_client_remote_send(sockfd, buf, len, flags);
-
+	
+	printf("OVERLAY SEND\n");
+	if(sunneed_client_is_dummysocket(sockfd))
+	{
+		printf("sunneed client send\n");
+		sunneed_client_remote_send(sockfd, buf, len, flags);
+	}else if(sockfd){
+		printf("SUPER send\n");
+		int ret;
+		SUPER(ret, send, int, (sockfd, buf, len, flags), int, const void *, size_t, int);
+		return ret;
+	}
 	return 0;
 }

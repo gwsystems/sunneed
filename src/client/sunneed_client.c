@@ -27,7 +27,6 @@ nngfatal(const char *func, int rv) {
 static void
 send_request(SunneedRequest *req) {
     nng_msg *msg;                                               
-
     int req_len = sunneed_request__get_packed_size(req);
     void *buf = malloc(req_len);
     if (!buf)
@@ -158,6 +157,7 @@ sunneed_client_on_locked_path_open(int i, char *pathname, int fd) {
     if (fd <= 0)
         FATAL(-1, "illegal FD");
 
+	   //toSend[REQUETS_PER_PWR_LOG * 3] = pwr_change;
     locked_paths[i].path = pathname;
     locked_paths[i].fd = fd;
 
@@ -224,7 +224,7 @@ sunneed_client_socket(int domain, int type, int protocol)
 		exit(0);
 	}
 
-	if(!((type == 1) || (type == 2)))
+	if(!((type == SOCK_STREAM) || (type == SOCK_DGRAM)))
 	{
 		perror("invalid type, must be SOCK_STREAM(tcp) or SOCK_DGRAM(udp)\n");
 		exit(0);
@@ -241,6 +241,7 @@ sunneed_client_socket(int domain, int type, int protocol)
 	sock.protocol = protocol;
 
 	req.socket = &sock;
+	printf("sending request to sunneed\n");
 	send_request(&req);
 
 	SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_SOCKET);
@@ -262,6 +263,7 @@ sunneed_client_socket(int domain, int type, int protocol)
 	}
 
 	//TODO: handle not having enough free sockets
+	sunneed_response__free_unpacked(resp, NULL);
 	return -1;
 
 }
@@ -274,7 +276,6 @@ sunneed_client_is_dummysocket(int sockfd)
 	{
 		if(dummy_sockets[i].dummy_sockfd == sockfd)
 		{
-			printf("found dummy sockfd\n");
 			return 1;
 		}
 	}
@@ -284,12 +285,29 @@ sunneed_client_is_dummysocket(int sockfd)
 int
 sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
-	printf("SUNNEED CLIENT CONNECT\n\n");
-	char address[NI_MAXHOST];
+	char host_name[NI_MAXHOST];
+	char address[INET_ADDRSTRLEN];
 	int port = 0;
-	printf("get name info was here\n");
-	//getnameinfo(addr, addrlen, address, sizeof(address), NULL, 0, 0);
-	//printf("client connect: got address %s\n", address);
+	struct hostent *requested_host;
+	char **addr_pointer;
+
+	//get host name from sockaddr struct
+	getnameinfo(addr, addrlen, host_name, NI_MAXHOST, NULL, 0, 0);
+
+	requested_host = gethostbyname(host_name);
+	if(requested_host == NULL)
+	{
+		fprintf(stderr, "client connect: failed to get host by name errno %d\n", h_errno);
+		return -1;
+	}
+
+	//loop through addr list to find a valid address for the host
+	for(addr_pointer = requested_host->h_addr_list; *addr_pointer; addr_pointer++)
+	{
+		inet_ntop(AF_INET, (void *)*addr_pointer, address, sizeof(address));
+		printf("client connect: got address %s\n", address);
+	}
+
 
 	SunneedRequest req = SUNNEED_REQUEST__INIT;
 	req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_CONNECT;
@@ -297,12 +315,12 @@ sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrle
 	ConnectRequest conn = CONNECT_REQUEST__INIT;
 	conn.port = port;
 	conn.address = address;
-	conn.addrlen = (int)addrlen;
+	conn.addrlen = sizeof(address);
 
 	req.connect = &conn;
 	send_request(&req);
 
-	return 0;
+	return 1;
 }
 
 ssize_t 
@@ -311,20 +329,20 @@ sunneed_client_remote_send(int sockfd, const void *data, size_t len, int flags)
 	//TODO: check sockfd for real socket, check data, flags, etc
 	//for now, just tell sunneed to perform a send for us
 	
-	if(!sockfd)
+	if(!sunneed_client_is_dummysocket(sockfd))
 	{
-		perror("bad socket fd");
+		perror("called sunneed send with a non-sunneed socket\n");
 		exit(0);
 	}
-
+	printf("client send: data %s len %d sizeof data %ld\n", data, len, sizeof(data));
 	SunneedRequest req = SUNNEED_REQUEST__INIT;
 	req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_SEND;
 
 	SendRequest send_req = SEND_REQUEST__INIT;
 	send_req.sockfd = sockfd;
-	send_req.data.data = malloc(len);
+	send_req.data.data = malloc(sizeof(data));
 
-	memcpy(send_req.data.data, data, len);
+	memcpy(send_req.data.data, data, sizeof(data));
 	send_req.data.len = len;
 
 	req.send = &send_req;
