@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define NUM_REQUESTS 20
+#define NUM_REQUESTS 2000
 
 int
 main(void)

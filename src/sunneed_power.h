@@ -20,7 +20,7 @@
 #define PASSIVE_PWR_PER_MIN PASSIVE_PWR_PER_SEC * 60
 
 #ifdef LOG_PWR
-#define REQUESTS_PER_PWR_LOG 4
+#define REQUESTS_PER_PWR_LOG 20
 #endif
 
 // TODO This is waaaaaaaaaaaaaaaaaaaaay too big.
