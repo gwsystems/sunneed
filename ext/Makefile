@@ -1,5 +1,5 @@
 .ONESHELL:
-dependencies: nng libbq27441
+dependencies: nng libbq27441 stepperDriver
 
 nng:
 	@cd nng
@@ -12,8 +12,11 @@ nng:
 libbq27441:
 	make -C libbq27441
 
+stepperDriver:
+	make -C SunneeD_dev_drivers/StepperDriver
+
 clean:
 	rm -rf nng/build
 	make -C libbq27441 clean
 
-.PHONY: nng libbq27441 dependencies clean
+.PHONY: nng libbq27441 stepperDriver dependencies clean
