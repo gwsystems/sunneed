@@ -66,7 +66,9 @@ spawn_worker_threads(void) {
 void
 sunneed_init(void) {
     pip = pip_info();
+    #ifdef LOG_PWR
     last_capacity = present_power();
+    #endif
 }
 
 int

@@ -358,7 +358,7 @@ serve_send(struct sunneed_tenant *tenant, SendRequest *request)
 	LOG_D("Got request from %d to send %ld bytes", tenant->id, request->data.len);
 	//LOG_D("Msg to send %s\n", request->data.data);
 	//TODO: probably want more checks here as well
-	
+
 	int sockfd = lookup_socket(request->sockfd);
 	if(!(sockfd))
 	{
@@ -370,6 +370,21 @@ serve_send(struct sunneed_tenant *tenant, SendRequest *request)
 		LOG_E("couldnt get data from request\n");
 		return 1;
 	}
+
+    #ifdef LOG_PWR
+    if(last_send == 0)
+    {
+        last_send = clock();
+        LOG_P ("%f ", (double) last_send / CLOCKS_PER_SEC);
+    }else{
+        time_since_send = (double)((clock() - last_send)/CLOCKS_PER_SEC);
+        LOG_P("%f ", time_since_send);
+    }
+    
+    LOG_P("%d ", request->data.len);
+
+    #endif
+
 	if((send(sockfd, request->data.data, request->data.len, request->flags)) < 0)
 	{
 		LOG_E("Failed to send data for tenant %d error %d\n", tenant->id, errno);
@@ -378,6 +393,16 @@ serve_send(struct sunneed_tenant *tenant, SendRequest *request)
 		LOG_D("Sent data from tenant %d\n", tenant->id);
 	}
 
+    #ifdef LOG_PWR
+    curr_capacity = present_power();
+    
+    double change = ((double) last_capacity - curr_capacity) - (time_since_send * PASSIVE_PWR_PER_SEC);
+    LOG_P("%f\n", change);
+
+    last_capacity = curr_capacity;
+    last_send = clock();
+
+    #endif
 
 	return 0;
 }
@@ -391,7 +416,9 @@ sunneed_listen(void) {
     SUNNEED_NNG_SET_ERROR_REPORT_FUNC(report_nng_error);
 
     #ifdef LOG_PWR
+        last_capacity = present_power();
         int capacity_change;
+        last_send = 0;
     #endif
 
     // Initialize client states.

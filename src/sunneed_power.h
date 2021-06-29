@@ -15,6 +15,8 @@
 
 #define QUANTUMS_RINGBUF_SZ 16
 
+#define PASSIVE_PWR_PER_SEC 0.07667
+
 // TODO This is waaaaaaaaaaaaaaaaaaaaay too big.
 #define QUANTUM_DURATION_MS 5000
 

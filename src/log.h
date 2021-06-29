@@ -16,14 +16,14 @@ FILE *logfile, *stepper_pwr_logfile;
 #define LOGL_WARN "W\e[0;33m"
 #define LOGL_ERROR "E\e[0;31m"
 
-#ifndef LOG_PWR
-#define LOG_PWR(LEVEL, MESSAGE, ...)                                                    \
+#ifndef LOG_PWR_EVENT
+#define LOG_PWR_EVENT(LEVEL, MESSAGE, ...)                                                    \
     {                                                                               \
         FILE *_logfile = stepper_pwr_logfile;                                       \
         if (!logfile) {                                                             \
             return;                                                                 \
         }                                                                           \
-        fprintf(_logfile, MESSAGE)                                                  \
+        fprintf(_logfile, MESSAGE);                                                  \
     }
 #endif
 #define LOG(LEVEL, MESSAGE, ...)                                                    \
@@ -43,6 +43,6 @@ FILE *logfile, *stepper_pwr_logfile;
 #define LOG_I(MESSAGE, ...) LOG(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
 #define LOG_W(MESSAGE, ...) LOG(LOGL_WARN, MESSAGE, ##__VA_ARGS__);
 #define LOG_E(MESSAGE, ...) LOG(LOGL_ERROR, MESSAGE, ##__VA_ARGS__);
-#define LOG_P(MESSAGE, ...) LOG_PWR(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
+#define LOG_P(MESSAGE, ...) LOG_PWR_EVENT(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
 
 #endif
