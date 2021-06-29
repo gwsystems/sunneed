@@ -51,7 +51,7 @@ tenant_of_pipe(int pipe_id) {
 }
 
 int
-lookup_socket(sockfd)
+lookup_socket(int sockfd)
 {
 	int i;
 	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
@@ -355,8 +355,8 @@ serve_send(struct sunneed_tenant *tenant, SendRequest *request)
 {
 	//TODO: formulate response, for now just log and call send
 	
-	LOG_D("Got request from %d to send %ld bytes", tenant->id, sizeof(request->data.len));
-	LOG_D("Msg to send %s\n", request->data.data);
+	LOG_D("Got request from %d to send %ld bytes", tenant->id, request->data.len);
+	//LOG_D("Msg to send %s\n", request->data.data);
 	//TODO: probably want more checks here as well
 	
 	int sockfd = lookup_socket(request->sockfd);
@@ -406,8 +406,13 @@ sunneed_listen(void) {
     LOG_I("Starting listener loop...");
 
     // Make a socket and attach it to the sunneed URL.
+    
     SUNNEED_NNG_TRY_RET(nng_rep0_open, != 0, &sock);
+
     SUNNEED_NNG_TRY_RET(nng_listen, < 0, sock, SUNNEED_LISTENER_URL, NULL, 0);
+
+        
+
 
     // Buffer for `serve_` methods to write their sub-response to.
     void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
@@ -508,11 +513,13 @@ sunneed_listen(void) {
 
         SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, resp_len);
         SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
-        SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
+        SUNNEED_NNG_TRY_RET(nng_sendmsg, != 0, sock, resp_msg, 0);
+
+        //nng_msg_free(resp_msg);
 
     end:
         sunneed_request__free_unpacked(request, NULL);
-        nng_msg_free(resp_msg);
+        
         nng_msg_free(msg);
     }
 

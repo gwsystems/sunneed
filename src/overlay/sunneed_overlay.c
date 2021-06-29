@@ -121,13 +121,10 @@ ssize_t
 send(int sockfd, const void *buf, size_t len, int flags)
 {
 	
-	printf("OVERLAY SEND\n");
 	if(sunneed_client_is_dummysocket(sockfd))
 	{
-		printf("sunneed client send\n");
 		sunneed_client_remote_send(sockfd, buf, len, flags);
 	}else if(sockfd){
-		printf("SUPER send\n");
 		int ret;
 		SUPER(ret, send, int, (sockfd, buf, len, flags), int, const void *, size_t, int);
 		return ret;

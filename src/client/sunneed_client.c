@@ -34,11 +34,10 @@ send_request(SunneedRequest *req) {
     sunneed_request__pack(req, buf);                           
 
     SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        
-    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
+    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);
     SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
 
-    free(buf);
-    nng_msg_free(msg);                                         
+    free(buf);                                        
 }
 
 static SunneedResponse *
@@ -334,15 +333,15 @@ sunneed_client_remote_send(int sockfd, const void *data, size_t len, int flags)
 		perror("called sunneed send with a non-sunneed socket\n");
 		exit(0);
 	}
-	printf("client send: data %s len %d sizeof data %ld\n", data, len, sizeof(data));
+	printf("client send: len %d\n", len);
 	SunneedRequest req = SUNNEED_REQUEST__INIT;
 	req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_SEND;
 
 	SendRequest send_req = SEND_REQUEST__INIT;
 	send_req.sockfd = sockfd;
-	send_req.data.data = malloc(sizeof(data));
+	send_req.data.data = malloc(len + 1);
 
-	memcpy(send_req.data.data, data, sizeof(data));
+	memcpy(send_req.data.data, data, len);
 	send_req.data.len = len;
 
 	req.send = &send_req;

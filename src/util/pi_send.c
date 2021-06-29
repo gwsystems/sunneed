@@ -19,8 +19,9 @@ main(void)
 {
 	int remote_fd, read_val;
 	struct sockaddr_in remote_addr;
-	char *msg = "heyo";
-	float downtime = 0.5;
+	char *msg;
+	int packet_sizes[8] = {1, 4, 8, 16, 32, 64, 128, 256};
+	int index;
 
 	//create UDP socket, change SOCK_DGRAM to SOCK_STREAM to create TCP sockets
 	
@@ -48,14 +49,19 @@ main(void)
 	}
 
 
-	int i;
-	for (i = 0; i < 20; i++)
+	int i, j;
+	for (i = 0; i < 2000; i++)
 	{
-		printf("sending msg %s\n", msg);
+		index = rand() % 8;
+		msg = (char *) malloc(packet_sizes[index] * sizeof(char));
+		for(j = 0; j < packet_sizes[index]-1; j++)
+		{
+			msg[j] = 'a';
+		}
+		msg[packet_sizes[index] - 1] = '\0';
 		send(remote_fd, msg, strlen(msg), 0);
 
-		sleep(downtime);
-
-		downtime += 0.5;
+		free(msg);
+		sleep(0.5);
 	}
 }
