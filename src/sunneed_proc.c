@@ -172,3 +172,11 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
 	return NULL;
     }
 }
+
+sunneed_worker_thread_result_t
+sunneed_camera_driver(__attribute__((unused)) void *args) {
+    system("./run_Pycode");
+    while(1);
+
+    return NULL;
+}

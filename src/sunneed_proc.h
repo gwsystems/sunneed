@@ -59,4 +59,7 @@ sunneed_proc_monitor(void *args);
 sunneed_worker_thread_result_t
 sunneed_stepperMotor_driver(void *args);
 
+sunneed_worker_thread_result_t
+sunneed_camera_driver(void *args);
+
 #endif
