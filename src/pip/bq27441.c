@@ -6,6 +6,7 @@
 
 int
 pip_init(void) {
+/*
     DIR *dev_dir;
     struct dirent *entry;
     char entry_prefix[5];
@@ -29,6 +30,8 @@ pip_init(void) {
     if (i2c_pathNum != -1) return bq27441_init(i2c_pathNum);
 
     return 1;
+*/
+    return 0;
 }
 
 

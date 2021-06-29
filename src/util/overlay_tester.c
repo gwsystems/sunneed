@@ -15,7 +15,7 @@
 int
 main(void) {
     printf("Starting main overlay tester\n");
-
+    printf("tenant: flags - %d\n",O_CREAT | O_RDWR);
     int fd = open("/tmp/test", O_CREAT | O_RDWR, 0666);
     if (fd == -1) {
         fprintf(stderr, "Failed to open file\n");

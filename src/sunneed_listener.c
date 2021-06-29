@@ -165,7 +165,6 @@ serve_open_file(
 
     // TODO Take flags!!
 
-
     struct sunneed_device *locker;
     if ((locker = sunneed_device_file_locker(request->path)) != NULL) {
         // TODO Wait for availability, perform power calcs, etc.
@@ -399,9 +398,9 @@ sunneed_listen(void) {
         SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
         SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
 
+
     end:
         sunneed_request__free_unpacked(request, NULL);
-        nng_msg_free(resp_msg);
         nng_msg_free(msg);
     }
 

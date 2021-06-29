@@ -34,8 +34,7 @@ send_request(SunneedRequest *req) {
     SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
     SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
 
-    free(buf);
-    nng_msg_free(msg);                                         
+    free(buf);                                        
 }
 
 static SunneedResponse *

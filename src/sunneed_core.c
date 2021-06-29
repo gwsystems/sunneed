@@ -4,7 +4,7 @@ extern struct sunneed_device devices[MAX_DEVICES];
 
 struct sunneed_pip pip;
 
-sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_proc_monitor, sunneed_quantum_worker, sunneed_stepperMotor_driver, NULL};
+sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_proc_monitor, sunneed_quantum_worker, NULL};
 
 #ifdef TESTING
 
