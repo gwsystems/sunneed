@@ -127,8 +127,8 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
     stepper_new_stdin = open("/tmp/stepper", O_RDONLY);
     //    stepper_signal_fd = open("/tmp/stepper", O_RDWR | O_CREAT, S_IRWXU | S_IROTH | S_IWOTH);
     if (stepper_new_stdin == -1) {
-        if (mkfifo("/tmp/stepper", S_IRWXU | S_IWOTH) == -1) {
-	    LOG_E("Could not create FIFO");	
+        if (mkfifo("/tmp/stepper", S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
+	    LOG_E("Could not create fd for stepper motor");	
 	    return NULL;
 	}
 	stepper_new_stdin = open("/tmp/stepper", O_RDONLY);
@@ -166,6 +166,7 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
    	return NULL; /* shouldn't be reached -- driver runs on infinite loop */
     } else { /* parent (pthread) -- doesn't do anything */
 	close(stepper_dataPipe[1]);
+    close(stepper_new_stdin);
 	stepper_signal_fd = open("/tmp/stepper", O_WRONLY);
    	wait(&status);
 	LOG_E("ERR stepper driver exited with status %d -- errno: %s", status,strerror(errno));
@@ -175,8 +176,40 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
 
 sunneed_worker_thread_result_t
 sunneed_camera_driver(__attribute__((unused)) void *args) {
-    system("./run_Pycode");
-    while(1);
+    int child_fd, wait_status, cam_driver_new_stdin;
+    const char *path = "/tmp/cam_driver";
+    const char *executable_path = "run_Pycode";
 
-    return NULL;
+    if ( (child_fd = fork()) == 0) {
+        cam_driver_new_stdin = open(path, O_RDONLY);
+        if (cam_driver_new_stdin == -1) {
+            if (mkfifo(path, S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
+                LOG_E("Could not create fd for camera");
+                exit(1);
+            }
+            cam_driver_new_stdin = open(path, O_RDONLY);
+        }
+        if (close(0) == -1) {
+            LOG_E("Error closing stdin for camera driver: %s\n", strerror(errno));
+            exit(1);
+        }
+        if (dup2(cam_driver_new_stdin, 0) == -1) {
+            LOG_E("Error duping camera driver fd to stdin");
+            exit(1);
+        }
+        execl(executable_path, executable_path, NULL);
+        //system("./run_Pycode");
+        wait(&wait_status);
+        exit(0);
+    } else {
+        wait(&wait_status);
+        if (wait_status) {
+            LOG_E("Error executing camera driver");
+            return NULL;
+        }
+
+        while(1);
+
+        return NULL;
+    }
 }

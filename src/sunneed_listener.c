@@ -171,7 +171,7 @@ serve_open_file(
 
         // Open the real file and save its FD.
 //        int real_fd = open(request->path, O_RDWR); // TODO Use flags given by client.
-	int real_fd = open(request->path, request->flags);
+	int real_fd = open(request->path, request->flags, request->mode);
 
 	if (real_fd == -1) {
 	    LOG_E("Failed to open file '%s'", request->path);

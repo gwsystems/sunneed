@@ -90,7 +90,7 @@ sunneed_client_init(const char *name) {
 
 /** Allocate a string containing the path of the dummy file corresponding to the given path. */
 char *
-sunneed_client_fetch_locked_file_path(const char *pathname, int flags) {
+sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode) {
     // TODO Check socket opened.
 
     SunneedRequest req = SUNNEED_REQUEST__INIT;
@@ -103,6 +103,7 @@ sunneed_client_fetch_locked_file_path(const char *pathname, int flags) {
     strncpy(open_file_req.path, pathname, strlen(pathname) + 1);
 
     open_file_req.flags = flags;
+    open_file_req.mode = mode;
 
     req.open_file = &open_file_req;
 
