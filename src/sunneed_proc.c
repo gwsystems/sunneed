@@ -117,3 +117,47 @@ sunneed_proc_monitor(__attribute__((unused)) void *args) {
         sleep(5);
     }
 }
+
+sunneed_worker_thread_result_t
+sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
+    int status, stepper_driver_new_stdin;
+    const char *path = "/tmp/stepper";
+    const char *executable_path = "ext/SunneeD_dev_drivers/StepperDriver/stepper_driver";
+
+    if ( (sunneed_stepper_driver_pid = fork()) == 0) {
+        if (mkfifo(path, S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
+            /* check if pipe already exists */
+            if ((stepper_driver_new_stdin = open(path, O_RDONLY)) == -1) {
+                /* cound't create pipe & it doesn't already exist */
+                LOG_E("Error creating pipe to stepper driver");
+                exit(1);
+            }
+        } else {
+            if ((stepper_driver_new_stdin = open(path, O_RDONLY)) == -1) {
+                /* pipe exists, couldn't open it */
+                LOG_E("Error opening pipe to stepper driver");
+                exit(1);
+            }
+        }
+        
+        if (close(0) == -1) {
+            LOG_E("error closing stdin for stepper driver");
+            exit(1);
+        }
+        if (dup2(stepper_driver_new_stdin, 0) == -1) {
+            LOG_E("error duping new stdin for stepper driver");
+            exit(1);
+        }
+        if (close(stepper_driver_new_stdin) == -1) {
+            LOG_E("error closing stepper driver's 2nd ref to new stdin after dup");
+            exit(1);
+        }
+        execl(executable_path, executable_path, NULL);
+        /* should never get here -- stepper driver runs on loop */
+        exit(1);
+    } else {
+        wait(&status);
+        LOG_E("Stepper driver exited - status=%d, errno=%s", status, strerror(errno));
+        return NULL;
+    }
+}

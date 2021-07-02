@@ -2,7 +2,13 @@
 #define _SUNNEED_PROC_H_
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <string.h>
+#include <wait.h>
 
 #include "log.h"
 #include "sunneed.h"
@@ -28,6 +34,8 @@ struct {
     struct tenant_cpu_usage tenants[MAX_TENANTS];
 } cpu_usage;
 
+int sunneed_stepper_driver_pid;
+
 int
 sunneed_update_tenant_cpu_usage(void);
 
@@ -48,5 +56,8 @@ sunneed_get_tenant_cpu_usage(sunneed_tenant_id_t tenant_id);
 
 sunneed_worker_thread_result_t
 sunneed_proc_monitor(void *args);
+
+sunneed_worker_thread_result_t
+sunneed_stepperMotor_driver(void *args);
 
 #endif
