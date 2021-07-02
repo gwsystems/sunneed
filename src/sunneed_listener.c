@@ -170,7 +170,13 @@ serve_open_file(
         // TODO Wait for availability, perform power calcs, etc.
 
         // Open the real file and save its FD.
-        int real_fd = open(request->path, O_RDWR); // TODO Use flags given by client.
+        int real_fd = open(request->path, request->flags, request->mode); // TODO Use flags given by client.
+        
+        if (real_fd == -1) {
+            LOG_E("Failed to open file '%s'", request->path);
+            return 1;
+        }
+        
         char *dummypath = sunneed_device_get_dummy_file(request->path);
 
         int i;
@@ -194,7 +200,7 @@ serve_open_file(
         }
         
         // TODO Free this
-        sub_resp->path = malloc(strlen(dummypath));
+        sub_resp->path = malloc(strlen(dummypath) + 1);
         strncpy(sub_resp->path, dummypath, strlen(dummypath) + 1);
     } else {
         // They requested a non-dummy file.
@@ -335,7 +341,7 @@ sunneed_listen(void) {
 
     end:
         sunneed_request__free_unpacked(request, NULL);
-        nng_msg_free(resp_msg);
+    //    nng_msg_free(resp_msg);
         nng_msg_free(msg);
     }
 

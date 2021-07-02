@@ -91,7 +91,7 @@ sunneed_client_init(const char *name) {
 
 /** Allocate a string containing the path of the dummy file corresponding to the given path. */
 char *
-sunneed_client_fetch_locked_file_path(const char *pathname) {
+sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode) {
     // TODO Check socket opened.
 
     SunneedRequest req = SUNNEED_REQUEST__INIT;
@@ -103,6 +103,10 @@ sunneed_client_fetch_locked_file_path(const char *pathname) {
     }
     strncpy(open_file_req.path, pathname, strlen(pathname) + 1);
     req.open_file = &open_file_req;
+
+    open_file_req.flags = flags;
+    open_file_req.mode = mode;
+
 
     send_request(&req);
     free(open_file_req.path);
@@ -193,7 +197,7 @@ sunneed_client_remote_write(int fd, const void *data, size_t n_bytes) {
     free(write_req.dummy_path);
     free(write_req.data.data);
 
-    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_CALL_WRITE);
     if (resp == NULL) {
         // TODO Handle
         FATAL(-1, "write response was NULL");

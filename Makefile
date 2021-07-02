@@ -59,13 +59,25 @@ device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
 all: pre-all main overlay util
+
+run_valgrind: pre-all main overlay util
+	valgrind ./build/sunneed
+
+run_ASAN: pre-all main_ASAN overlay util
+	./build/sunneed
+
+
 pre-all:
 	@echo "Starting all build..."
 
 main: ext protobuf pip devices
 	$(call section_title,main executable)
 	$(CC) $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
- 
+
+main_ASAN: ext protobuf pip devices
+	$(call section_title,main executable)
+	$(CC) -fsanitize=address $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+
 pip: pre-pip $(src_dir)/pip/$(pip_name).c
 	$(CC) $(CFLAGS) -c $(src_dir)/pip/$(pip_name).c -o $(pip_obj)
 pre-pip:

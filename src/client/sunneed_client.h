@@ -25,7 +25,7 @@ int
 sunneed_client_init(const char *name);
 
 char *
-sunneed_client_fetch_locked_file_path(const char *pathname);
+sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode);
 
 int
 sunneed_client_check_locked_file(const char *pathname);
