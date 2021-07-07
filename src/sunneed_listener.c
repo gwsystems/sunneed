@@ -335,13 +335,15 @@ sunneed_listen(void) {
         void *resp_buf = malloc(resp_len);
         sunneed_response__pack(&resp, resp_buf);
 
-        SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, resp_len);
-        SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
+        SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, 0);
+    //    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, resp_len);
+        SUNNEED_NNG_TRY(nng_msg_append, != 0, resp_msg, resp_buf, resp_len);
+    //    SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
         SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
 
     end:
         sunneed_request__free_unpacked(request, NULL);
-    //    nng_msg_free(resp_msg);
+ 
         nng_msg_free(msg);
     }
 

@@ -72,7 +72,6 @@ int
 main(int argc, char *argv[]) {
     int opt;
     extern int optopt;
-
 #ifdef TESTING
     const char *optstring = ":ht:c";
 #else
@@ -127,7 +126,6 @@ main(int argc, char *argv[]) {
         ret = 1;
         goto end;
     }
-
     if ((ret = sunneed_listen()) != 0) {
         LOG_E("sunneed listener encountered a fatal error. Exiting.");
         ret = 1;

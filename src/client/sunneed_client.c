@@ -44,7 +44,7 @@ receive_response(SunneedResponse__MessageTypeCase message_type) {
     SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
 
     size_t msg_len = nng_msg_len(reply);
-    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+//    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
     SunneedResponse *resp = sunneed_response__unpack(NULL, msg_len, nng_msg_body(reply));
 
     if (resp->status != 0) {

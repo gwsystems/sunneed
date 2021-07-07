@@ -1,7 +1,7 @@
 # Builds the main sunneed executable.
 
 ifeq ($(origin CC),default)
-	export CC = gcc
+	export CC = gcc 
 endif
 
 CFLAGS ?= -Wall -Wextra -g

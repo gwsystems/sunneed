@@ -13,7 +13,7 @@
 #include "log.h"
 #include "sunneed.h"
 
-#define MAX_TENANTS 2
+#define MAX_TENANTS 4
 
 typedef unsigned int sunneed_tenant_id_t;
 
