@@ -170,15 +170,14 @@ serve_open_file(
         // TODO Wait for availability, perform power calcs, etc.
 
         // Open the real file and save its FD.
-//        int real_fd = open(request->path, O_RDWR); // TODO Use flags given by client.
-	int real_fd = open(request->path, request->flags, request->mode);
-
-	if (real_fd == -1) {
-	    LOG_E("Failed to open file '%s'", request->path);
-	    return 1;
-	}
-
-	char *dummypath = sunneed_device_get_dummy_file(request->path);
+        int real_fd = open(request->path, request->flags, request->mode); // TODO Use flags given by client.
+        
+        if (real_fd == -1) {
+            LOG_E("Failed to open file '%s'", request->path);
+            return 1;
+        }
+        
+        char *dummypath = sunneed_device_get_dummy_file(request->path);
 
         int i;
         for (i = 0; i < MAX_LOCKED_FILES; i++) {
@@ -342,7 +341,9 @@ sunneed_listen(void) {
 
         // Get contents of message.
         size_t msg_len = nng_msg_len(msg);
-        SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+
+//        SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+
         SunneedRequest *request = sunneed_request__unpack(NULL, msg_len, nng_msg_body(msg));
 	LOG_D("unpacked msg");
         if (request == NULL) {
@@ -394,13 +395,19 @@ sunneed_listen(void) {
         void *resp_buf = malloc(resp_len);
         sunneed_response__pack(&resp, resp_buf);
 
-        SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, resp_len);
-        SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
+        SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, 0);
+    //    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, resp_len);
+        SUNNEED_NNG_TRY(nng_msg_append, != 0, resp_msg, resp_buf, resp_len);
+    //    SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
         SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
 
 
     end:
         sunneed_request__free_unpacked(request, NULL);
+<<<<<<< HEAD
+ 
+=======
+>>>>>>> powermodeling
         nng_msg_free(msg);
     }
 

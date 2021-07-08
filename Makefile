@@ -1,7 +1,7 @@
 # Builds the main sunneed executable.
 
 ifeq ($(origin CC),default)
-	export CC = gcc
+	export CC = gcc 
 endif
 
 CFLAGS ?= -Wall -Wextra -g
@@ -59,6 +59,14 @@ device_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/device/*.c))
 util_objs = $(patsubst %.c, %.o, $(wildcard $(src_dir)/util/*.c))
 
 all: pre-all main overlay util
+
+run_valgrind: pre-all main overlay util
+	valgrind ./build/sunneed
+
+run_ASAN: pre-all main_ASAN overlay util
+	./build/sunneed
+
+
 pre-all:
 	@echo "Starting all build..."
 
@@ -68,10 +76,17 @@ log_pwr: pre-all main_pwr_data overlay util
 main: ext protobuf pip devices
 	$(call section_title,main executable)
 	$(CC) $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+<<<<<<< HEAD
+
+main_ASAN: ext protobuf pip devices
+	$(call section_title,main executable)
+	$(CC) -fsanitize=address $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+=======
  
 main_pwr_data: ext protobuf pip devices
 	$(call section_title, main executable)
 	$(CC) $(CFLAGS) -DTESTING -DLOG_PWR $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+>>>>>>> powermodeling
 
 pip: pre-pip $(src_dir)/pip/$(pip_name).c
 	$(CC) $(CFLAGS) -o $(pip_obj) -c $(src_dir)/pip/$(pip_name).c

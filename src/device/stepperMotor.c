@@ -1,3 +1,5 @@
+// An example device that implements the bare minimum.
+
 #include "../shared/sunneed_device_interface.h"
 #include "../shared/sunneed_testing.h"
 #include <stdio.h>
@@ -5,7 +7,7 @@
 
 struct sunneed_device_type_file_lock data = {
     .len = 1,
-    .paths = { "/tmp/camera" }
+    .paths = { "/tmp/stepper" }
 };
 
 int
@@ -21,3 +23,5 @@ get_device_type_data(void) {
 }
 
 unsigned int device_flags = 0;
+
+// TODO Device type.

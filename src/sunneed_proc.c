@@ -120,96 +120,84 @@ sunneed_proc_monitor(__attribute__((unused)) void *args) {
 
 sunneed_worker_thread_result_t
 sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
-    int status, stepper_new_stdin;
-    const char *executable_path = "./ext/SunneeD_dev_drivers/StepperDriver/stepper_driver";
-    
-    LOG_I("Starting stepper motor driver: tenants can write to /tmp/stepper");
-    stepper_new_stdin = open("/tmp/stepper", O_RDONLY);
-    //    stepper_signal_fd = open("/tmp/stepper", O_RDWR | O_CREAT, S_IRWXU | S_IROTH | S_IWOTH);
-    if (stepper_new_stdin == -1) {
-        if (mkfifo("/tmp/stepper", S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
-	    LOG_E("Could not create fd for stepper motor");	
-	    return NULL;
-	}
-	stepper_new_stdin = open("/tmp/stepper", O_RDONLY);
-    }
+    int status, stepper_driver_new_stdin;
+    const char *path = "/tmp/stepper";
+    const char *executable_path = "ext/SunneeD_dev_drivers/StepperDriver/stepper_driver";
 
-    if (pipe(stepper_dataPipe) == -1) {
-	LOG_E("Could not create data pipe to stepper motor driver");
-	return NULL;
-    }
-
-    if ( (stepper_driver_pid = fork()) == 0) { /* child proc -- stepper motor driver */
-	close(stepper_dataPipe[0]);
-	if (close(0) == -1) {
-	    LOG_E("Error closing stdin for stepper driver: %s\n",strerror(errno));
-	    return NULL;
-	}
-	if (dup2(stepper_new_stdin, 0) == -1) {
-	    LOG_E("Error duping stepper_signal_fd: %s\n", strerror(errno));
-	    return NULL;
-	}
-	close(stepper_new_stdin);
-
-	if (close(1) == -1) {
-	    LOG_E("Error closing stdin for stepper driver: %s\n",strerror(errno));
-	    return NULL;
-	}
-	if (dup2(stepper_dataPipe[1], 1) == -1) {
-	    LOG_E("Error duping stepper_signal_fd: %s\n", strerror(errno));
-	    return NULL;
-	}
-	close(stepper_dataPipe[1]);
-	LOG_I("Calling execl");
-	execl(executable_path, executable_path, NULL);
-	    LOG_E("Stepper driver could not execute: errno %s", strerror(errno));
-   	return NULL; /* shouldn't be reached -- driver runs on infinite loop */
-    } else { /* parent (pthread) -- doesn't do anything */
-	close(stepper_dataPipe[1]);
-    close(stepper_new_stdin);
-	stepper_signal_fd = open("/tmp/stepper", O_WRONLY);
-   	wait(&status);
-	LOG_E("ERR stepper driver exited with status %d -- errno: %s", status,strerror(errno));
-	return NULL;
+    if ( (sunneed_stepper_driver_pid = fork()) == 0) {
+        if (mkfifo(path, S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
+            /* check if pipe already exists */
+            if ((stepper_driver_new_stdin = open(path, O_RDONLY)) == -1) {
+                /* cound't create pipe & it doesn't already exist */
+                LOG_E("Error creating pipe to stepper driver");
+                exit(1);
+            }
+        } else {
+            if ((stepper_driver_new_stdin = open(path, O_RDONLY)) == -1) {
+                /* pipe exists, couldn't open it */
+                LOG_E("Error opening pipe to stepper driver");
+                exit(1);
+            }
+        }
+        
+        if (close(0) == -1) {
+            LOG_E("error closing stdin for stepper driver");
+            exit(1);
+        }
+        if (dup2(stepper_driver_new_stdin, 0) == -1) {
+            LOG_E("error duping new stdin for stepper driver");
+            exit(1);
+        }
+        if (close(stepper_driver_new_stdin) == -1) {
+            LOG_E("error closing stepper driver's 2nd ref to new stdin after dup");
+            exit(1);
+        }
+        execl(executable_path, executable_path, NULL);
+        /* should never get here -- stepper driver runs on loop */
+        exit(1);
+    } else {
+        wait(&status);
+        LOG_E("Stepper driver exited - status=%d, errno=%s", status, strerror(errno));
+        return NULL;
     }
 }
 
 sunneed_worker_thread_result_t
 sunneed_camera_driver(__attribute__((unused)) void *args) {
-    int child_fd, wait_status, cam_driver_new_stdin;
-    const char *path = "/tmp/cam_driver";
-    const char *executable_path = "run_Pycode";
+    int wait_status, cam_driver_new_stdin;
+    const char *path = "/tmp/camera";
+    const char *executable_path = "run_PyDriver";
 
-    if ( (child_fd = fork()) == 0) {
-        cam_driver_new_stdin = open(path, O_RDONLY);
-        if (cam_driver_new_stdin == -1) {
+    if ( (sunneed_camera_driver_pid = fork()) == 0) {
+        if ( (cam_driver_new_stdin = open(path, O_RDONLY)) == -1) {
             if (mkfifo(path, S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
-                LOG_E("Could not create fd for camera");
+                LOG_E("Could not create camera device fd");
+                exit(1);
+            }
+            if (chmod(path, S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
+                LOG_E("Could not set permissions for camera device fd");
                 exit(1);
             }
             cam_driver_new_stdin = open(path, O_RDONLY);
         }
         if (close(0) == -1) {
-            LOG_E("Error closing stdin for camera driver: %s\n", strerror(errno));
+            LOG_E("Error closing camera driver stdin");
             exit(1);
         }
         if (dup2(cam_driver_new_stdin, 0) == -1) {
-            LOG_E("Error duping camera driver fd to stdin");
+            LOG_E("Error duping camera device fd to camera driver stdin");
+            exit(1);
+        }
+        if (close(cam_driver_new_stdin) == -1) {
+            LOG_E("Error closing camera driver's unused reference to camera fd");
             exit(1);
         }
         execl(executable_path, executable_path, NULL);
-        //system("./run_Pycode");
-        wait(&wait_status);
-        exit(0);
+
+        exit(1);
     } else {
         wait(&wait_status);
-        if (wait_status) {
-            LOG_E("Error executing camera driver");
-            return NULL;
-        }
-
-        while(1);
-
+        LOG_E("Error executing camera driver: status=%d\n",wait_status);
         return NULL;
     }
 }

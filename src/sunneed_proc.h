@@ -3,18 +3,27 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+<<<<<<< HEAD
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <string.h>
+#include <wait.h>
+=======
 #include <stdio.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
+>>>>>>> powermodeling
 
 #include "log.h"
 #include "sunneed.h"
 #include "sunneed_device.h" /* for setting up pipes to stepper motor driver */
 
-#define MAX_TENANTS 2
+#define MAX_TENANTS 4
 
 typedef unsigned int sunneed_tenant_id_t;
 
@@ -34,6 +43,8 @@ struct {
     unsigned long long user, nice, sys, idle;
     struct tenant_cpu_usage tenants[MAX_TENANTS];
 } cpu_usage;
+
+int sunneed_stepper_driver_pid, sunneed_camera_driver_pid;
 
 int
 sunneed_update_tenant_cpu_usage(void);

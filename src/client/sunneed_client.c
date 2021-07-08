@@ -30,8 +30,10 @@ send_request(SunneedRequest *req) {
         FATAL(-1, "unable to allocate buffer for request");
     sunneed_request__pack(req, buf);                           
 
-    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        
-    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
+//    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        
+//    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, 0);
+    SUNNEED_NNG_TRY(nng_msg_append, != 0, msg, buf, req_len);
     SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
 
     free(buf);                                        
@@ -43,7 +45,7 @@ receive_response(SunneedResponse__MessageTypeCase message_type) {
     SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
 
     size_t msg_len = nng_msg_len(reply);
-    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+//    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
     SunneedResponse *resp = sunneed_response__unpack(NULL, msg_len, nng_msg_body(reply));
 
     if (resp->status != 0) {
@@ -106,6 +108,10 @@ sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode)
     open_file_req.mode = mode;
 
     req.open_file = &open_file_req;
+
+    open_file_req.flags = flags;
+    open_file_req.mode = mode;
+
 
     send_request(&req);
     free(open_file_req.path);
