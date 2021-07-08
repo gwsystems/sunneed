@@ -67,7 +67,7 @@ spawn_worker_threads(void) {
             return 1;
         };
     }
-
+    LOG_I("worker threads launched");
     return 0;
 }
 
@@ -75,28 +75,41 @@ spawn_worker_threads(void) {
 void
 sunneed_init(void) {
     atexit(handle_exit);
+    if (pip_init()) {
+	LOG_E("Error initializing power management hardware");
+	exit(1);
+    }
     pip = pip_info();
+    stepperMotor_orientation = -1;
+    #ifdef LOG_PWR
+    requests_since_last_log = 0;
+    last_logged_pwr = -1;
+    #endif
 }
 
 int
 main(int argc, char *argv[]) {
     int opt;
     extern int optopt;
+
+#ifdef LOG_PWR
+    logfile_pwr = fopen("sunneed_pwr_log.csv", "w+");
+#endif
+
 #ifdef TESTING
     const char *optstring = ":ht:c";
 #else
     const char *optstring = ":h";
 #endif
-
     // TODO Long-form getopts.
     while ((opt = getopt(argc, argv, optstring)) != -1) {
-        switch (opt) {
+	switch (opt) {
             case 'h':
                 printf(HELP_TEXT, argv[0]);
                 exit(0);
 #ifdef TESTING
             case 't': ;
-                logfile = fopen("sunneed_log.txt", "w+");
+   		logfile = fopen("sunneed_log.txt", "w+");
                 int testcase = strtol(optarg, NULL, 10);
                 if (errno) {
                     LOG_E("Failed to parse testcase index: %s", strerror(errno));

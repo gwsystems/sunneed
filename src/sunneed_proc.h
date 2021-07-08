@@ -3,15 +3,25 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+<<<<<<< HEAD
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <wait.h>
+=======
+#include <stdio.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <string.h>
+#include <fcntl.h>
+#include <errno.h>
+>>>>>>> powermodeling
 
 #include "log.h"
 #include "sunneed.h"
+#include "sunneed_device.h" /* for setting up pipes to stepper motor driver */
 
 #define MAX_TENANTS 4
 

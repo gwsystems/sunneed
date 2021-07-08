@@ -4,20 +4,20 @@
 #include <stdlib.h>
 
 struct sunneed_device_type_file_lock data = {
-    .len = 1,
-    .paths = { "/tmp/camera" }
+	.len = 1,
+	.paths = {"/tmp/stepper"}
 };
 
 int
 init(void) {
-    return 0;
+	return 0;
 }
 
 enum sunneed_device_type device_type_kind = DEVICE_TYPE_FILE_LOCK;
 
 void *
 get_device_type_data(void) {
-    return &data;
+	return &data;
 }
 
 unsigned int device_flags = 0;

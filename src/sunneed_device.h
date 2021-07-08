@@ -45,6 +45,12 @@ sunneed_device_file_locker(const char *pathname);
 char *
 sunneed_device_get_dummy_file(const char *orig_path);
 
+char *
+get_path_from_dummy_path(const char *dummypath);
+
 extern struct sunneed_device devices[];
 
+int stepper_signal_fd, stepper_driver_pid;
+int stepper_dataPipe[2];
+int stepperMotor_orientation;
 #endif

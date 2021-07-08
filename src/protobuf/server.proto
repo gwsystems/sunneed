@@ -20,8 +20,8 @@ message UnregisterClientRequest {}
 
 message OpenFileRequest {
     string path = 1;
-    int32  flags = 2;
-    int32  mode = 3;
+    int32 flags = 2;
+    int32 mode = 3;
 }
 
 message WriteRequest {

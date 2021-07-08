@@ -17,6 +17,14 @@
 
 #define QUANTUMS_RINGBUF_SZ 16
 
+#define PASSIVE_PWR_PER_SEC 0.07667 
+
+#define PASSIVE_PWR_PER_MIN PASSIVE_PWR_PER_SEC * 60
+
+#ifdef LOG_PWR
+#define REQUESTS_PER_PWR_LOG 20
+#endif
+
 // TODO This is waaaaaaaaaaaaaaaaaaaaay too big.
 #define QUANTUM_DURATION_MS 5000
 
@@ -50,4 +58,9 @@ struct sunneed_power_usage_event *power_usage_evs;
 
 struct sunneed_device devices[MAX_DEVICES];
 
+#ifdef LOG_PWR
+clock_t last_pwr_log_t, curr_pwr_log_t;
+int requests_since_last_log, last_logged_pwr;
+int requests_arr_dirty[REQUESTS_PER_PWR_LOG]; /* holds requests intercepted by sunneed until REQUESTS_PER_PWR_LOG requests hit, then will be flushed to logfile */
+#endif
 #endif

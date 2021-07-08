@@ -64,3 +64,12 @@ sunneed_device_get_dummy_file(const char *orig_path) {
     LOG_E("Cannot create dummy file mapping for '%s'", orig_path);
     return NULL;
 }
+
+char *
+get_path_from_dummy_path(const char *path) {
+    for (int i = 0; i < MAX_LOCKED_FILES; i++)
+	if (dummy_map[i].init)
+	    if (strncmp(path, dummy_map[i].dummypath, sizeof(dummy_map[i].dummypath)) == 0)
+		    return dummy_map[i].pathname;
+    return NULL;
+}

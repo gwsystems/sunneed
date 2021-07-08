@@ -1,5 +1,5 @@
 #include "sunneed_client.h"
-
+#include "../log.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -36,8 +36,7 @@ send_request(SunneedRequest *req) {
     SUNNEED_NNG_TRY(nng_msg_append, != 0, msg, buf, req_len);
     SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
 
-    free(buf);
-//    nng_msg_free(msg);                                         
+    free(buf);                                        
 }
 
 static SunneedResponse *
@@ -104,6 +103,10 @@ sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode)
         FATAL(-1, "failed to allocated memory for path");
     }
     strncpy(open_file_req.path, pathname, strlen(pathname) + 1);
+
+    open_file_req.flags = flags;
+    open_file_req.mode = mode;
+
     req.open_file = &open_file_req;
 
     open_file_req.flags = flags;
@@ -114,7 +117,6 @@ sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode)
     free(open_file_req.path);
 
     // TODO Handle request of a path that isn't locked.
-    
     SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_OPEN_FILE);
     if (resp == NULL) {
         // TODO Gotos
@@ -151,7 +153,7 @@ sunneed_client_on_locked_path_open(int i, char *pathname, int fd) {
     if (pathname == NULL)
         FATAL(-1, "pathname is null");
     if (fd <= 0)
-        FATAL(-1, "illegal FD");
+	FATAL(-1, "illegal FD");
 
     locked_paths[i].path = pathname;
     locked_paths[i].fd = fd;
