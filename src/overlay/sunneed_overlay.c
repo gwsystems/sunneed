@@ -30,9 +30,10 @@ open(const char *pathname, int flags, mode_t mode) {
 
     // TODO Handle errors from open
 
-    sunneed_client_on_locked_path_open(locked, (char *)pathname, fd);
+    if(locked > 0) sunneed_client_on_locked_path_open(locked, (char *)pathname, fd);
 
     sunneed_client_debug_print_locked_path_table();
+    
 
     return fd;
 }
@@ -120,7 +121,6 @@ connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 ssize_t
 send(int sockfd, const void *buf, size_t len, int flags)
 {
-	
 	if(sunneed_client_is_dummysocket(sockfd))
 	{
 		sunneed_client_remote_send(sockfd, buf, len, flags);
@@ -131,3 +131,7 @@ send(int sockfd, const void *buf, size_t len, int flags)
 	}
 	return 0;
 }
+
+
+
+

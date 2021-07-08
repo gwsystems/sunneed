@@ -301,7 +301,7 @@ serve_socket(SunneedResponse *resp, void *sub_response_buf, SocketRequest *reque
 }
 
 static int
-serve_connect(nng_pipe pipe, ConnectRequest *request)
+serve_connect(SunneedResponse *resp, void* sub_resp_buf, nng_pipe pipe, ConnectRequest *request)
 {
 	//lookup real sockfd in dummy_socket_map and create new socket
 	LOG_D("got connect request\n");
@@ -345,13 +345,18 @@ serve_connect(nng_pipe pipe, ConnectRequest *request)
 
 	LOG_D("connected to remote host: %s\n", request->address);
 
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
+    GenericResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+    resp->generic = sub_resp;
+
 	return 0;
 
 
 }
 
 static int 
-serve_send(struct sunneed_tenant *tenant, SendRequest *request)
+serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *tenant, SendRequest *request)
 {
 	//TODO: formulate response, for now just log and call send
 	
@@ -404,6 +409,11 @@ serve_send(struct sunneed_tenant *tenant, SendRequest *request)
 
     #endif
 
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
+    GenericResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+    resp->generic = sub_resp;
+
 	return 0;
 }
 static void
@@ -444,15 +454,27 @@ sunneed_listen(void) {
     // Buffer for `serve_` methods to write their sub-response to.
     void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
     // TODO Check malloc.
-
+    if(sub_resp_buf == NULL)
+    {
+        LOG_E ("ERROR, failed to malloc sub_resp_buf in sunneed_listener");
+    }
+    int ret = -1;
     // Await messages.
     for (;;) {
-        nng_msg *msg;
+        nng_msg *msg = NULL;
+        
 
-        SUNNEED_NNG_TRY_RET(nng_recvmsg, != 0, sock, &msg, NNG_FLAG_ALLOC);
-
+        SUNNEED_NNG_TRY_SET(nng_recvmsg, ret, != 0, sock, &msg, 0);
+        if(ret)
+        {
+            LOG_E("nng_recvmsg failed with error %d\n", ret);
+        }
         // TODO They claim nng_msg_get_pipe() returns -1 on error, but its return type is nng_pipe, which can't
         //  be compared to an integer.
+        if(!(msg))
+        {
+            LOG_E("recv msg couldn't get the request");
+        }
         nng_pipe pipe = nng_msg_get_pipe(msg);
 
         // Get contents of message.
@@ -516,10 +538,10 @@ sunneed_listen(void) {
 		ret = serve_socket(&resp, sub_resp_buf, request->socket);
 		break;
 	    case SUNNEED_REQUEST__MESSAGE_TYPE_CONNECT:
-		ret = serve_connect(pipe, request->connect);
+		ret = serve_connect(&resp, sub_resp_buf, pipe, request->connect);
 		break;
 	    case SUNNEED_REQUEST__MESSAGE_TYPE_SEND:
-		ret = serve_send(tenant, request->send);
+		ret = serve_send(&resp, sub_resp_buf, tenant, request->send);
 		break;
             default:
                 LOG_W("Received request with invalid type %d", request->message_type_case);
@@ -534,21 +556,34 @@ sunneed_listen(void) {
 
         // Create and send the response message.
         nng_msg *resp_msg;
+        int ret2 = -2;
         int resp_len = sunneed_response__get_packed_size(&resp);
         void *resp_buf = malloc(resp_len);
         sunneed_response__pack(&resp, resp_buf);
 
         SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, resp_len);
         SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
-        SUNNEED_NNG_TRY_RET(nng_sendmsg, != 0, sock, resp_msg, 0);
+        SUNNEED_NNG_TRY_SET(nng_sendmsg, ret2, != 0, sock, resp_msg, 0);
+
+        if(resp.message_type_case == SUNNEED_RESPONSE__MESSAGE_TYPE_REGISTER_CLIENT)
+        {
+            //need to free the locked paths array after we send the message
+            free(resp.register_client->locked_paths);
+        }
 
         //nng_msg_free(resp_msg);
+        memset(resp_buf, '\0', resp_len);
+        memset(sub_resp_buf, '\0', SUB_RESPONSE_BUF_SZ);
 
     end:
-        sunneed_request__free_unpacked(request, NULL);
+        if(request != NULL) sunneed_request__free_unpacked(request, NULL);
         
-        nng_msg_free(msg);
+        free(resp_buf);
+        //in theory nng_sendmsg frees this for us, but it may be casuing the memory bug
+        if(ret2) nng_msg_free(resp_msg);
+        
     }
-
     free(sub_resp_buf);
+
+    
 }

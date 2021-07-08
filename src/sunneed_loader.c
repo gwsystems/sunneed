@@ -159,7 +159,8 @@ end:
     // Clean up if error.
     if (retval != 0) {
         if (identifier) free(identifier);
-    }
+    }else if (identifier) free(identifier);
+    
 
     return retval;
 }
