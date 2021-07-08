@@ -404,10 +404,6 @@ sunneed_listen(void) {
 
     end:
         sunneed_request__free_unpacked(request, NULL);
-<<<<<<< HEAD
- 
-=======
->>>>>>> powermodeling
         nng_msg_free(msg);
     }
 
