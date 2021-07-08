@@ -161,3 +161,43 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
         return NULL;
     }
 }
+
+sunneed_worker_thread_result_t
+sunneed_camera_driver(__attribute__((unused)) void *args) {
+    int wait_status, cam_driver_new_stdin;
+    const char *path = "/tmp/camera";
+    const char *executable_path = "run_PyDriver";
+
+    if ( (sunneed_camera_driver_pid = fork()) == 0) {
+        if ( (cam_driver_new_stdin = open(path, O_RDONLY)) == -1) {
+            if (mkfifo(path, S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
+                LOG_E("Could not create camera device fd");
+                exit(1);
+            }
+            if (chmod(path, S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
+                LOG_E("Could not set permissions for camera device fd");
+                exit(1);
+            }
+            cam_driver_new_stdin = open(path, O_RDONLY);
+        }
+        if (close(0) == -1) {
+            LOG_E("Error closing camera driver stdin");
+            exit(1);
+        }
+        if (dup2(cam_driver_new_stdin, 0) == -1) {
+            LOG_E("Error duping camera device fd to camera driver stdin");
+            exit(1);
+        }
+        if (close(cam_driver_new_stdin) == -1) {
+            LOG_E("Error closing camera driver's unused reference to camera fd");
+            exit(1);
+        }
+        execl(executable_path, executable_path, NULL);
+
+        exit(1);
+    } else {
+        wait(&wait_status);
+        LOG_E("Error executing camera driver: status=%d\n",wait_status);
+        return NULL;
+    }
+}

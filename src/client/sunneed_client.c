@@ -30,12 +30,14 @@ send_request(SunneedRequest *req) {
         FATAL(-1, "unable to allocate buffer for request");
     sunneed_request__pack(req, buf);                           
 
-    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        
-    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
+//    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        
+//    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, 0);
+    SUNNEED_NNG_TRY(nng_msg_append, != 0, msg, buf, req_len);
     SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
 
     free(buf);
-    nng_msg_free(msg);                                         
+//    nng_msg_free(msg);                                         
 }
 
 static SunneedResponse *

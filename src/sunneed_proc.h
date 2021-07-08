@@ -34,7 +34,7 @@ struct {
     struct tenant_cpu_usage tenants[MAX_TENANTS];
 } cpu_usage;
 
-int sunneed_stepper_driver_pid;
+int sunneed_stepper_driver_pid, sunneed_camera_driver_pid;
 
 int
 sunneed_update_tenant_cpu_usage(void);
@@ -59,5 +59,8 @@ sunneed_proc_monitor(void *args);
 
 sunneed_worker_thread_result_t
 sunneed_stepperMotor_driver(void *args);
+
+sunneed_worker_thread_result_t
+sunneed_camera_driver(void *args);
 
 #endif

@@ -7,7 +7,7 @@
 
 struct sunneed_device_type_file_lock data = {
     .len = 1,
-    .paths = { "/tmp/cam_driver" }
+    .paths = { "/tmp/camera" }
 };
 
 int
