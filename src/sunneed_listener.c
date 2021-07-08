@@ -283,7 +283,9 @@ sunneed_listen(void) {
 
         // Get contents of message.
         size_t msg_len = nng_msg_len(msg);
+
 //        SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+
         SunneedRequest *request = sunneed_request__unpack(NULL, msg_len, nng_msg_body(msg));
 
         if (request == NULL) {
