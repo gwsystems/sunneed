@@ -16,7 +16,7 @@ SUNNEED_BUILD_OVERLAY_LIB_NAME ?= sunneed_overlay
 
 export SOURCE_FORMATTER = clang-format -style=file -i
 
-export cflags_deps = -I$(PWD)/$(ext_dir)/nng/include -L$(PWD)/$(ext_dir)/nng/build -lnng -lpthread -ldl -lprotobuf-c -latomic -I$(PWD)/$(ext_dir)/libbq27441 -lbq27441 -li2c
+export cflags_deps = -I$(PWD)/$(ext_dir)/nng/include -L$(PWD)/$(ext_dir)/nng/build -L$(PWD)/$(ext_dir)/libbq27441 -lnng -lpthread -ldl -lprotobuf-c -latomic -I$(PWD)/$(ext_dir)/libbq27441 -lbq27441 -li2c
 
 ifeq ($(SUNNEED_BUILD_TYPE),devel)
 	util_cflags = -Wl,-rpath,$(CURDIR)/$(clientlib_out_dir)
