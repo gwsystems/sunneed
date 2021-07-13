@@ -74,9 +74,7 @@ socket(int domain, int type, int protocol)
 	{
 		if((type == SOCK_STREAM) || (type == SOCK_DGRAM))
 		{
-			printf("calling sunneed_client_socket\n");
 			sockfd = sunneed_client_socket(domain, type, protocol);
-			printf("got back sockfd %d\n", sockfd);
 			return sockfd;
 
 		}

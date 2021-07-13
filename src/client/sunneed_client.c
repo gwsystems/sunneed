@@ -32,37 +32,25 @@ send_request(SunneedRequest *req) {
     if (!buf)
         FATAL(-1, "unable to allocate buffer for request");
     sunneed_request__pack(req, buf);                           
-    printf("malloced %d bytes for buf\n", req_len);
     int ret = -1;
-    //int ret = nng_msg_alloc(&msg, req_len);
-    SUNNEED_NNG_TRY_SET(nng_msg_alloc, ret, != 0, &msg, req_len);  
-    //ret = nng_msg_insert(msg, buf, req_len);      
-    SUNNEED_NNG_TRY_SET(nng_msg_insert, ret,  != 0, msg, buf, req_len);
-    printf("nng_msg_insert: ret = %d\n", ret);
-    //ret = nng_sendmsg(sunneed_socket, msg, 0);
-    SUNNEED_NNG_TRY_SET(nng_sendmsg, ret, != 0, sunneed_socket, msg, 0);
-    printf("nng_sendmsg: ret = %d\n", ret);
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, 0);  
+    SUNNEED_NNG_TRY(nng_msg_append,  != 0, msg, buf, req_len);
+    SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
 
-    if(ret > 0) nng_msg_free(msg);
-    
+      
     free(buf); 
-    printf("end of send_request\n");                                       
 }
 
 static SunneedResponse *
 receive_response(SunneedResponse__MessageTypeCase message_type) {
     nng_msg *reply;
-    printf("nng_recvmsg from socket %d\n", sunneed_socket);
     SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
 
     size_t msg_len = nng_msg_len(reply);
-    printf("response size: %d\n", msg_len);
-    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
-    printf("unpacking response\n");
+    //SUNNEED_NNG_MSG_LEN_FIX(msg_len);
     SunneedResponse *resp = sunneed_response__unpack(NULL, msg_len, nng_msg_body(reply));
 
     if (resp->status != 0) {
-        printf("resp status > 0\n");
         return NULL;
     } else if (resp->message_type_case != message_type) {
         FATAL(-1, "incorrect message type received (expected %d, got %d)", message_type, resp->status);
@@ -253,13 +241,12 @@ sunneed_client_socket(int domain, int type, int protocol)
 	sock.protocol = protocol;
 
 	req.socket = &sock;
-	printf("sending request to sunneed\n");
 	send_request(&req);
 
 	SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_SOCKET);
 	if(resp == NULL)
 	{
-		FATAL(-1, "failed to create socket");
+		FATAL(-1, "failed to create socket, no response");
 	}
 
 	int i;
@@ -269,7 +256,6 @@ sunneed_client_socket(int domain, int type, int protocol)
 		{
 			dummy_sockets[i].dummy_sockfd = resp -> socket -> dummy_sockfd;
 			sunneed_response__free_unpacked(resp, NULL);
-			printf("added dummy sockfd to table\n");
 			return dummy_sockets[i].dummy_sockfd;
 		}
 	}
@@ -317,7 +303,6 @@ sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrle
 	for(addr_pointer = requested_host->h_addr_list; *addr_pointer; addr_pointer++)
 	{
 		inet_ntop(AF_INET, (void *)*addr_pointer, address, sizeof(address));
-		printf("client connect: got address %s\n", address);
 	}
 
 
@@ -332,16 +317,16 @@ sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrle
 	req.connect = &conn;
 	send_request(&req);
 
-    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
-    if(resp == NULL)
-    {
-        FATAL(-1, "connect response was null\n");
-        return -1;
-    }
+    	SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
+    	if(resp == NULL)
+    	{
+        	FATAL(-1, "connect response was null\n");
+        	return -1;
+    	}
 
-    sunneed_response__free_unpacked(resp, NULL);
+    	sunneed_response__free_unpacked(resp, NULL);
 
-	return 1;
+    	return 1;
 }
 
 ssize_t 
@@ -384,7 +369,7 @@ sunneed_client_remote_send(int sockfd, const void *data, size_t len, int flags)
     free(send_req.data.data);
     sunneed_response__free_unpacked(resp, NULL);
 
-	return 0;
+    return 0;
 }
 
 int

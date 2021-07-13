@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <time.h>
 
 #define PORT 9999
 
@@ -52,8 +53,9 @@ main(void)
 	memset(packet_size_256, 'd', 256);
 	packets[7] = packet_size_256;
 	
-	int index;
+	int size_index, time_index;
 	int packet_sizes[8] = {1, 4, 8, 16, 32, 64, 128, 256};
+	double delay_times[14] = {0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0};
 	
 
 	//create UDP socket, change SOCK_DGRAM to SOCK_STREAM to create TCP sockets
@@ -82,21 +84,25 @@ main(void)
 	}
 
 
-	int i, j;
-	for (i = 0; i < 2000; i++)
+	int i;
+	clock_t delay_start;
+	double curr_delay;
+	for (i = 0; i < 200; i++)
 	{
-		index = rand() % 8;
-		//msg = (char *) malloc(packet_sizes[index] * sizeof(char));
-		/*for(j = 0; j < packet_sizes[index]-1; j++)
-		{
-			msg[j] = 'a';
-		}*/
-		//msg[packet_sizes[index] - 1] = '\0';
-		printf("msg size: %d\n", packet_sizes[index]);
-		send(remote_fd, packets[index], packet_sizes[index], 0);
+		size_index = rand() % 8;
+		time_index = rand() % 14;
 
-		//free(msg);
-		sleep(0.5);
+		printf("msg size: %d\n", packet_sizes[size_index]);
+
+		send(remote_fd, packets[size_index], packet_sizes[size_index], 0);
+
+		delay_start = clock();
+		curr_delay = 0;
+		while(curr_delay < delay_times[time_index])
+		{
+			curr_delay = (double)(clock() - delay_start) / CLOCKS_PER_SEC;
+		}
+
 	}
 
 }

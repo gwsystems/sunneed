@@ -315,7 +315,6 @@ serve_connect(SunneedResponse *resp, void* sub_resp_buf, nng_pipe pipe, ConnectR
 	{
 		if(dummy_socket_map[i].id == request->sockfd)
 		{
-			LOG_D("found socket for pipe %d\n", pipe.id);
 			sockfd = dummy_socket_map[i].sockfd;
 			domain = dummy_socket_map[i].domain;
 			break;
@@ -345,10 +344,10 @@ serve_connect(SunneedResponse *resp, void* sub_resp_buf, nng_pipe pipe, ConnectR
 
 	LOG_D("connected to remote host: %s\n", request->address);
 
-    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
-    GenericResponse *sub_resp = sub_resp_buf;
-    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
-    resp->generic = sub_resp;
+    	resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
+    	GenericResponse *sub_resp = sub_resp_buf;
+    	*sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+    	resp->generic = sub_resp;
 
 	return 0;
 
@@ -361,7 +360,6 @@ serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *ten
 	//TODO: formulate response, for now just log and call send
 	
 	LOG_D("Got request from %d to send %ld bytes", tenant->id, request->data.len);
-	//LOG_D("Msg to send %s\n", request->data.data);
 	//TODO: probably want more checks here as well
 
 	int sockfd = lookup_socket(request->sockfd);
@@ -376,43 +374,51 @@ serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *ten
 		return 1;
 	}
 
-    #ifdef LOG_PWR
-    if(last_send == 0)
-    {
-        last_send = clock();
-        LOG_P ("%f ", (double) last_send / CLOCKS_PER_SEC);
-    }else{
-        time_since_send = (double)((clock() - last_send)/CLOCKS_PER_SEC);
-        LOG_P("%f ", time_since_send);
-    }
+#ifdef LOG_PWR
+    	if(last_send == 0)
+    	{
+        	last_send = clock();
+		printf("last send = %ld\n", last_send);
+        	LOG_P ("%f ", (((double)(last_send))/CLOCKS_PER_SEC));
+		LOG_D ("first send %f ", (((double) (last_send))/CLOCKS_PER_SEC));
+    	}else{
+		printf("clock() - last_send = %ld\n", clock()-last_send);
+        	time_since_send = (double)(clock() - last_send) / (double)CLOCKS_PER_SEC;
+        	LOG_P("%f ", time_since_send);
+		LOG_D("%f since last send", time_since_send);
+    	}
     
-    LOG_P("%d ", request->data.len);
+    	LOG_P("%d ", request->data.len);
+	LOG_D("msg size %d\n", request->data.len);
 
-    #endif
+#endif
 
 	if((send(sockfd, request->data.data, request->data.len, request->flags)) < 0)
 	{
 		LOG_E("Failed to send data for tenant %d error %d\n", tenant->id, errno);
+		return 1;
 	}else{
 
 		LOG_D("Sent data from tenant %d\n", tenant->id);
 	}
 
-    #ifdef LOG_PWR
-    curr_capacity = present_power();
+#ifdef LOG_PWR
+	curr_capacity = present_power();
     
-    double change = ((double) last_capacity - curr_capacity) - (time_since_send * PASSIVE_PWR_PER_SEC);
-    LOG_P("%f\n", change);
+    	double change = ((double) last_capacity - curr_capacity) - (time_since_send * PASSIVE_PWR_PER_SEC);
+    	LOG_P("%f\n", change);
+	LOG_D("%f\n", change);
 
-    last_capacity = curr_capacity;
-    last_send = clock();
+   	last_capacity = curr_capacity;
+    	last_send = clock();
 
-    #endif
+#endif
 
-    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
-    GenericResponse *sub_resp = sub_resp_buf;
-    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
-    resp->generic = sub_resp;
+    	resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
+    	GenericResponse *sub_resp = sub_resp_buf;
+    	*sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+    	resp->generic = sub_resp;
+
 
 	return 0;
 }
@@ -479,7 +485,7 @@ sunneed_listen(void) {
 
         // Get contents of message.
         size_t msg_len = nng_msg_len(msg);
-        SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+        //SUNNEED_NNG_MSG_LEN_FIX(msg_len);
         SunneedRequest *request = sunneed_request__unpack(NULL, msg_len, nng_msg_body(msg));
 
         if (request == NULL) {
@@ -553,17 +559,15 @@ sunneed_listen(void) {
         }
 
         resp.status = ret;
-
         // Create and send the response message.
         nng_msg *resp_msg;
-        int ret2 = -2;
         int resp_len = sunneed_response__get_packed_size(&resp);
         void *resp_buf = malloc(resp_len);
         sunneed_response__pack(&resp, resp_buf);
 
-        SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, resp_len);
+        SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, 0);
         SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
-        SUNNEED_NNG_TRY_SET(nng_sendmsg, ret2, != 0, sock, resp_msg, 0);
+        SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
 
         if(resp.message_type_case == SUNNEED_RESPONSE__MESSAGE_TYPE_REGISTER_CLIENT)
         {
@@ -572,15 +576,11 @@ sunneed_listen(void) {
         }
 
         //nng_msg_free(resp_msg);
-        memset(resp_buf, '\0', resp_len);
-        memset(sub_resp_buf, '\0', SUB_RESPONSE_BUF_SZ);
 
     end:
         if(request != NULL) sunneed_request__free_unpacked(request, NULL);
         
         free(resp_buf);
-        //in theory nng_sendmsg frees this for us, but it may be casuing the memory bug
-        if(ret2) nng_msg_free(resp_msg);
         
     }
     free(sub_resp_buf);

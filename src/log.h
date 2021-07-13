@@ -11,19 +11,22 @@
 
 FILE *logfile, *stepper_pwr_logfile;
 
+
 #define LOGL_DEBUG "D\e[38;5;240m"
 #define LOGL_INFO "I"
 #define LOGL_WARN "W\e[0;33m"
 #define LOGL_ERROR "E\e[0;31m"
 
 #ifndef LOG_PWR_EVENT
-#define LOG_PWR_EVENT(LEVEL, MESSAGE, ...)                                                    \
-    {                                                                               \
-        FILE *_logfile = stepper_pwr_logfile;                                       \
-        if (!logfile) {                                                             \
-            return;                                                                 \
-        }                                                                           \
-        fprintf(_logfile, MESSAGE);                                                  \
+#define LOG_PWR_EVENT(LEVEL, MESSAGE, ...)                                         	\
+    { 											\
+       FILE *_logfile = fopen("sunneed_network_pwr_log.txt", "w+");          	    	\
+       if (!_logfile) {								\
+		return;	       								\
+        }										\
+	    										\
+        fprintf(_logfile, MESSAGE);						\
+	fflush(_logfile);	  						\
     }
 #endif
 #define LOG(LEVEL, MESSAGE, ...)                                                    \
