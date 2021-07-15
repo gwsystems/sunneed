@@ -301,13 +301,10 @@ serve_socket(SunneedResponse *resp, void *sub_response_buf, SocketRequest *reque
 }
 
 static int
-serve_connect(SunneedResponse *resp, void* sub_resp_buf, nng_pipe pipe, ConnectRequest *request)
+serve_connect(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *tenant, ConnectRequest *request)
 {
 	//lookup real sockfd in dummy_socket_map and create new socket
 	LOG_D("got connect request\n");
-	
-	//TODO: figure out getting the port from the tenant, hardcoded to get data from network
-
 	int i, sockfd, domain;
 	struct sockaddr_in remote_addr;
 	sockfd = 0;
@@ -320,14 +317,21 @@ serve_connect(SunneedResponse *resp, void* sub_resp_buf, nng_pipe pipe, ConnectR
 			break;
 		}
 	}
+    //check socket and domain
 	if(!(sockfd))
 	{
-		LOG_E("failed to find socket for pipe %d\n", pipe.id);
+		LOG_E("failed to find socket for tenant %d\n", tenant->id);
 		return 1;
 	}
 
+    if(!((domain == AF_INET) || (domain == AF_INET6)))
+    {
+        LOG_E("tenant passed invalid domain %d\n");
+        return 1;
+    }
+
 	remote_addr.sin_family = domain;
-	remote_addr.sin_port = htons(9999);
+	remote_addr.sin_port = htons(request->port);
 
 	//TODO: check address/port
 	if(inet_pton(domain, request->address, &remote_addr.sin_addr) <= 0)
@@ -342,7 +346,7 @@ serve_connect(SunneedResponse *resp, void* sub_resp_buf, nng_pipe pipe, ConnectR
 		 return 1;
 	}
 
-	LOG_D("connected to remote host: %s\n", request->address);
+	LOG_D("connected to remote host %s on port %d\n", request->address, request->port);
 
     	resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
     	GenericResponse *sub_resp = sub_resp_buf;
@@ -357,8 +361,7 @@ serve_connect(SunneedResponse *resp, void* sub_resp_buf, nng_pipe pipe, ConnectR
 static int 
 serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *tenant, SendRequest *request)
 {
-	//TODO: formulate response, for now just log and call send
-	
+
 	LOG_D("Got request from %d to send %ld bytes", tenant->id, request->data.len);
 	//TODO: probably want more checks here as well
 
@@ -544,7 +547,7 @@ sunneed_listen(void) {
 		ret = serve_socket(&resp, sub_resp_buf, request->socket);
 		break;
 	    case SUNNEED_REQUEST__MESSAGE_TYPE_CONNECT:
-		ret = serve_connect(&resp, sub_resp_buf, pipe, request->connect);
+		ret = serve_connect(&resp, sub_resp_buf, tenant, request->connect);
 		break;
 	    case SUNNEED_REQUEST__MESSAGE_TYPE_SEND:
 		ret = serve_send(&resp, sub_resp_buf, tenant, request->send);

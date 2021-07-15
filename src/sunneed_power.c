@@ -139,7 +139,16 @@ sunneed_quantum_worker(__attribute__((unused)) void *args) {
             goto end;
         }
 
+//cant have sleeps when trying to log power usage - will mess with clock() function
+#ifndef LOG_PWR
         usleep(QUANTUM_DURATION_MS * 1000);
+#endif
+
+#ifdef LOG_PWR
+        clock_t delay_start = clock();
+
+        while(((double)(clock() - delay_start) / CLOCKS_PER_SEC) < QUANTUM_DURATION_MS);
+#endif
 
         if ((ret = sunneed_quantum_end()) != 0) {
             goto end;

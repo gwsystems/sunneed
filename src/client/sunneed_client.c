@@ -285,8 +285,10 @@ sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrle
 {
 	char host_name[NI_MAXHOST];
 	char address[INET_ADDRSTRLEN];
+    char addr2[INET_ADDRSTRLEN];
 	int port = 0;
 	struct hostent *requested_host;
+    struct sockaddr_in *addr_info;
 	char **addr_pointer;
 
 	//get host name from sockaddr struct
@@ -305,6 +307,8 @@ sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrle
 		inet_ntop(AF_INET, (void *)*addr_pointer, address, sizeof(address));
 	}
 
+    addr_info = (struct sockaddr_in*) addr;
+    port = htons(addr_info->sin_port);
 
 	SunneedRequest req = SUNNEED_REQUEST__INIT;
 	req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_CONNECT;
@@ -332,9 +336,8 @@ sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrle
 ssize_t 
 sunneed_client_remote_send(int sockfd, const void *data, size_t len, int flags)
 {
-	//TODO: check sockfd for real socket, check data, flags, etc
-	//for now, just tell sunneed to perform a send for us
 	
+    //TODO: handle flags
 	if(!sunneed_client_is_dummysocket(sockfd))
 	{
 		perror("called sunneed send with a non-sunneed socket\n");
