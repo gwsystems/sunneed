@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 #include "log.h"
 #include "shared/sunneed_pip_interface.h"

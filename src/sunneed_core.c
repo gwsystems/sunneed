@@ -4,7 +4,16 @@ extern struct sunneed_device devices[MAX_DEVICES];
 
 struct sunneed_pip pip;
 
-sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_proc_monitor, sunneed_quantum_worker, NULL};
+sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_proc_monitor, sunneed_quantum_worker, sunneed_stepperMotor_driver, sunneed_camera_driver, NULL};
+
+void
+handle_exit(void) {
+    LOG_I("Sunneed exiting");
+    LOG_I("\tKilling stepper motor");
+    kill(sunneed_stepper_driver_pid, SIGTERM);
+    LOG_I("\tKilling camera driver");
+    kill(sunneed_camera_driver_pid, SIGTERM);
+}
 
 #ifdef TESTING
 
@@ -65,6 +74,7 @@ spawn_worker_threads(void) {
 
 void
 sunneed_init(void) {
+    atexit(handle_exit);
     pip = pip_info();
 }
 
@@ -130,7 +140,6 @@ main(int argc, char *argv[]) {
         ret = 1;
         goto end;
     }
-
     if ((ret = sunneed_listen()) != 0) {
         LOG_E("sunneed listener encountered a fatal error. Exiting.");
         ret = 1;
