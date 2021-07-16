@@ -25,16 +25,6 @@ get_fd_from_dummy_path(char *path) {
     return -1;
 }
 
-// Control flow:
-// When a new pipe connects, we use this struct to make a mapping of its pipe ID to a tenant. Then, when further
-//  requests are made, the pipe ID is used to identify a tenant to the request.
-// The client will have to send some notification in order to unregister; I don't think we can tell if a pipe
-//  closed.
-struct tenant_pipe {
-    struct sunneed_tenant *tenant;
-    nng_pipe pipe;
-} tenant_pipes[SUNNEED_MAX_IPC_CLIENTS];
-
 // TODO This is probably slow -- O(n) lookup for every request made.
 static struct sunneed_tenant *
 tenant_of_pipe(int pipe_id) {

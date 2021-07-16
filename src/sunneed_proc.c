@@ -41,8 +41,29 @@ sunneed_tenant_unregister(struct sunneed_tenant *tenant) {
     }
 
     tenant->is_active = false;
-
     return 0;
+}
+
+void
+unregister_lost_tenant(struct sunneed_tenant* tenant)
+{
+    bool cleared = false;
+    for (int i = 0; i < SUNNEED_MAX_IPC_CLIENTS; i++) {
+        if (tenant_pipes[i].tenant->id == tenant->id) {
+            LOG_D("Removing mapping from pipe %d to tenant %d", tenant_pipes[i].pipe.id, tenant->id);
+            tenant_pipes[i].tenant = NULL;
+            tenant_pipes[i].pipe = (nng_pipe)NNG_PIPE_INITIALIZER;
+            cleared = true;
+            break;
+        }
+    }
+    if (!cleared) {
+        LOG_E("No mapping cleared when unregistering tenant %d", tenant->id);
+        return;
+    }
+    if (sunneed_tenant_unregister(tenant) != 0) {
+        LOG_E("Failed to unregister tenant %d", tenant->id);
+    }
 }
 
 unsigned int
@@ -76,6 +97,8 @@ sunneed_update_tenant_cpu_usage(void) {
         if (access(filepath, F_OK) != 0) {
             LOG_E("Unable to find procfs file for PID %d; most likely a tenant ended but forgot to tell us",
                   tenant->pid);
+            LOG_E("Unregistering tenant %d (PID %d)",tenant->id, tenant->pid);
+            unregister_lost_tenant(tenant);
             continue;
         }
 

@@ -21,7 +21,6 @@
 #include "sunneed_proc.h"
 
 #define SUNNEED_MESSAGE_DEFAULT_BODY_SZ 64
-#define SUNNEED_MAX_IPC_CLIENTS 512
 #define SUNNEED_DEVICE_PATH_MAX_LEN 64
 
 int
