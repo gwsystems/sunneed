@@ -42,5 +42,5 @@ pip_info() {
 
 unsigned int
 present_power() {
-    return bq27441_nominal_avail_cap();
+    return bq27441_remaining_cap_unfiltered();
 }

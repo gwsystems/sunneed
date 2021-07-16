@@ -16,7 +16,7 @@ arg_to_output RECOGNIZED_ARGS[NUM_RECOGNIZED_ARGS] = {
     {
         .arg = "-cap",
         .output_format = "Remaining capacity: %dmAh\n",
-        .func = &bq27441_nominal_avail_cap
+        .func = &bq27441_remaining_cap_unfiltered
     },
     {
 	.arg = "-pwr",
