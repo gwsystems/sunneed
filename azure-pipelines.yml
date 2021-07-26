@@ -20,8 +20,6 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-        echo "installing i2c lib"
-        sudo apt-get install -y libi2c-dev
         git clone https://github.com/gwsystems/sunneed.git
         git submodule update --init --recursive
         ls -la
