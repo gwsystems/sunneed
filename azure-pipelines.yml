@@ -32,6 +32,8 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
+      su -
+      apt-get install sudo -y
       ls
       sudo ./misc/install_dependencies
   displayName: 'Install deps'
