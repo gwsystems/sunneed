@@ -15,7 +15,7 @@ pool:
   vmImage: 'ubuntu-18.04'
 
 container: grahamschock/suneed_env:latest
-options: --user root
+
 
 steps:
 - task: Bash@3
@@ -30,8 +30,8 @@ steps:
 - task: Bash@3
   inputs:
     targetType: 'inline'
-    script: |
-      $PWD/misc/install_dependencies
+    bash: |
+      sudo $PWD/misc/install_dependencies
   displayName: 'Install deps'
 
 - task: Bash@3
