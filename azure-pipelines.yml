@@ -9,6 +9,7 @@ variables:
 
 trigger:
 - master
+- dev
 
 pool:
   vmImage: 'ubuntu-18.04'
