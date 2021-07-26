@@ -32,6 +32,7 @@ steps:
     targetType: 'inline'
     bash: |
       sudo ./misc/install_dependencies
+      echo ':)'
   displayName: 'Install deps'
 
 - task: Bash@3
