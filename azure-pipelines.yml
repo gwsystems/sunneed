@@ -29,6 +29,7 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
+      sudo ./misc/install_dependencies
       mkdir build
       make
   displayName: 'Build sunneed'
