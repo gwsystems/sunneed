@@ -23,7 +23,7 @@ steps:
     script: |
         git clone https://github.com/gwsystems/sunneed.git
         git submodule update --init --recursive
-        sudo ./misc/install_dependencies
+        ./misc/install_dependencies
         ls -la
   displayName: 'Clone system'
 
