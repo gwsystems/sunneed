@@ -9,6 +9,7 @@ variables:
 
 trigger:
 - master
+- Ryan
 
 pool:
   vmImage: 'ubuntu-18.04'
