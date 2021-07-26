@@ -23,10 +23,16 @@ steps:
     script: |
         git clone https://github.com/gwsystems/sunneed.git
         git submodule update --init --recursive
-        ./misc/install_dependencies
         ls -la
   displayName: 'Clone system'
 
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      sudo $PWD/misc/install_dependencies
+  displayName: 'Install deps'
+  
 - task: Bash@3
   inputs:
     targetType: 'inline'
