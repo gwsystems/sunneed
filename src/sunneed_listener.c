@@ -225,7 +225,7 @@ serve_write(
     #ifdef LOG_PWR
     char *real_path = get_path_from_dummy_path(request->dummy_path);
     int orientation_change;
-    char stepper_sig = 'z';
+    char stepper_sig;
             ///// temp
 	    LOG_D("Real path: %s\n", real_path);
 	    /////
@@ -266,13 +266,13 @@ serve_write(
     sub_resp->bytes_written = bytes_written;
     sub_resp->errno_value = 0;
 
-//    if (strcmp(real_path, "/tmp/stepper") == 0) fsync(stepper_signal_fd);
-
     #ifdef LOG_PWR
     if (strcmp(real_path, "/tmp/stepper") == 0) {
 	LOG_I("Waiting for stepper driver to finish");
-
-	while (read(stepper_dataPipe[0], &stepper_sig, 1) == 0 || stepper_sig != 'a'); /* wait for stepper motor to finish turning */
+	stepper_sig = 'z';
+	do {
+	    LOG_E("%d",read(stepper_dataPipe[0], &stepper_sig, 1));
+	} while (stepper_sig != 'a'); /* wait for stepper motor to finish turning */
 	stepper_sig = 'z';
 
 	LOG_I("Requests so far: %d", requests_since_last_log);

@@ -4,7 +4,7 @@
 #include <dirent.h>
 #include <string.h>
 
-#define NUM_RECOGNIZED_ARGS 5
+#define NUM_RECOGNIZED_ARGS 12
 
 typedef struct arg_to_output{
     char *arg;
@@ -37,6 +37,41 @@ arg_to_output RECOGNIZED_ARGS[NUM_RECOGNIZED_ARGS] = {
 	.arg = "-volt",
 	.output_format = "Voltage: %dmV\n",
 	.func = &bq27441_voltage
+    },
+    {
+	.arg = "-soc",
+	.output_format = "State of Charge: %d%%\n",
+	.func = &bq27441_soc_unfiltered
+    },
+    {
+	.arg = "-cap_full",
+	.output_format = "Battery Capacity @ full charge: %dmAh\n",
+	.func = &bq27441_full_charge_cap
+    },
+    {
+	.arg = "-cap_full_filt",
+	.output_format = "filtered capacity @ full charge: %dmAh\n",
+	.func = &bq27441_full_charge_cap_filtered
+    },
+    {
+	.arg = "-nom_cap",
+	.output_format = "Nominal Available Capacity (less than C/20load cap remaining): %d\n",
+	.func = &bq27441_nominal_avail_cap
+    },
+    {
+	.arg = "-cap_filtered",
+	.output_format = "Remaining cap filtered: %dmAh\n",
+	.func = &bq27441_remaining_cap_filtered
+    },
+    {
+	.arg = "-cap_unfiltered",
+	.output_format = "Remaining cap unfiltered: %dmAh\n",
+	.func = &bq27441_remaining_cap_unfiltered
+    },
+    {
+	.arg = "-soc_unfilt",
+	.output_format = "Uniltered state of charge: %d%%\n",
+	.func = &bq27441_soc_unfiltered
     }
 };
 
@@ -77,7 +112,7 @@ main(int argc, char *argv[])
 
     for (i = 1; i < argc; i++) {
 	if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-help") == 0) {
-	    printf("Available arguments:\n\t-cap: Get remaining capacity of battery (mAh)\n\t-pwr: Get average power draw from battery\n\t-temp: Get temperature of battery\n\t-current: Get average current of battery\n\t-volt: Get voltage of battery\n");
+	    printf("Available arguments:\n\t-cap: Get remaining capacity of battery (mAh)\n\t-cap_filtered: Get filtered remaining capacity\n\t-cap_unfiltered: Get true battery capacity remaining\n\t-nom_cap: Get less than C/20 load battery capacity remaining\n\t-soc: Get state of charge (%%)\n\t-pwr: Get average power draw from battery\n\t-temp: Get temperature of battery\n\t-current: Get average current of battery\n\t-volt: Get voltage of battery\n");
 	    continue;	
 	}
 	valid_arg = 0;
