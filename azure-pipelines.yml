@@ -31,7 +31,7 @@ steps:
 - task: Bash@3
   inputs:
     targetType: 'inline'
-    bash: |
+    script: |
       ls
       ./misc/install_dependencies
   displayName: 'Install deps'
