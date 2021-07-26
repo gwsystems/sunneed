@@ -13,6 +13,7 @@ trigger:
 
 pool:
   vmImage: 'ubuntu-18.04'
+  options: --user root
 
 container: grahamschock/suneed_env:latest
 
@@ -31,7 +32,7 @@ steps:
   inputs:
     targetType: 'inline'
     bash: |
-      sudo ./misc/install_dependencies
+      ./misc/install_dependencies
       echo ':)'
   displayName: 'Install deps'
 
