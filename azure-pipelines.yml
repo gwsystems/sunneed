@@ -20,6 +20,7 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
+        sudo ./misc/install_dependencies
         git clone https://github.com/gwsystems/sunneed.git
         git submodule update --init --recursive
         ls -la
