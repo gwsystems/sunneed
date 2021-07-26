@@ -33,7 +33,7 @@ steps:
     targetType: 'inline'
     script: |
       ls
-      ./misc/install_dependencies
+      sudo ./misc/install_dependencies
   displayName: 'Install deps'
 
 - task: Bash@3
