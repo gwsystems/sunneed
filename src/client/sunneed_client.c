@@ -229,14 +229,14 @@ sunneed_client_socket(int domain, int type, int protocol)
      * currently only support IPv4 UDP packets for power logging
      * can extend for TCP and IPv6 later if needed
      */
-	if(!(domain == AF_INET))
+	if(domain != AF_INET)
 	{
 		FATAL(-1, "must be IPv4 socket\n");
 	}
 
-	if(!(type == SOCK_DGRAM))
+	if(type != SOCK_DGRAM)
 	{
-        //TODO: determine type of gethostbyname and getaddr info packets, both end up triggering this return case
+        //TODO: determine type of getnameinfo and getaddrinfo packets, both end up triggering this return case
         //should error out if not one of those, but for now just return -1 to signal a call to SUPER
 		return -1;
 	}
@@ -356,6 +356,7 @@ sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrle
 	conn.port = port;
 	conn.address = address;
 	conn.addrlen = sizeof(address);
+    conn.sockfd = sockfd;
 
 	req.connect = &conn;
 	send_request(&req);

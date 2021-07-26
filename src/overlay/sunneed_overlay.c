@@ -59,9 +59,8 @@ write(int fd, const void *buf, size_t count) {
 int
 socket(int domain, int type, int protocol)
 {
-	int ret;
 
-	ret = sunneed_client_socket(domain, type, protocol);
+	int ret = sunneed_client_socket(domain, type, protocol);
 		
 	if(ret == -1)
 	{
@@ -77,7 +76,6 @@ socket(int domain, int type, int protocol)
 int
 connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
-	printf("overlay connect\n");
 
 	int ret;
 

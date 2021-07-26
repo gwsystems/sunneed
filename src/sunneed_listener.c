@@ -283,7 +283,12 @@ serve_socket(SunneedResponse *resp, void *sub_response_buf, SocketRequest *reque
                 //need to store the domain (AF_INET) to use in connect
 				dummy_socket_map[i].domain = request->domain;
 				LOG_D("Socket %d created successfully\n", new_id);
-				sock_resp->dummy_sockfd = new_id;
+                
+                /*
+                 * add 3 to the dummy sockfd to be returned to avoid overwriting STDIN, STDOUT, or STDERR
+                 * using (request->sockfd - 3) in connect and send should give us O(1) lookup for this table
+                 */
+				sock_resp->dummy_sockfd = new_id + 3;
 				return 0;
 			}else{
 				LOG_E("Failed to create socket. domain %d type %d protocol %d\n", request->domain, request->type, request->protocol);
@@ -308,8 +313,8 @@ serve_connect(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *
      * the fake sockfd passed by the request is the index into the dummy socket map of the tenants socket
      * can take advantage of this for O(1) retrieval of the real socket fd and domain
      */
-    sockfd = dummy_socket_map[request->sockfd].sockfd;
-    domain = dummy_socket_map[request->sockfd].domain;
+    sockfd = dummy_socket_map[request->sockfd - 3].sockfd;
+    domain = dummy_socket_map[request->sockfd - 3].domain;
 
     //check sockfd and domain
 	if(sockfd < 0)
@@ -324,7 +329,7 @@ serve_connect(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *
      */
     if(!(domain == AF_INET))
     {
-        LOG_E("tenant %d tried to create a non-IPv4 socket\n", tenant->id);
+        LOG_E("tenant %d tried to create a non-IPv4 socket %d\n", tenant->id, domain);
         return 1;
     }
 
@@ -364,7 +369,7 @@ serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *ten
 	LOG_D("Got request from %d to send %ld bytes", tenant->id, request->data.len);
 
     //same lookup as serve_connect, use the requested sockfd as the index for O(1) lookup
-	int sockfd = dummy_socket_map[request->sockfd].sockfd;
+	int sockfd = dummy_socket_map[request->sockfd - 3].sockfd;
 
 	if(sockfd < 0)
 	{
