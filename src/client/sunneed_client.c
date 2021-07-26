@@ -14,6 +14,7 @@ struct {
 } dummy_sockets[MAX_TENANT_SOCKETS] = { { -1 } };
 
 nng_socket sunneed_socket;
+nng_dialer sunneed_socket_dialer;
 nng_msg *msg;
 static void
 nngfatal(const char *func, int rv) {
@@ -62,16 +63,12 @@ receive_response(SunneedResponse__MessageTypeCase message_type) {
 
 int
 sunneed_client_init(const char *name) {
+   
     SUNNEED_NNG_SET_ERROR_REPORT_FUNC(nngfatal);
     SUNNEED_NNG_TRY(nng_req0_open, != 0, &sunneed_socket);
-    SUNNEED_NNG_TRY(nng_dial, != 0, sunneed_socket, SUNNEED_LISTENER_URL, NULL, 0);
+    SUNNEED_NNG_TRY(nng_dial, != 0, sunneed_socket, SUNNEED_LISTENER_URL, &sunneed_socket_dialer, 0);
+ 
 
-    
-    if(!(client_init))
-    {
-	    client_init = 1;
-    }    
-    // Register this client with sunneed.
     SunneedRequest req = SUNNEED_REQUEST__INIT;
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT;
     RegisterClientRequest register_req = REGISTER_CLIENT_REQUEST__INIT;
@@ -218,16 +215,30 @@ int
 sunneed_client_socket(int domain, int type, int protocol)
 {
 
-	if(!((domain == AF_INET) || (domain == AF_INET6)))
+    /*
+     * sunneed_socket_dialer points to the nng_dialer associated with the tenant <--> suneeed nng socket
+     * since the dialer is the last part of the socket set up, this should indicate whether the nng socket is set up or not
+     * if not, nng_dialer_id will return -1 to signal an invalid dialer, therefore we need to call SUPER to create the nng socket
+     */
+    if(nng_dialer_id(sunneed_socket_dialer) == -1)
+    {
+        return -1;
+    }
+
+    /*
+     * currently only support IPv4 UDP packets for power logging
+     * can extend for TCP and IPv6 later if needed
+     */
+	if(!(domain == AF_INET))
 	{
-		perror("invalid address family, must be ipv4 or ipv6\n");
-		exit(0);
+		FATAL(-1, "must be IPv4 socket\n");
 	}
 
-	if(!((type == SOCK_STREAM) || (type == SOCK_DGRAM)))
+	if(!(type == SOCK_DGRAM))
 	{
-		perror("invalid type, must be SOCK_STREAM(tcp) or SOCK_DGRAM(udp)\n");
-		exit(0);
+        //TODO: determine type of gethostbyname and getaddr info packets, both end up triggering this return case
+        //should error out if not one of those, but for now just return -1 to signal a call to SUPER
+		return -1;
 	}
 
 	SunneedRequest req = SUNNEED_REQUEST__INIT;
@@ -237,7 +248,7 @@ sunneed_client_socket(int domain, int type, int protocol)
 	sock.domain = domain;
 	sock.type = type;
 
-	//TODO: check protocol
+
 	sock.protocol = protocol;
 
 	req.socket = &sock;
@@ -249,6 +260,7 @@ sunneed_client_socket(int domain, int type, int protocol)
 		FATAL(-1, "failed to create socket, no response");
 	}
 
+    //add the new fake socket from sunneed to the table, future sends to this fd will be caught by the send overlay
 	int i;
 	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
 	{
@@ -266,6 +278,10 @@ sunneed_client_socket(int domain, int type, int protocol)
 
 }
 
+/*
+ * dummy socket table lookup function for convenience
+ * TODO: could probably speed this up a little bit (currently O(n))
+ */
 int
 sunneed_client_is_dummysocket(int sockfd)
 {
@@ -283,29 +299,52 @@ sunneed_client_is_dummysocket(int sockfd)
 int
 sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
+    
 	char host_name[NI_MAXHOST];
 	char address[INET_ADDRSTRLEN];
-    char addr2[INET_ADDRSTRLEN];
 	int port = 0;
 	struct hostent *requested_host;
     struct sockaddr_in *addr_info;
-	char **addr_pointer;
+    struct addrinfo hints;
+    struct addrinfo *result, *rp;
+	void *addr_ptr;
 
-	//get host name from sockaddr struct
+    //need to check that nng is set up via dialer here as well
+    if(nng_dialer_id(sunneed_socket_dialer) == -1)
+    {
+        return -1;
+    }
+
+    
+	/*
+     * get remote address and port from given sockaddr struct
+     * uses AF_INET since we assume IPv4 packets, change to AF_UNSPEC when IPv6 support is added
+     */
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_protocol = 0;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
+
 	getnameinfo(addr, addrlen, host_name, NI_MAXHOST, NULL, 0, 0);
+    if(getaddrinfo(host_name, NULL, &hints, &result))
+    {
+        FATAL(-1, "getaddrinfo\n");
+    }
 
-	requested_host = gethostbyname(host_name);
-	if(requested_host == NULL)
-	{
-		fprintf(stderr, "client connect: failed to get host by name errno %d\n", h_errno);
-		return -1;
-	}
+    //getaddrinfo() returns a list of socket structs, since we only have one socket per address this will give us the address the tenant requested
+    while(result)
+    {
+        inet_ntop(result->ai_family, result->ai_addr->sa_data, address, NI_MAXHOST);  
+        addr_ptr = &((struct sockaddr_in*)result->ai_addr)->sin_addr;
 
-	//loop through addr list to find a valid address for the host
-	for(addr_pointer = requested_host->h_addr_list; *addr_pointer; addr_pointer++)
-	{
-		inet_ntop(AF_INET, (void *)*addr_pointer, address, sizeof(address));
-	}
+        inet_ntop(result->ai_family, addr_ptr, address, NI_MAXHOST);
+
+        
+        result = result->ai_next;
+    }
 
     addr_info = (struct sockaddr_in*) addr;
     port = htons(addr_info->sin_port);
@@ -321,28 +360,22 @@ sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrle
 	req.connect = &conn;
 	send_request(&req);
 
-    	SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
-    	if(resp == NULL)
-    	{
-        	FATAL(-1, "connect response was null\n");
-        	return -1;
-    	}
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
+    if(resp == NULL)
+    {
+        FATAL(-1, "connect response was null\n");
+        return -1;
+    }
 
-    	sunneed_response__free_unpacked(resp, NULL);
+    sunneed_response__free_unpacked(resp, NULL);
 
-    	return 1;
+    return 1;
 }
 
 ssize_t 
 sunneed_client_remote_send(int sockfd, const void *data, size_t len, int flags)
 {
 	
-    //TODO: handle flags
-	if(!sunneed_client_is_dummysocket(sockfd))
-	{
-		perror("called sunneed send with a non-sunneed socket\n");
-		exit(0);
-	}
 	SunneedRequest req = SUNNEED_REQUEST__INIT;
 	req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_SEND;
 
@@ -362,7 +395,6 @@ sunneed_client_remote_send(int sockfd, const void *data, size_t len, int flags)
 	req.send = &send_req;
 	send_request(&req);
 
-	
     SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
     if(resp == NULL)
     {

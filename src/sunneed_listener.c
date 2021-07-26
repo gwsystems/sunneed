@@ -50,16 +50,6 @@ tenant_of_pipe(int pipe_id) {
     return NULL;
 }
 
-int
-lookup_socket(int sockfd)
-{
-	int i;
-	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
-		if(dummy_socket_map[i].id == sockfd)
-			return dummy_socket_map[i].sockfd;
-	return 0;
-	
-}
 
 // Get the PID of a pipe and use that to create a new sunneed tenant with that ID.
 // TODO: This shouldn't always create a new tenant, since we want multiple processes
@@ -271,9 +261,13 @@ serve_socket(SunneedResponse *resp, void *sub_response_buf, SocketRequest *reque
 	*sock_resp = (SocketResponse)SOCKET_RESPONSE__INIT;
 	resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_SOCKET;
 	resp->socket = sock_resp;
-	//TODO: checks on the request?
 	
-	//find open spot in socket table
+	/*
+     * add domain and real socket file descriptor to dummy socket map
+     * need to store domain for use in connect
+     * 
+     * the tenant will receive the index into the table of the socket fd and their dummy sockfd
+     */
 	int i, new_id, sockfd;
 	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
 	{
@@ -285,8 +279,10 @@ serve_socket(SunneedResponse *resp, void *sub_response_buf, SocketRequest *reque
 			{
 				dummy_socket_map[i].id = new_id;
 				dummy_socket_map[i].sockfd = sockfd;
+
+                //need to store the domain (AF_INET) to use in connect
 				dummy_socket_map[i].domain = request->domain;
-				LOG_D("Socket created successfully\n");
+				LOG_D("Socket %d created successfully\n", new_id);
 				sock_resp->dummy_sockfd = new_id;
 				return 0;
 			}else{
@@ -303,37 +299,39 @@ serve_socket(SunneedResponse *resp, void *sub_response_buf, SocketRequest *reque
 static int
 serve_connect(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *tenant, ConnectRequest *request)
 {
-	//lookup real sockfd in dummy_socket_map and create new socket
 	LOG_D("got connect request\n");
 	int i, sockfd, domain;
 	struct sockaddr_in remote_addr;
-	sockfd = 0;
-	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
-	{
-		if(dummy_socket_map[i].id == request->sockfd)
-		{
-			sockfd = dummy_socket_map[i].sockfd;
-			domain = dummy_socket_map[i].domain;
-			break;
-		}
-	}
-    //check socket and domain
-	if(!(sockfd))
+	sockfd = domain = 0;
+
+    /*
+     * the fake sockfd passed by the request is the index into the dummy socket map of the tenants socket
+     * can take advantage of this for O(1) retrieval of the real socket fd and domain
+     */
+    sockfd = dummy_socket_map[request->sockfd].sockfd;
+    domain = dummy_socket_map[request->sockfd].domain;
+
+    //check sockfd and domain
+	if(sockfd < 0)
 	{
 		LOG_E("failed to find socket for tenant %d\n", tenant->id);
 		return 1;
 	}
 
-    if(!((domain == AF_INET) || (domain == AF_INET6)))
+    /*
+     * should have errored out in socket if the tenant passed an IPv6 domain
+     * but worth the check here in case the dummy socket table got messed with
+     */
+    if(!(domain == AF_INET))
     {
-        LOG_E("tenant passed invalid domain %d\n");
+        LOG_E("tenant %d tried to create a non-IPv4 socket\n", tenant->id);
         return 1;
     }
 
 	remote_addr.sin_family = domain;
 	remote_addr.sin_port = htons(request->port);
 
-	//TODO: check address/port
+
 	if(inet_pton(domain, request->address, &remote_addr.sin_addr) <= 0)
 	{
 		LOG_E("invalid address/domain or failed to convert\n");
@@ -343,15 +341,16 @@ serve_connect(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *
 	if(connect(sockfd, (struct sockaddr *)&remote_addr, sizeof(remote_addr)) < 0)
 	{
 		LOG_E("Failed to connect to %s\n", request->address);
-		 return 1;
+		return 1;
 	}
 
+    //connection successful, send generic response to the tenant
 	LOG_D("connected to remote host %s on port %d\n", request->address, request->port);
 
-    	resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
-    	GenericResponse *sub_resp = sub_resp_buf;
-    	*sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
-    	resp->generic = sub_resp;
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
+    GenericResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+    resp->generic = sub_resp;
 
 	return 0;
 
@@ -363,10 +362,11 @@ serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *ten
 {
 
 	LOG_D("Got request from %d to send %ld bytes", tenant->id, request->data.len);
-	//TODO: probably want more checks here as well
 
-	int sockfd = lookup_socket(request->sockfd);
-	if(!(sockfd))
+    //same lookup as serve_connect, use the requested sockfd as the index for O(1) lookup
+	int sockfd = dummy_socket_map[request->sockfd].sockfd;
+
+	if(sockfd < 0)
 	{
 		LOG_E("Bad socket descriptor: %d\n", sockfd);
 		return 1;
@@ -378,20 +378,21 @@ serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *ten
 	}
 
 #ifdef LOG_PWR
-    	if(last_send == 0)
-    	{
-        	last_send = clock();
+    // log time since last sent packet and size of the current packet
+    if(last_send == 0)
+    {
+        last_send = clock();
 		printf("last send = %ld\n", last_send);
-        	LOG_P ("%f ", (((double)(last_send))/CLOCKS_PER_SEC));
+        LOG_P ("%f ", (((double)(last_send))/CLOCKS_PER_SEC));
 		LOG_D ("first send %f ", (((double) (last_send))/CLOCKS_PER_SEC));
-    	}else{
+    }else{
 		printf("clock() - last_send = %ld\n", clock()-last_send);
-        	time_since_send = (double)(clock() - last_send) / (double)CLOCKS_PER_SEC;
-        	LOG_P("%f ", time_since_send);
+        time_since_send = (double)(clock() - last_send) / (double)CLOCKS_PER_SEC;
+        LOG_P("%f ", time_since_send);
 		LOG_D("%f since last send", time_since_send);
-    	}
+    }
     
-    	LOG_P("%d ", request->data.len);
+    LOG_P("%d ", request->data.len);
 	LOG_D("msg size %d\n", request->data.len);
 
 #endif
@@ -406,21 +407,22 @@ serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *ten
 	}
 
 #ifdef LOG_PWR
+    //log power change from send and reset last_capacity and last_send
 	curr_capacity = present_power();
     
-    	double change = ((double) last_capacity - curr_capacity) - (time_since_send * PASSIVE_PWR_PER_SEC);
-    	LOG_P("%f\n", change);
+    double change = ((double) last_capacity - curr_capacity) - (time_since_send * PASSIVE_PWR_PER_SEC);
+    LOG_P("%f\n", change);
 	LOG_D("%f\n", change);
 
    	last_capacity = curr_capacity;
-    	last_send = clock();
+    last_send = clock();
 
 #endif
 
-    	resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
-    	GenericResponse *sub_resp = sub_resp_buf;
-    	*sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
-    	resp->generic = sub_resp;
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
+    GenericResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
+    resp->generic = sub_resp;
 
 
 	return 0;

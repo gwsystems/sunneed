@@ -2,9 +2,10 @@
 
 void
 on_load() {
-    sunneed_client_init("TODO");
 
+    sunneed_client_init("TODO");
     printf("Overlay: Client init\n");
+    
 }
 
 void
@@ -58,55 +59,41 @@ write(int fd, const void *buf, size_t count) {
 int
 socket(int domain, int type, int protocol)
 {
+	int ret;
 
-	int sockfd;
-
-	if(!(client_init))
+	ret = sunneed_client_socket(domain, type, protocol);
+		
+	if(ret == -1)
 	{
-		int ret;
+		//nng socket is not open (caught in sunneed_client_socket), call SUPER
 		SUPER(ret, socket, int, (domain, type, protocol), int, int, int);
 		return ret;
 	}
 
-
-
-	if((domain == AF_INET) || (domain == AF_INET6))
-	{
-		if((type == SOCK_STREAM) || (type == SOCK_DGRAM))
-		{
-			sockfd = sunneed_client_socket(domain, type, protocol);
-			return sockfd;
-
-		}
-	}
-	
-	int ret2;
-	SUPER(ret2, socket, int, (domain, type, protocol), int, int, int);
-	return ret2;
+	return ret;
 
 }
 
 int
 connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
-	if(!(client_init))
-	{
-		int fd;
-		SUPER(fd, connect, int, (sockfd, addr, addrlen), int, const struct sockaddr *, socklen_t);
-		return fd;
-	}
+	printf("overlay connect\n");
+
+	int ret;
 
 	if(sunneed_client_is_dummysocket(sockfd))
-	{
-		//struct sockaddr_in *in_addr = (struct sockaddr_in *)addr;
-		//inet_pton(AF_INET, in_addr->sin_addr, addr_string);
-		//printf("overlay connect: destination ip = %s\n",addr_string);
+	{ 
+		ret = sunneed_client_connect(sockfd, addr, addrlen);
+		if(ret == -1)
+		{
+			//NNG dialer wasn't set up or the socket type was wrong
+			SUPER(ret, connect, int, (sockfd, addr, addrlen), int, const struct sockaddr *, socklen_t);
+			return ret;
+		}
 
-		//getnameinfo(addr, addrlen, addr_string, strlen(addr_string), NULL, 0, 0); 
-		//printf("overlay connect: addr: %s\n", addr_string); 
-		return sunneed_client_connect(sockfd, addr, addrlen);
+		return ret;
 	}else if(sockfd){
-		int ret;
+		//non-sunneed socket (maybe dont need this? Need to think of a case where we'd want to allow a connection to a non sunneed socket)
 		SUPER(ret, connect, int, (sockfd, addr, addrlen), int, const struct sockaddr *, socklen_t);
 		return ret;
 	}else{
@@ -121,7 +108,7 @@ send(int sockfd, const void *buf, size_t len, int flags)
 {
 	if(sunneed_client_is_dummysocket(sockfd))
 	{
-		sunneed_client_remote_send(sockfd, buf, len, flags);
+		return sunneed_client_remote_send(sockfd, buf, len, flags);
 	}else if(sockfd){
 		int ret;
 		SUPER(ret, send, int, (sockfd, buf, len, flags), int, const void *, size_t, int);

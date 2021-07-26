@@ -24,7 +24,8 @@
 #define client_printf(FMT, ...) \
     printf("\e[38;5;240mclient:\e[0m " FMT, ##__VA_ARGS__)
 
-int client_init = 0;
+
+
 typedef unsigned int sunneed_device_handle_t;
 
 int

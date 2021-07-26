@@ -71,7 +71,7 @@ main(void)
 	remote_addr.sin_family = AF_INET;
 	remote_addr.sin_port = htons(PORT);
 
-	if(inet_pton(AF_INET, "192.168.1.214", &remote_addr.sin_addr) <= 0)
+	if(inet_pton(AF_INET, "127.0.0.1", &remote_addr.sin_addr) <= 0)
 	{
 		perror("invalid address/failed to convert\n");
 		exit(0);
