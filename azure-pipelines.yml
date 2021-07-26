@@ -15,6 +15,7 @@ pool:
   vmImage: 'ubuntu-18.04'
 
 container: grahamschock/suneed_env:latest
+options: --user root
 
 steps:
 - task: Bash@3
