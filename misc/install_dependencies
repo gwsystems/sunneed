@@ -2,3 +2,4 @@ apt install -y cmake
 apt install -y ninja-build
 apt install -y libprotobuf-c-dev protobuf-c-compiler
 apt install -y libi2c-dev
+echo "done installing dependencies"
