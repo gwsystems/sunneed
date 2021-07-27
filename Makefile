@@ -75,15 +75,15 @@ log_pwr: pre-all main_pwr_data overlay util
 
 main: ext protobuf pip devices
 	$(call section_title,main executable)
-	$(CC) $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+	$(CC) $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(pip_obj) $(cflags_deps) -o $(out_dir)/$(bin_file)
  
 main_pwr_data: ext protobuf pip devices
 	$(call section_title, main executable)
-	$(CC) $(CFLAGS) -DTESTING -DLOG_PWR $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+	$(CC) $(CFLAGS) -DTESTING -DLOG_PWR $(sources) $(protobuf_out_sources) $(pip_obj) $(cflags_deps) -o $(out_dir)/$(bin_file)
 
 main_ASAN: ext protobuf pip devices
 	$(call section_title,main executable)
-	$(CC) -fsanitize=address $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(cflags_deps) $(pip_obj) -o $(out_dir)/$(bin_file)
+	$(CC) -fsanitize=address $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(pip_obj) $(cflags_deps) -o $(out_dir)/$(bin_file)
 
 pip: pre-pip $(src_dir)/pip/$(pip_name).c
 	$(CC) $(CFLAGS) -o $(pip_obj) -c $(src_dir)/pip/$(pip_name).c
