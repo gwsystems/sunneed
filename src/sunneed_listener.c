@@ -305,7 +305,7 @@ static int
 serve_connect(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *tenant, ConnectRequest *request)
 {
 	LOG_D("got connect request\n");
-	int i, sockfd, domain;
+	int sockfd, domain;
 	struct sockaddr_in remote_addr;
 	sockfd = domain = 0;
 
