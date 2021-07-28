@@ -8,6 +8,8 @@ extern struct sunneed_device devices[];
 extern struct sunneed_tenant tenants[];
 extern const char *locked_file_paths[];
 
+nng_socket sock;
+
 /** 
  * Maps dummy paths (typically sent by clients during a read or write) to FDs pointing to the real device, held by
  * sunneed.
@@ -339,7 +341,6 @@ sunneed_listen(void) {
                                                  .pipe = (nng_pipe)NNG_PIPE_INITIALIZER};
     }
 
-    nng_socket sock;
 
     LOG_I("Starting listener loop...");
 
@@ -348,7 +349,7 @@ sunneed_listen(void) {
     SUNNEED_NNG_TRY_RET(nng_listen, < 0, sock, SUNNEED_LISTENER_URL, NULL, 0);
 
     // Buffer for `serve_` methods to write their sub-response to.
-    void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
+//    void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
     // TODO Check malloc.
 
     // Await messages.
@@ -367,6 +368,7 @@ sunneed_listen(void) {
 //        SUNNEED_NNG_MSG_LEN_FIX(msg_len);
 
         SunneedRequest *request = sunneed_request__unpack(NULL, msg_len, nng_msg_body(msg));
+
 	LOG_D("unpacked msg");
         if (request == NULL) {
             LOG_W("Received null request from %d", pipe.id);
@@ -382,6 +384,10 @@ sunneed_listen(void) {
             goto end;
         }
 	LOG_D("got tenant from pipe");
+
+    /* TODO: actually schedule request instead of just inserting at tail of queued_requests list */
+    insert_request(request, tenant, pipe, 0); /* TODO: insert actual power estimate for request instead of 0 */
+/*
         // Begin setting up our response.
         SunneedResponse resp = SUNNEED_RESPONSE__INIT;
         int ret = -1;
@@ -423,11 +429,78 @@ sunneed_listen(void) {
     //    SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
         SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
 
-
+*/
     end:
-        sunneed_request__free_unpacked(request, NULL);
+ //       sunneed_request__free_unpacked(request, NULL);
         nng_msg_free(msg);
     }
 
-    free(sub_resp_buf);
+//    free(sub_resp_buf);
+}
+
+sunneed_worker_thread_result_t
+sunneed_request_servicer(__attribute__((unused)) void *args) {
+    struct SunneedRequest_ListNode *requestNode;
+    struct sunneed_tenant *tenant;
+    SunneedRequest *request_to_serve;
+    nng_pipe tenant_pipe;
+    void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
+
+    LOG_I("Starting request servicer");
+
+    if (sub_resp_buf == NULL) {
+        LOG_E("Could not allocate subresponse buffer");
+        abort();
+        /* TODO: kill sunneed proc */
+    }
+    while (true) {
+        if (sunneed_queued_requests.num_active_requests > 0) {
+            requestNode = pop_requestNode();
+            if (requestNode == NULL) continue;
+            request_to_serve = requestNode->request;
+            tenant = requestNode->tenant;
+            tenant_pipe = requestNode->tenant_pipe;
+
+            SunneedResponse resp = SUNNEED_RESPONSE__INIT;
+            int ret = -1;
+            
+            switch (request_to_serve->message_type_case) {
+                case SUNNEED_REQUEST__MESSAGE_TYPE__NOT_SET:
+                    LOG_W("Request from pipe %d has no message type set.", tenant_pipe.id);
+                    ret = -1;
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT:
+                    ret = serve_register_client(&resp, sub_resp_buf, tenant_pipe);
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_UNREGISTER_CLIENT:
+                    ret = serve_unregister_client(&resp, sub_resp_buf, tenant_pipe, tenant);
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE:
+                    ret = serve_open_file(&resp, sub_resp_buf, tenant, request_to_serve->open_file);
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_WRITE:
+                    ret = serve_write(&resp, sub_resp_buf, tenant, request_to_serve->write);
+                    break;
+                default:
+                    LOG_W("Received request with invalid type %d", request_to_serve->message_type_case);
+                    ret = -1;
+                    break;
+            }
+
+            free(requestNode);
+
+            resp.status = ret;
+            // Create and send the response message.
+            nng_msg *resp_msg;
+            int resp_len = sunneed_response__get_packed_size(&resp);
+            void *resp_buf = malloc(resp_len);
+            sunneed_response__pack(&resp, resp_buf);
+
+            SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, 0);
+            SUNNEED_NNG_TRY(nng_msg_append, != 0, resp_msg, resp_buf, resp_len);
+            SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
+
+            sunneed_request__free_unpacked(request_to_serve, NULL);
+        }
+    }
 }

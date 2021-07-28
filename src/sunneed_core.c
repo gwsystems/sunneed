@@ -4,7 +4,7 @@ extern struct sunneed_device devices[MAX_DEVICES];
 
 struct sunneed_pip pip;
 
-sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_proc_monitor, sunneed_quantum_worker, sunneed_stepperMotor_driver, sunneed_camera_driver, NULL};
+sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_request_servicer, sunneed_proc_monitor, sunneed_quantum_worker, sunneed_stepperMotor_driver, sunneed_camera_driver, NULL};
 
 void
 handle_exit(void) {
@@ -76,17 +76,20 @@ void
 sunneed_init(void) {
     atexit(handle_exit);
     /* for running off raspberry pi (no battery babysitter i2c connection) */
-    /*
+    
     if (!pip_init()) {
 	    LOG_E("Error initializing power management hardware");
 	    exit(1);
     }
-    */
     
+    /*
     if (pip_init()) {
 	    LOG_E("Error initializing power management hardware");
 	    exit(1);
     }
+    */
+    SunneedRequest_List_init();
+
     pip = pip_info();
     stepperMotor_orientation = -1;
 

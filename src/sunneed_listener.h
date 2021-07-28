@@ -19,6 +19,7 @@
 #include "sunneed.h"
 #include "sunneed_power.h"
 #include "sunneed_proc.h"
+#include "sunneed_queued_requests.h"
 
 #define SUNNEED_MESSAGE_DEFAULT_BODY_SZ 64
 #define SUNNEED_MAX_IPC_CLIENTS 512
@@ -35,4 +36,6 @@ int last_logged_pwr, reqs_since_log_flush;
 int
 sunneed_listen(void);
 
+sunneed_worker_thread_result_t
+sunneed_request_servicer(__attribute__((unused)) void *args);
 #endif
