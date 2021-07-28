@@ -6,10 +6,13 @@ pip_info() {
     return (struct sunneed_pip){"bq27441", 1000, 50};
 }
 
-#ifdef LOG_PWR
-unsigned int
+signed int
 present_power() {
+
+#ifdef log_pwr
     bq27441_init(1);
     return bq27441_nominal_avail_cap();
+#endif
+
+    return 0;
 }
-#ifdef LOG_PWR

@@ -75,7 +75,7 @@ log_pwr: pre-all main_pwr_data overlay util
 
 main: ext protobuf pip devices
 	$(call section_title,main executable)
-	$(CC) $(CFLAGS) -DTESTING $(sources) $(protobuf_out_sources) $(pip_obj) $(cflags_deps) -o $(out_dir)/$(bin_file)
+	$(CC) $(CFLAGS) -DTESTING -ULOG_PWR $(sources) $(protobuf_out_sources) $(pip_obj) $(cflags_deps) -o $(out_dir)/$(bin_file)
  
 main_pwr_data: ext protobuf pip devices
 	$(call section_title, main executable)

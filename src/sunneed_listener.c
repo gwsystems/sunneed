@@ -31,16 +31,6 @@ get_fd_from_dummy_path(char *path) {
     return -1;
 }
 
-// Control flow:
-// When a new pipe connects, we use this struct to make a mapping of its pipe ID to a tenant. Then, when further
-//  requests are made, the pipe ID is used to identify a tenant to the request.
-// The client will have to send some notification in order to unregister; I don't think we can tell if a pipe
-//  closed.
-struct tenant_pipe {
-    struct sunneed_tenant *tenant;
-    nng_pipe pipe;
-} tenant_pipes[SUNNEED_MAX_IPC_CLIENTS];
-
 // TODO This is probably slow -- O(n) lookup for every request made.
 static struct sunneed_tenant *
 tenant_of_pipe(int pipe_id) {
@@ -387,11 +377,9 @@ serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *ten
     if(last_send == 0)
     {
         last_send = clock();
-		printf("last send = %ld\n", last_send);
         LOG_P ("%f ", (((double)(last_send))/CLOCKS_PER_SEC));
 		LOG_D ("first send %f ", (((double) (last_send))/CLOCKS_PER_SEC));
     }else{
-		printf("clock() - last_send = %ld\n", clock()-last_send);
         time_since_send = (double)(clock() - last_send) / (double)CLOCKS_PER_SEC;
         LOG_P("%f ", time_since_send);
 		LOG_D("%f since last send", time_since_send);
@@ -413,13 +401,12 @@ serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *ten
 
 #ifdef LOG_PWR
     //log power change from send and reset last_capacity and last_send
-	curr_capacity = present_power();
+    curr_read = present_power();
     
-    double change = ((double) last_capacity - curr_capacity) - (time_since_send * PASSIVE_PWR_PER_SEC);
-    LOG_P("%f\n", change);
-	LOG_D("%f\n", change);
+    LOG_P("%d\n", curr_read);
+    LOG_D("%d\n", curr_read);
 
-   	last_capacity = curr_capacity;
+    last_read = curr_read;
     last_send = clock();
 
 #endif
@@ -442,7 +429,7 @@ sunneed_listen(void) {
     SUNNEED_NNG_SET_ERROR_REPORT_FUNC(report_nng_error);
 
     #ifdef LOG_PWR
-        last_capacity = present_power();
+        last_read = present_power();
         int capacity_change;
         last_send = 0;
     #endif
@@ -576,7 +563,7 @@ sunneed_listen(void) {
         sunneed_response__pack(&resp, resp_buf);
 
         SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, 0);
-        SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
+        SUNNEED_NNG_TRY(nng_msg_append, != 0, resp_msg, resp_buf, resp_len);
         SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
 
         if(resp.message_type_case == SUNNEED_RESPONSE__MESSAGE_TYPE_REGISTER_CLIENT)

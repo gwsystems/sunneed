@@ -30,7 +30,7 @@ struct sunneed_pip {
 struct sunneed_pip
 pip_info();
 
-unsigned int
+signed int
 present_power();
 
 #endif

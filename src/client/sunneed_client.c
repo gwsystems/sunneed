@@ -231,7 +231,7 @@ sunneed_client_socket(int domain, int type, int protocol)
      */
 	if(domain != AF_INET)
 	{
-		FATAL(-1, "must be IPv4 socket\n");
+		return -1;
 	}
 
 	if(type != SOCK_DGRAM)
