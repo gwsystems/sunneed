@@ -129,6 +129,13 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
 	exit(1);
     }
 
+    sunneed_stepperDir = STOPPED;
+    last_stepperMotor_req_time = NULL;
+    struct timespec init_time;
+    init_time.tv_sec = 0;
+    init_time.tv_nsec = 0;
+    clock_settime(CLOCK_MONOTONIC, &init_time);
+
     if ( (sunneed_stepper_driver_pid = fork()) == 0) {
         close(stepper_dataPipe[0]);
 

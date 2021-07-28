@@ -224,28 +224,56 @@ serve_write(
     resp->call_write = sub_resp;
     #ifdef LOG_PWR
     char *real_path = get_path_from_dummy_path(request->dummy_path);
-    int orientation_change;
+    int orientation_change, num_pwr_readings;
+    float avg_pwr;
     char stepper_sig;
-            ///// temp
+    char orientation_bytes[request->data.len];
+    bool change_dir, from_stop;
+    struct timespec *curr_time = (struct timespec*) malloc(sizeof(struct timespec));
+    clock_gettime(CLOCK_MONOTONIC, curr_time);
+    change_dir = from_stop = false;
+        ///// temp
 	    LOG_D("Real path: %s\n", real_path);
 	    /////
 	    if (strcmp(real_path, "/tmp/stepper") == 0) {
-   		if (stepperMotor_orientation == -1) {
-			/* TODO: read orientation file */
-			stepperMotor_orientation = 0;
-		}
+            if (stepperMotor_orientation == -1) {
+                /* TODO: read orientation file */
+                stepperMotor_orientation = 0;
+            }
 		
 	        if (request->data.data[0] == '+' || request->data.data[0] == '-') {
-		    orientation_change = (int)request->data.data[2] << 8 | (int)request->data.data[1]; 
-		    if (request->data.data[0] == '+') {
-			stepperMotor_orientation += orientation_change;
-		    } else {
-			stepperMotor_orientation -= orientation_change;
-		    }
-		} else {
-		    orientation_change = abs(stepperMotor_orientation - ( ((int)request->data.data[1] << 8) | (int) request->data.data[0])); 
-		    stepperMotor_orientation = ((int)request->data.data[1] << 8) | (int)request->data.data[0];
-		}
+                strncpy(orientation_bytes, (char*)(request->data.data + 1), request->data.len - 1);
+                orientation_bytes[request->data.len - 1] = '\0';
+                orientation_change = atoi(orientation_bytes);                
+
+                if (request->data.data[0] == '+') {
+                    if (sunneed_stepperDir == COUNTER_CLOCKWISE) {
+                        change_dir = true;
+                    }
+                    sunneed_stepperDir = CLOCKWISE;
+                    stepperMotor_orientation += orientation_change;
+                } else {
+                    if (sunneed_stepperDir == CLOCKWISE) {
+                        change_dir = true;
+                    }
+                    sunneed_stepperDir = COUNTER_CLOCKWISE;
+                    stepperMotor_orientation -= orientation_change;
+                }
+            } else {
+                int new_orientation = ((int)request->data.data[1] << 8) | (int) request->data.data[0];
+                orientation_change = abs(stepperMotor_orientation - new_orientation); 
+                stepperMotor_orientation = new_orientation;
+            }
+            if (last_stepperMotor_req_time != NULL) {
+                if ( ((curr_time->tv_sec - last_stepperMotor_req_time->tv_sec) + ((curr_time->tv_nsec - last_stepperMotor_req_time->tv_nsec) / 10e9) ) > 0.5) {
+                    from_stop = true;
+                    change_dir = false;
+                }
+            } else {
+                last_stepperMotor_req_time = (struct timespec*) malloc(sizeof(struct timespec));
+                from_stop = true;
+                change_dir = false;
+            }
 	    }
     #endif
 
@@ -268,34 +296,28 @@ serve_write(
 
     #ifdef LOG_PWR
     if (strcmp(real_path, "/tmp/stepper") == 0) {
-	LOG_I("Waiting for stepper driver to finish");
-	stepper_sig = 'z';
-	do {
-	    LOG_E("%d",read(stepper_dataPipe[0], &stepper_sig, 1));
-	} while (stepper_sig != 'a'); /* wait for stepper motor to finish turning */
-	stepper_sig = 'z';
+        LOG_I("Waiting for stepper driver to finish");
+        stepper_sig = 'z';
+        struct timespec *last_pwrRead_time = (struct timespec*) malloc(sizeof(struct timespec));
+        avg_pwr = present_power() - PASSIVE_PWR;
+        num_pwr_readings = 1;
+        do { /* get average power draw from battery while stepper motor served request */
+            clock_gettime(CLOCK_MONOTONIC, curr_time);
+            read(stepper_dataPipe[0], &stepper_sig, 1);
+            if (curr_time->tv_sec - last_pwrRead_time->tv_sec >= 1 /* poll rate for bq27441_average_power() is 1s */) {
+                avg_pwr += present_power() - PASSIVE_PWR;
+                num_pwr_readings++;
+                clock_gettime(CLOCK_MONOTONIC, last_pwrRead_time);
+            }
+        } while (stepper_sig != 'a'); /* wait for stepper motor to finish turning */
+        stepper_sig = 'z';
 
-	LOG_I("Requests so far: %d", requests_since_last_log);
-	if (requests_since_last_log < REQUESTS_PER_PWR_LOG) {
-    	    if (requests_since_last_log == 0 && last_logged_pwr == -1) { /* first log since boot - need to initialize pwr record */
-		last_logged_pwr = present_power();
-		last_pwr_log_t = clock();
-            }		
-	    requests_arr_dirty[requests_since_last_log] = orientation_change;
-	    requests_since_last_log++;
-	} else {
-            for (int i = 0; i < REQUESTS_PER_PWR_LOG; i ++) {
-		LOG_D("%d, ",requests_arr_dirty[i]);
-           	LOG_P("%d, ",requests_arr_dirty[i]);
-	    }
+        avg_pwr = avg_pwr / num_pwr_readings;
+        
+        clock_gettime(CLOCK_MONOTONIC, last_stepperMotor_req_time);
 
-	    memset(requests_arr_dirty, -1, REQUESTS_PER_PWR_LOG * sizeof(int));
-	    requests_since_last_log = 0;
-	    double pwr_change = ((double) last_logged_pwr - present_power()) - ( ((double) (clock() - last_pwr_log_t) / CLOCKS_PER_SEC) * PASSIVE_PWR_PER_SEC);
-	    LOG_P("%f\n",pwr_change); 
-	    last_logged_pwr = present_power();
-	    last_pwr_log_t = clock();
-	}
+        LOG_D("%d, %d, %d, %d",orientation_change, change_dir, from_stop, avg_pwr);
+        LOG_P("%d, %d, %d, %d",orientation_change, change_dir, from_stop, avg_pwr);
     }
     #endif
     return 0;

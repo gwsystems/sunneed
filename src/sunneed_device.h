@@ -39,6 +39,12 @@ struct sunneed_device {
     } device_type_data;
 };
 
+typedef enum {
+    CLOCKWISE,
+    COUNTER_CLOCKWISE,
+    STOPPED
+} stepperMotor_Direction;
+
 struct sunneed_device *
 sunneed_device_file_locker(const char *pathname);
 
@@ -53,4 +59,6 @@ extern struct sunneed_device devices[];
 int stepper_signal_fd, stepper_driver_pid;
 int stepper_dataPipe[2];
 int stepperMotor_orientation;
+stepperMotor_Direction sunneed_stepperDir;
+struct timespec *last_stepperMotor_req_time;
 #endif

@@ -29,7 +29,7 @@ pip_init(void) {
 
     if (i2c_pathNum != -1) return bq27441_init(i2c_pathNum);
 
-    return 0;
+    return 1;
 }
 
 
