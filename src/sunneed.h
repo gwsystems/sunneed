@@ -1,22 +1,3 @@
-<<<<<<< HEAD
-#ifndef _SUNNEED_H_
-#define _SUNNEED_H_
-
-#include <stdbool.h>
-#include <time.h>
-
-#define APP_NAME "sunneed"
-
-#ifdef LOG_PWR
-    #define REQS_PER_LOG 10
-    int last_capacity, curr_capacity, reqs_since_last_log;
-    clock_t last_send, time_since_send;
-#endif
-
-typedef void* sunneed_worker_thread_result_t;
-
-#endif
-=======
 #ifndef _SUNNEED_H_
 #define _SUNNEED_H_
 
@@ -41,4 +22,3 @@ struct tenant_pipe {
     nng_pipe pipe;
 } tenant_pipes[SUNNEED_MAX_IPC_CLIENTS];
 #endif
->>>>>>> c1ce9be87ee40f52cd027a965adce8ad5d136a36
