@@ -29,11 +29,11 @@ open(const char *pathname, int flags, mode_t mode) {
     SUPER(fd, open, int, (pathname, flags, mode), const char *, int, mode_t);
 
     // TODO Handle errors from open
-
-    sunneed_client_on_locked_path_open(locked, (char *)pathname, fd);
-
-    sunneed_client_debug_print_locked_path_table();
-
+    if (locked) {
+        sunneed_client_on_locked_path_open(locked, (char *)pathname, fd);
+    
+        sunneed_client_debug_print_locked_path_table();
+    }
     return fd;
 }
 

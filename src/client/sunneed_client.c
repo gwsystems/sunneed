@@ -6,6 +6,7 @@
 
 struct {
     char *path;
+    char *dummy_path;
     int fd;
 } locked_paths[MAX_LOCKED_FILES] = { { NULL, 0 } };
 
@@ -94,7 +95,6 @@ sunneed_client_init(const char *name) {
 char *
 sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode) {
     // TODO Check socket opened.
-
     SunneedRequest req = SUNNEED_REQUEST__INIT;
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE;
     OpenFileRequest open_file_req = OPEN_FILE_REQUEST__INIT;
@@ -154,8 +154,7 @@ sunneed_client_on_locked_path_open(int i, char *pathname, int fd) {
         FATAL(-1, "pathname is null");
     if (fd <= 0)
 	FATAL(-1, "illegal FD");
-
-    locked_paths[i].path = pathname;
+    locked_paths[i].dummy_path = pathname;
     locked_paths[i].fd = fd;
 
     return 0;
@@ -176,7 +175,7 @@ sunneed_client_remote_write(int fd, const void *data, size_t n_bytes) {
     char *dummy_path = NULL;
     for (locked_file_i = 0; locked_file_i < MAX_LOCKED_FILES; locked_file_i++)
         if (locked_paths[locked_file_i].fd == fd) {
-            dummy_path = locked_paths[locked_file_i].path;
+            dummy_path = locked_paths[locked_file_i].dummy_path;
             break;
         }
 

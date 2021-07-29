@@ -165,8 +165,6 @@ serve_open_file(
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_OPEN_FILE;
     resp->open_file = sub_resp;
 
-    // TODO Take flags!!
-
     struct sunneed_device *locker;
     if ((locker = sunneed_device_file_locker(request->path)) != NULL) {
         // TODO Wait for availability, perform power calcs, etc.
@@ -292,7 +290,7 @@ serve_write(
 
         return 1;
     }
-
+    
     sub_resp->bytes_written = bytes_written;
     sub_resp->errno_value = 0;
 
