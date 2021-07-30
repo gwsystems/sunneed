@@ -16,10 +16,10 @@
 int
 main(void) {
     printf("Starting main overlay tester\n");
-    int fd = open("/tmp/test", O_CREAT | O_RDWR, 0666);
+//    int fd = open("/tmp/test", O_CREAT | O_RDWR, 0666);
+    int fd = open("/tmp/test", O_RDWR);
     if (fd == -1) {
-        fprintf(stderr, "Failed to open file\n");
-        return -1;
+        exit(1);
     }
     printf("%d",fd);
     write(fd, "foo", 3);

@@ -23,6 +23,11 @@ open(const char *pathname, int flags, mode_t mode) {
         printf("'%s' is locked; opening via dummy\n", pathname);
         char *dummy_path = sunneed_client_fetch_locked_file_path(pathname, flags, mode);
         pathname = dummy_path;
+        if (pathname == NULL) {/* sunneed got -1 on open(real_path) so dummy_path is null */
+            printf("Failed to open file\n");
+            sunneed_client_debug_print_locked_path_table();
+            return -1;
+        }
     }
 
     int fd;
