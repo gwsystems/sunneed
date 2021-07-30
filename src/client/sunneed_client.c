@@ -8,7 +8,7 @@ struct {
     char *path;
     char *dummy_path;
     int fd;
-} locked_paths[MAX_LOCKED_FILES] = { { NULL, 0 } };
+} locked_paths[MAX_LOCKED_FILES] = { { NULL, NULL, 0 } };
 
 nng_socket sunneed_socket;
 
@@ -207,7 +207,7 @@ sunneed_client_remote_write(int fd, const void *data, size_t n_bytes) {
     }
     sunneed_response__free_unpacked(resp, NULL);
 
-    return 0;
+    return resp->call_write->bytes_written;
 }
 
 int

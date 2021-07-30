@@ -54,7 +54,5 @@ write(int fd, const void *buf, size_t count) {
     }
     
     // Ask sunneed to do the write for us.
-    sunneed_client_remote_write(fd, buf, count);
-
-    return 0;
+    return sunneed_client_remote_write(fd, buf, count);
 }
