@@ -42,6 +42,19 @@ open(const char *pathname, int flags, mode_t mode) {
     return fd;
 }
 
+int
+close(int fd) {
+    printf("Overlay close %d\n", fd);
+    int ret;
+
+    if (!sunneed_client_fd_is_locked(fd)) {
+        SUPER(ret, write, int, (fd), int);
+        return ret;
+    }
+
+    return sunneed_client_remote_close(fd);
+}
+
 ssize_t
 write(int fd, const void *buf, size_t count) {
     printf("Overlay write %d\n", fd);

@@ -33,6 +33,9 @@ sunneed_client_check_locked_file(const char *pathname);
 bool
 sunneed_client_fd_is_locked(int fd);
 
+int
+sunneed_client_remote_close(int fd);
+
 ssize_t
 sunneed_client_remote_write(int fd, const void *data, size_t n_bytes);
 

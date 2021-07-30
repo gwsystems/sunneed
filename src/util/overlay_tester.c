@@ -17,18 +17,12 @@ int
 main(void) {
     printf("Starting main overlay tester\n");
     int fd = open("/tmp/test", O_CREAT | O_RDWR, 0666);
-//    int fd = open("/tmp/test", O_CREAT | O_RDONLY, 0666);
- //   int fd = open("/tmp/test", O_RDWR);
+
     if (fd == -1) {
         exit(1);
     }
-    printf("wrote %d bytes\n",write(fd, "foo", 3));
+    printf("wrote %ld bytes\n",write(fd, "foo", 3));
     close(fd);
-/*
-    fd = open("/tmp/test", O_WRONLY);
-    write(fd, "foo", 3);
-    printf("%d",fd);
-    printf("Opened and closed file\n");
-*/
+
     return 0;
 }

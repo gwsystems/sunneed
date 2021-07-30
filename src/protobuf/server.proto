@@ -8,7 +8,8 @@ message SunneedRequest {
         RegisterClientRequest register_client = 1;
         UnregisterClientRequest unregister_client = 2;
         OpenFileRequest open_file = 3;
-        WriteRequest write = 4;
+        CloseFileRequest close_file = 4;
+        WriteRequest write = 5;
     }
 }
 
@@ -22,6 +23,10 @@ message OpenFileRequest {
     string path = 1;
     int32 flags = 2;
     int32 mode = 3;
+}
+
+message CloseFileRequest {
+    string dummy_path = 1;
 }
 
 message WriteRequest {
@@ -40,6 +45,7 @@ message SunneedResponse {
         OpenFileResponse open_file = 4;
         RegisterClientResponse register_client = 5;
         WriteResponse call_write = 6;
+        CloseFileResponse close_file = 7;
     }
 }
 
@@ -53,6 +59,10 @@ message GenericResponse {
 
 message OpenFileResponse {
     string path = 1;
+}
+
+message CloseFileResponse {
+    int32 errno_value = 1;
 }
 
 message WriteResponse {

@@ -17,13 +17,14 @@ nng_socket sock;
 struct {
     char *path;
     int fd;
-} dummy_path_fd_map[MAX_LOCKED_FILES] = { { NULL, 0 } };
+} dummy_path_fd_map[MAX_TENANTS][MAX_LOCKED_FILES] = {{ { NULL, 0 } }};
 
 static int
-get_fd_from_dummy_path(char *path) {
-    for (int i = 0; i < MAX_LOCKED_FILES; i++)
-        if (dummy_path_fd_map[i].path && strncmp(dummy_path_fd_map[i].path, path, strlen(path)) == 0)
-            return dummy_path_fd_map[i].fd;
+get_fd_from_dummy_path(char *path, struct sunneed_tenant *tenant) {
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        if (dummy_path_fd_map[tenant->id][i].path && strncmp(dummy_path_fd_map[tenant->id][i].path, path, strlen(path)) == 0)
+            return dummy_path_fd_map[tenant->id][i].fd;
+    }
     return -1;
 }
 
@@ -182,10 +183,10 @@ serve_open_file(
         int i;
         for (i = 0; i < MAX_LOCKED_FILES; i++) {
             // Find open slot.
-            if (dummy_path_fd_map[i].path == NULL) {
-                dummy_path_fd_map[i].path = malloc(strlen(dummypath) + 1);
-                strncpy(dummy_path_fd_map[i].path, dummypath, strlen(dummypath) + 1);
-                dummy_path_fd_map[i].fd = real_fd;
+            if (dummy_path_fd_map[tenant->id][i].path == NULL) {
+                dummy_path_fd_map[tenant->id][i].path = malloc(strlen(dummypath) + 1);
+                strncpy(dummy_path_fd_map[tenant->id][i].path, dummypath, strlen(dummypath) + 1);
+                dummy_path_fd_map[tenant->id][i].fd = real_fd;
 
                 LOG_I("Opened locked path '%s' as '%s' (FD %d)", request->path, dummypath, real_fd);
 
@@ -211,12 +212,39 @@ serve_open_file(
 }
 
 static int
+serve_close(
+        SunneedResponse *resp,
+        void *sub_resp_buf,
+        struct sunneed_tenant *tenant,
+        CloseFileRequest *request) {
+    LOG_D("Got request from %d to close '%s' (real file FD %d)", tenant->id, request->dummy_path, get_fd_from_dummy_path(request->dummy_path, tenant));
+
+    CloseFileResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (CloseFileResponse)CLOSE_FILE_RESPONSE__INIT;
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_CLOSE_FILE;
+    resp->close_file= sub_resp;
+
+    if (close(get_fd_from_dummy_path(request->dummy_path, tenant)) < 0) {
+        int errno_val = errno;
+
+        sub_resp->errno_value = errno_val;
+
+        LOG_E("'close' for client %d failed with: %s", tenant->id, strerror(errno));
+
+        return 1;
+    }
+
+    sub_resp->errno_value = 0;
+    return 0;
+}
+
+static int
 serve_write(
         SunneedResponse *resp,
         void *sub_resp_buf,
         struct sunneed_tenant *tenant,
         WriteRequest *request) {
-    LOG_D("Got request from %d to write %ld bytes to '%s' (real file FD %d)", tenant->id, request->data.len, request->dummy_path, get_fd_from_dummy_path(request->dummy_path));
+    LOG_D("Got request from %d to write %ld bytes to '%s' (real file FD %d)", tenant->id, request->data.len, request->dummy_path, get_fd_from_dummy_path(request->dummy_path, tenant));
 
     WriteResponse *sub_resp = sub_resp_buf;
     *sub_resp = (WriteResponse)WRITE_RESPONSE__INIT;
@@ -279,7 +307,7 @@ serve_write(
 
     // Perform the write.
     ssize_t bytes_written;
-    if ((bytes_written = write(get_fd_from_dummy_path(request->dummy_path), request->data.data, request->data.len)) 
+    if ((bytes_written = write(get_fd_from_dummy_path(request->dummy_path, tenant), request->data.data, request->data.len)) 
             < 0) {
         int errno_val = errno;
 
@@ -478,6 +506,9 @@ sunneed_request_servicer(__attribute__((unused)) void *args) {
                     break;
                 case SUNNEED_REQUEST__MESSAGE_TYPE_WRITE:
                     ret = serve_write(&resp, sub_resp_buf, tenant, request_to_serve->write);
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_CLOSE_FILE:
+                    ret = serve_close(&resp, sub_resp_buf, tenant, request_to_serve->close_file);
                     break;
                 default:
                     LOG_W("Received request with invalid type %d", request_to_serve->message_type_case);

@@ -49,3 +49,6 @@ open(const char *pathname, int flags, mode_t mode);
 
 ssize_t
 write(int fd, const void *buf, size_t count);
+
+int
+close(int fd);

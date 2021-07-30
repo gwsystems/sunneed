@@ -168,6 +168,39 @@ sunneed_client_fd_is_locked(int fd) {
     return false;
 }
 
+int
+sunneed_client_remote_close(int fd) {
+    int locked_file_i;
+    char *dummy_path = NULL;
+    for (locked_file_i = 0; locked_file_i < MAX_LOCKED_FILES; locked_file_i++)
+        if (locked_paths[locked_file_i].fd == fd) {
+            dummy_path = locked_paths[locked_file_i].dummy_path;
+            break;
+        }
+
+    if (dummy_path == NULL)
+        FATAL(-1, "cannot remote close a non-dummy file");
+
+    SunneedRequest req = SUNNEED_REQUEST__INIT;
+    req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_CLOSE_FILE;
+
+    CloseFileRequest close_req = CLOSE_FILE_REQUEST__INIT;
+    close_req.dummy_path = dummy_path;
+
+    req.close_file = &close_req;
+    send_request(&req);
+
+    free(close_req.dummy_path);
+
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_CLOSE_FILE);
+    if (resp == NULL) {
+        FATAL(-1, "close response was NULL");
+    }
+    sunneed_response__free_unpacked(resp, NULL);
+
+    return 0;
+}
+
 ssize_t
 sunneed_client_remote_write(int fd, const void *data, size_t n_bytes) {
     // Get the dummy path corresponding to the FD.
