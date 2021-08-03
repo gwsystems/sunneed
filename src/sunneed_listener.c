@@ -252,22 +252,31 @@ serve_write(
     resp->call_write = sub_resp;
     #ifdef LOG_PWR
     char *real_path = get_path_from_dummy_path(request->dummy_path);
-    int orientation_change, num_pwr_readings;
+    int num_pwr_readings, request_n_msec /* how many milliseconds device was drawing extra power to service request */;
     float avg_pwr;
-    char stepper_sig;
-    char orientation_bytes[request->data.len];
-    bool change_dir, from_stop;
-    struct timespec *curr_time = (struct timespec*) malloc(sizeof(struct timespec));
+    
+   
+    
+    struct timespec *curr_time, *end_req_time;
+    curr_time  = (struct timespec*) malloc(sizeof(struct timespec));
+    request_end_time = = (struct timespec*) malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, curr_time);
-    change_dir = from_stop = false;
+    
         ///// temp
 	    LOG_D("Real path: %s\n", real_path);
 	    /////
 	    if (strcmp(real_path, "/tmp/stepper") == 0) {
+            bool change_dir, from_stop;
+            char stepper_sig;
+            char orientation_bytes[request->data.len];
+            int orientation_change;
+
             if (stepperMotor_orientation == -1) {
                 /* TODO: read orientation file */
                 stepperMotor_orientation = 0;
             }
+
+            change_dir = from_stop = false;
 		
 	        if (request->data.data[0] == '+' || request->data.data[0] == '-') {
                 strncpy(orientation_bytes, (char*)(request->data.data + 1), request->data.len - 1);
@@ -343,9 +352,12 @@ serve_write(
         avg_pwr = avg_pwr / num_pwr_readings;
         
         clock_gettime(CLOCK_MONOTONIC, last_stepperMotor_req_time);
+        clock_gettime(CLOCK_MONOTONIC, request_end_time);
 
-        LOG_D("%d, %d, %d, %d",orientation_change, change_dir, from_stop, avg_pwr);
-        LOG_P("%d, %d, %d, %d",orientation_change, change_dir, from_stop, avg_pwr);
+        request_n_msec = ( (request_end_time->tv_nsec - /*curr_time set before request written */curr_time->tv_nsec) * 10e-6);
+
+        LOG_D("%d, %d, %d, %f",orientation_change, change_dir, from_stop, avg_pwr * request_n_msec);
+        LOG_P("%d, %d, %d, %f",orientation_change, change_dir, from_stop, avg_pwr * request_n_msec);
     }
     #endif
     return 0;
