@@ -75,19 +75,19 @@ spawn_worker_threads(void) {
 void
 sunneed_init(void) {
     atexit(handle_exit);
-    /* for running off raspberry pi (no battery babysitter i2c connection) */
-    
+    /* for running on system  with no battery babysitter i2c connection (testing) */
+    /*
     if (!pip_init()) {
 	    LOG_E("Error initializing power management hardware");
 	    exit(1);
     }
+    */
     
-    /*
     if (pip_init()) {
 	    LOG_E("Error initializing power management hardware");
 	    exit(1);
     }
-    */
+    
     SunneedRequest_List_init();
 
     pip = pip_info();

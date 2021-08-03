@@ -38,7 +38,7 @@ pip_info() {
     return (struct sunneed_pip){"bq27441", 1000, 50};
 }
 
-unsigned int
+int
 present_power() {
-    return bq27441_average_power();
+    return -1 * (int) bq27441_average_power();
 }

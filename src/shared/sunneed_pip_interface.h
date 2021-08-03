@@ -32,7 +32,7 @@ pip_init();
 struct sunneed_pip
 pip_info();
 
-unsigned int
+int
 present_power();
 
 #endif

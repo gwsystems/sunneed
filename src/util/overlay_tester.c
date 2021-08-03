@@ -21,7 +21,7 @@ main(void) {
     if (fd == -1) {
         exit(1);
     }
-    printf("wrote %ld bytes\n",write(fd, "foo", 3));
+    printf("wrote %d bytes\n",write(fd, "foo", 3));
     close(fd);
 
     return 0;

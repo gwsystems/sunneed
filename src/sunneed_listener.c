@@ -252,24 +252,31 @@ serve_write(
     resp->call_write = sub_resp;
     #ifdef LOG_PWR
     char *real_path = get_path_from_dummy_path(request->dummy_path);
-    int num_pwr_readings, request_n_msec /* how many milliseconds device was drawing extra power to service request */;
+    int num_pwr_readings;
+    float request_n_sec /* how many seconds (not just whole #s) device was drawing extra power to service request */;
     float avg_pwr;
+    char stepper_sig;
+    bool change_dir, from_stop; 
+    int orientation_change;
     
-   
+    /* struct timespec doesn't have minute, so use these to tell if minute turns over */
+    struct tm *temp, *temp2;
+    time_t raw_time;
+    time(&raw_time);
+    temp = localtime(&raw_time);
+    int delta_min;
+
     
-    struct timespec *curr_time, *end_req_time;
+    struct timespec *curr_time, *request_end_time;
     curr_time  = (struct timespec*) malloc(sizeof(struct timespec));
-    request_end_time = = (struct timespec*) malloc(sizeof(struct timespec));
+    request_end_time = (struct timespec*) malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, curr_time);
     
         ///// temp
 	    LOG_D("Real path: %s\n", real_path);
 	    /////
 	    if (strcmp(real_path, "/tmp/stepper") == 0) {
-            bool change_dir, from_stop;
-            char stepper_sig;
             char orientation_bytes[request->data.len];
-            int orientation_change;
 
             if (stepperMotor_orientation == -1) {
                 /* TODO: read orientation file */
@@ -341,7 +348,7 @@ serve_write(
         do { /* get average power draw from battery while stepper motor served request */
             clock_gettime(CLOCK_MONOTONIC, curr_time);
             read(stepper_dataPipe[0], &stepper_sig, 1);
-            if (curr_time->tv_sec - last_pwrRead_time->tv_sec >= 1 /* poll rate for bq27441_average_power() is 1s */) {
+            if (curr_time->tv_sec - last_pwrRead_time->tv_sec >= 1 /* poll rate for bq27441_average_power() is 1 s */) {
                 avg_pwr += present_power() - PASSIVE_PWR;
                 num_pwr_readings++;
                 clock_gettime(CLOCK_MONOTONIC, last_pwrRead_time);
@@ -354,10 +361,39 @@ serve_write(
         clock_gettime(CLOCK_MONOTONIC, last_stepperMotor_req_time);
         clock_gettime(CLOCK_MONOTONIC, request_end_time);
 
-        request_n_msec = ( (request_end_time->tv_nsec - /*curr_time set before request written */curr_time->tv_nsec) * 10e-6);
+	time(&raw_time);
+	temp2 = localtime(&raw_time);
 
-        LOG_D("%d, %d, %d, %f",orientation_change, change_dir, from_stop, avg_pwr * request_n_msec);
-        LOG_P("%d, %d, %d, %f",orientation_change, change_dir, from_stop, avg_pwr * request_n_msec);
+	delta_min = temp2->tm_min - temp->tm_min;
+
+	if (delta_min < 0) {
+		LOG_E("%f", delta_min);
+		char buff1[100], buff2[100];
+		strftime(buff1, sizeof(buff1), "%D %T", temp);
+		strftime(buff2, sizeof(buff2), "%D %T", temp2);
+		LOG_E("%s %s", buff1, buff2);
+	}
+	  //  LOG_E("%d ------- %d", temp2->tm_min, temp->tm_min);
+	    //LOG_E("now: %ds:%dns --- start: %ds:%dns", request_end_time->tv_sec, request_end_time->tv_nsec, curr_time->tv_sec, curr_time->tv_nsec);
+	    //LOG_E("%ds from s--- %fs from ns",request_end_time->tv_sec - curr_time->tv_sec, (request_end_time->tv_nsec - curr_time->tv_nsec) * 10e-9);
+
+	if (delta_min > 0) {
+	    LOG_E("%d ------- %d", temp2->tm_min, temp->tm_min);
+	}
+	/* curr_time set before request written */
+        request_n_sec = ( ((float)delta_min * 60) + (float)(request_end_time->tv_sec - curr_time->tv_sec) + (( (float)request_end_time->tv_nsec * 10e-10) - ((float)curr_time->tv_nsec * 10e-10)));
+	/* I have no idea why this is e-10 and not e-9 but it was a magnitude too large every time with 
+	 * e-9 despite the fact
+	 * that 1 ns = 10e-9 s
+	 */
+	if (request_n_sec < 0) {
+	    LOG_E("%d ------- %d", temp2->tm_min, temp->tm_min);
+	    LOG_E("now: %ds:%dns --- start: %ds:%dns", request_end_time->tv_sec, request_end_time->tv_nsec, curr_time->tv_sec, curr_time->tv_nsec);
+	    LOG_E("%ds from s--- %fs from ns",request_end_time->tv_sec - curr_time->tv_sec, (request_end_time->tv_nsec - curr_time->tv_nsec) * 10e-9);
+	}
+	LOG_D("pwr: %f", avg_pwr);
+        LOG_D("%d, %d, %d, %f",orientation_change, change_dir, from_stop, avg_pwr * request_n_sec);
+        LOG_P("%d, %d, %d, %f\n",orientation_change, change_dir, from_stop, avg_pwr * request_n_sec);
     }
     #endif
     return 0;
