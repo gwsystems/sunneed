@@ -145,6 +145,13 @@ serve_unregister_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe
         //  that handles interacting with tenants).
         return 1;
 
+    /* clear dummy_path -> fd map for when tenant is re-activated */
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        dummy_path_fd_map[tenant->id][i].path = NULL;
+        dummy_path_fd_map[tenant->id][i].fd = 0;
+    }
+
+
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
     GenericResponse *sub_resp = sub_resp_buf;
     *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
@@ -224,18 +231,21 @@ serve_close(
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_CLOSE_FILE;
     resp->close_file= sub_resp;
 
-    if (close(get_fd_from_dummy_path(request->dummy_path, tenant)) < 0) {
-        int errno_val = errno;
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        if (dummy_path_fd_map[tenant->id][i].path && strncmp(dummy_path_fd_map[tenant->id][i].path, path, strlen(path)) == 0)
+            if (close(dummy_fd_map[tenant->id][i].fd) < 0) {
+                int errno_val = errno;
+                sub_resp->errno_value = errno_val;
+                LOG_E("'close' for client %d failed with: %s", tenant->id, strerror(errno));
+                return 1;
+            }
+            /* reset array spot to be reused on future serve_open() calls */
+            dummy_path_fd_map[tenant->id][i].path = NULL;
+            dummy_path_fd_map[tenant->id][i].fd = 0;
 
-        sub_resp->errno_value = errno_val;
-
-        LOG_E("'close' for client %d failed with: %s", tenant->id, strerror(errno));
-
-        return 1;
+            sub_resp->errno_value = 0;
+            return 0;
     }
-
-    sub_resp->errno_value = 0;
-    return 0;
 }
 
 static int
@@ -267,10 +277,12 @@ serve_write(
     int delta_min;
 
     
-    struct timespec *curr_time, *request_end_time;
+    struct timespec *curr_time, *request_start_time, *request_end_time;
     curr_time  = (struct timespec*) malloc(sizeof(struct timespec));
+    request_start_time = = (struct timespec*) malloc(sizeof(struct timespec));
     request_end_time = (struct timespec*) malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, curr_time);
+    clock_gettime(CLOCK_MONOTONIC, request_start_time);
     
         ///// temp
 	    LOG_D("Real path: %s\n", real_path);
@@ -343,13 +355,15 @@ serve_write(
         LOG_I("Waiting for stepper driver to finish");
         stepper_sig = 'z';
         struct timespec *last_pwrRead_time = (struct timespec*) malloc(sizeof(struct timespec));
-        avg_pwr = present_power() - PASSIVE_PWR;
+        avg_pwr = present_power();
+//        avg_pwr = present_power() - PASSIVE_PWR;
         num_pwr_readings = 1;
         do { /* get average power draw from battery while stepper motor served request */
             clock_gettime(CLOCK_MONOTONIC, curr_time);
             read(stepper_dataPipe[0], &stepper_sig, 1);
             if (curr_time->tv_sec - last_pwrRead_time->tv_sec >= 1 /* poll rate for bq27441_average_power() is 1 s */) {
-                avg_pwr += present_power() - PASSIVE_PWR;
+//                avg_pwr += present_power() - PASSIVE_PWR;
+                avg_pwr += present_power();
                 num_pwr_readings++;
                 clock_gettime(CLOCK_MONOTONIC, last_pwrRead_time);
             }
@@ -381,8 +395,9 @@ serve_write(
 	    LOG_E("%d ------- %d", temp2->tm_min, temp->tm_min);
 	}
 	/* curr_time set before request written */
-        request_n_sec = ( ((float)delta_min * 60) + (float)(request_end_time->tv_sec - curr_time->tv_sec) + (( (float)request_end_time->tv_nsec * 10e-10) - ((float)curr_time->tv_nsec * 10e-10)));
-	/* I have no idea why this is e-10 and not e-9 but it was a magnitude too large every time with 
+//        request_n_sec = ( ((float)delta_min * 60) + (float)(request_end_time->tv_sec - curr_time->tv_sec) + (( (float)request_end_time->tv_nsec * 10e-10) - ((float)curr_time->tv_nsec * 10e-10)));
+    requests_n_sec = ( ((float)delta_min * 60) + (float)(request_end_time->tv_sec - requst_start_time->tv_sec) + ( ((float)request_end_time->tv_nsec - (float)request_start_time->tv_nsec) * 10e-10));
+    /* I have no idea why this is e-10 and not e-9 but it was a magnitude too large every time with 
 	 * e-9 despite the fact
 	 * that 1 ns = 10e-9 s
 	 */
