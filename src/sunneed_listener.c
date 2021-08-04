@@ -232,8 +232,8 @@ serve_close(
     resp->close_file= sub_resp;
 
     for (int i = 0; i < MAX_LOCKED_FILES; i++) {
-        if (dummy_path_fd_map[tenant->id][i].path && strncmp(dummy_path_fd_map[tenant->id][i].path, path, strlen(path)) == 0)
-            if (close(dummy_fd_map[tenant->id][i].fd) < 0) {
+        if (dummy_path_fd_map[tenant->id][i].path && strncmp(dummy_path_fd_map[tenant->id][i].fd, request->dummy_path, strlen(request->dummy_path)) == 0)
+            if (close(dummy_path_fd_map[tenant->id][i].fd) < 0) {
                 int errno_val = errno;
                 sub_resp->errno_value = errno_val;
                 LOG_E("'close' for client %d failed with: %s", tenant->id, strerror(errno));
@@ -246,6 +246,7 @@ serve_close(
             sub_resp->errno_value = 0;
             return 0;
     }
+    return 1;
 }
 
 static int
@@ -279,7 +280,7 @@ serve_write(
     
     struct timespec *curr_time, *request_start_time, *request_end_time;
     curr_time  = (struct timespec*) malloc(sizeof(struct timespec));
-    request_start_time = = (struct timespec*) malloc(sizeof(struct timespec));
+    request_start_time = (struct timespec*) malloc(sizeof(struct timespec));
     request_end_time = (struct timespec*) malloc(sizeof(struct timespec));
     clock_gettime(CLOCK_MONOTONIC, curr_time);
     clock_gettime(CLOCK_MONOTONIC, request_start_time);
@@ -396,7 +397,7 @@ serve_write(
 	}
 	/* curr_time set before request written */
 //        request_n_sec = ( ((float)delta_min * 60) + (float)(request_end_time->tv_sec - curr_time->tv_sec) + (( (float)request_end_time->tv_nsec * 10e-10) - ((float)curr_time->tv_nsec * 10e-10)));
-    requests_n_sec = ( ((float)delta_min * 60) + (float)(request_end_time->tv_sec - requst_start_time->tv_sec) + ( ((float)request_end_time->tv_nsec - (float)request_start_time->tv_nsec) * 10e-10));
+    request_n_sec = ( ((float)delta_min * 60) + (float)(request_end_time->tv_sec - request_start_time->tv_sec) + ( ((float)request_end_time->tv_nsec - (float)request_start_time->tv_nsec) * 10e-10));
     /* I have no idea why this is e-10 and not e-9 but it was a magnitude too large every time with 
 	 * e-9 despite the fact
 	 * that 1 ns = 10e-9 s
