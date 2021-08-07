@@ -26,10 +26,10 @@ main(void)
         delay = rand() % 2;
         if (dir) {
             sprintf(to_send, "+%d", orientation);
-            write(fd, to_send, strlen(to_send));
+            write(fd, to_send, 4);
         } else {
             sprintf(to_send, "-%d", orientation);
-            write(fd, to_send, strlen(to_send));
+            write(fd, to_send, 4);
         }
         if (delay) usleep(300000);
         printf("%s\n",to_send);
