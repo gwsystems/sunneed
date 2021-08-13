@@ -1,6 +1,10 @@
 #include "sunneed_proc.h"
 
+
 struct sunneed_tenant tenants[MAX_TENANTS];
+
+static enum battery_state battery_state;
+
 
 int
 sunneed_init_tenants(void) {
@@ -129,13 +133,32 @@ sunneed_get_tenant_cpu_usage(sunneed_tenant_id_t tenant_id) {
 
 sunneed_worker_thread_result_t
 sunneed_proc_monitor(__attribute__((unused)) void *args) {
-    int ret;
+    int ret, last_soc, curr_soc;
+    last_soc = bq27441_soc_unfiltered();
     while (true) {
         LOG_D("Updating process CPU usage");
         if ((ret = sunneed_update_tenant_cpu_usage()) != 0) {
             LOG_E("Error updating CPU usage; monitor thread stopping");
             return NULL;
         }
+
+        //check and update battery state
+        curr_soc = bq27441_soc_unfiltered();
+        if(curr_soc > 90)
+        {
+            battery_state = FULL;
+        }else if(curr_soc > last_soc){
+            battery_state = CHARGING;
+        }else if(curr_soc > 50){
+            battery_state = DISCHARGING;
+        }else if(curr_soc > 20){
+            battery_state = HALF;
+        }else if(curr_soc){
+            battery_state = LOW;
+        }else{
+            battery_state = EMPTY;
+        }
+        LOG_D("battery state: %s\n", battery_state);
 
         sleep(5);
     }
