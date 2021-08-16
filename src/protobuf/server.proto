@@ -9,6 +9,9 @@ message SunneedRequest {
         UnregisterClientRequest unregister_client = 2;
         OpenFileRequest open_file = 3;
         WriteRequest write = 4;
+	SocketRequest socket = 5;
+	ConnectRequest connect = 6;
+	SendRequest send = 7;
     }
 }
 
@@ -20,14 +23,34 @@ message UnregisterClientRequest {}
 
 message OpenFileRequest {
     string path = 1;
-    int32  flags = 2;
-    int32  mode = 3;
+    int32 flags = 2;
 }
 
 message WriteRequest {
     string dummy_path = 1;
     bytes data = 2; 
 }
+
+message SocketRequest {
+    int32 domain = 1;
+    int32 type = 2;
+    int32 protocol = 3;
+}
+
+message ConnectRequest {
+    int32 port = 1;
+    string address = 2;
+    int32 addrlen = 3;
+    int32 sockfd = 4;
+}
+
+message SendRequest {
+    int32 sockfd = 1;
+    bytes data = 2;
+    int32 flags = 3;
+}
+
+
 
 // {{{1 Response
 
@@ -40,6 +63,7 @@ message SunneedResponse {
         OpenFileResponse open_file = 4;
         RegisterClientResponse register_client = 5;
         WriteResponse call_write = 6;
+	SocketResponse socket = 7;
     }
 }
 
@@ -62,6 +86,11 @@ message WriteResponse {
     // This is only set from values of type `size_t`, so don't worry about data loss when converting it back from
     // uint64.
     uint64 bytes_written = 2;
+}
+
+message SocketResponse {
+    //fake socket fd given back by sunneed
+    int32 dummy_sockfd = 1;
 }
 
 import "device.proto";

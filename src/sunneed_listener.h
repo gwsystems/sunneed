@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -21,6 +24,7 @@
 #include "sunneed_proc.h"
 
 #define SUNNEED_MESSAGE_DEFAULT_BODY_SZ 64
+#define SUNNEED_MAX_IPC_CLIENTS 512
 #define SUNNEED_DEVICE_PATH_MAX_LEN 64
 
 int

@@ -1,0 +1,11 @@
+{
+        "files.associations": {
+                "sunneed_pip_interface.h": "c",
+                "sunneed_listener.h": "c",
+                "cstring": "c",
+                "memory": "c",
+                "xmemory": "c",
+                "xstring": "c",
+                "xutility": "c"
+        }
+}

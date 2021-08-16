@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 
 #include "log.h"
 #include "shared/sunneed_pip_interface.h"
@@ -16,6 +14,17 @@
 #define MAX_DEVICES 64
 
 #define QUANTUMS_RINGBUF_SZ 16
+
+#define PASSIVE_PWR_PER_SEC 0.07667
+
+#define PASSIVE_PWR_PER_MIN PASSIVE_PWR_PER_SEC * 60
+
+#ifdef LOG_PWR
+#define REQS_PER_LOG 10
+int16_t last_read, curr_read, last_capacity, curr_capacity, reqs_since_last_log;
+clock_t last_send, time_since_send;
+#endif
+
 
 // TODO This is waaaaaaaaaaaaaaaaaaaaay too big.
 #define QUANTUM_DURATION_MS 5000

@@ -9,8 +9,13 @@ struct {
     int fd;
 } locked_paths[MAX_LOCKED_FILES] = { { NULL, 0 } };
 
-nng_socket sunneed_socket;
+struct {
+	int dummy_sockfd;
+} dummy_sockets[MAX_TENANT_SOCKETS] = { { -1 } };
 
+nng_socket sunneed_socket;
+nng_dialer sunneed_socket_dialer;
+nng_msg *msg;
 static void
 nngfatal(const char *func, int rv) {
     FATAL(rv, "%s: %s\n", func, nng_strerror(rv));
@@ -22,22 +27,19 @@ nngfatal(const char *func, int rv) {
  */
 static void
 send_request(SunneedRequest *req) {
-    nng_msg *msg;                                               
-
+    //nng_msg *msg;                                               
     int req_len = sunneed_request__get_packed_size(req);
     void *buf = malloc(req_len);
     if (!buf)
         FATAL(-1, "unable to allocate buffer for request");
     sunneed_request__pack(req, buf);                           
-
-//    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        
-//    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
-    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, 0);
-    SUNNEED_NNG_TRY(nng_msg_append, != 0, msg, buf, req_len);
+    int ret = -1;
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, 0);  
+    SUNNEED_NNG_TRY(nng_msg_append,  != 0, msg, buf, req_len);
     SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
 
-    free(buf);
-//    nng_msg_free(msg);                                         
+      
+    free(buf); 
 }
 
 static SunneedResponse *
@@ -46,7 +48,7 @@ receive_response(SunneedResponse__MessageTypeCase message_type) {
     SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
 
     size_t msg_len = nng_msg_len(reply);
-//    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+    //SUNNEED_NNG_MSG_LEN_FIX(msg_len);
     SunneedResponse *resp = sunneed_response__unpack(NULL, msg_len, nng_msg_body(reply));
 
     if (resp->status != 0) {
@@ -61,11 +63,12 @@ receive_response(SunneedResponse__MessageTypeCase message_type) {
 
 int
 sunneed_client_init(const char *name) {
+   
     SUNNEED_NNG_SET_ERROR_REPORT_FUNC(nngfatal);
     SUNNEED_NNG_TRY(nng_req0_open, != 0, &sunneed_socket);
-    SUNNEED_NNG_TRY(nng_dial, != 0, sunneed_socket, SUNNEED_LISTENER_URL, NULL, 0);
+    SUNNEED_NNG_TRY(nng_dial, != 0, sunneed_socket, SUNNEED_LISTENER_URL, &sunneed_socket_dialer, 0);
+ 
 
-    // Register this client with sunneed.
     SunneedRequest req = SUNNEED_REQUEST__INIT;
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT;
     RegisterClientRequest register_req = REGISTER_CLIENT_REQUEST__INIT;
@@ -93,8 +96,7 @@ sunneed_client_init(const char *name) {
 
 /** Allocate a string containing the path of the dummy file corresponding to the given path. */
 char *
-
-sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode) {
+sunneed_client_fetch_locked_file_path(const char *pathname, int flags) {
     // TODO Check socket opened.
 
     SunneedRequest req = SUNNEED_REQUEST__INIT;
@@ -109,10 +111,6 @@ sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode)
     open_file_req.flags = flags;
 
     req.open_file = &open_file_req;
-
-    open_file_req.flags = flags;
-    open_file_req.mode = mode;
-
 
     send_request(&req);
     free(open_file_req.path);
@@ -154,8 +152,9 @@ sunneed_client_on_locked_path_open(int i, char *pathname, int fd) {
     if (pathname == NULL)
         FATAL(-1, "pathname is null");
     if (fd <= 0)
-	FATAL(-1, "illegal FD");
+        FATAL(-1, "illegal FD");
 
+	   //toSend[REQUETS_PER_PWR_LOG * 3] = pwr_change;
     locked_paths[i].path = pathname;
     locked_paths[i].fd = fd;
 
@@ -207,6 +206,203 @@ sunneed_client_remote_write(int fd, const void *data, size_t n_bytes) {
         // TODO Handle
         FATAL(-1, "write response was NULL");
     }
+    sunneed_response__free_unpacked(resp, NULL);
+
+    return 0;
+}
+
+int
+sunneed_client_socket(int domain, int type, int protocol)
+{
+
+    /*
+     * sunneed_socket_dialer points to the nng_dialer associated with the tenant <--> suneeed nng socket
+     * since the dialer is the last part of the socket set up, this should indicate whether the nng socket is set up or not
+     * if not, nng_dialer_id will return -1 to signal an invalid dialer, therefore we need to call SUPER to create the nng socket
+     */
+    if(nng_dialer_id(sunneed_socket_dialer) == -1)
+    {
+        return -1;
+    }
+
+    /*
+     * currently only support IPv4 UDP packets for power logging
+     * can extend for TCP and IPv6 later if needed
+     */
+	if(domain != AF_INET)
+	{
+		return -1;
+	}
+
+	if(type != SOCK_DGRAM)
+	{
+        //TODO: determine type of getnameinfo and getaddrinfo packets, both end up triggering this return case
+        //should error out if not one of those, but for now just return -1 to signal a call to SUPER
+		return -1;
+	}
+
+	SunneedRequest req = SUNNEED_REQUEST__INIT;
+	req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_SOCKET;
+
+	SocketRequest sock = SOCKET_REQUEST__INIT;
+	sock.domain = domain;
+	sock.type = type;
+
+
+	sock.protocol = protocol;
+
+	req.socket = &sock;
+	send_request(&req);
+
+	SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_SOCKET);
+	if(resp == NULL)
+	{
+		FATAL(-1, "failed to create socket, no response");
+	}
+
+    //add the new fake socket from sunneed to the table, future sends to this fd will be caught by the send overlay
+	int i;
+	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
+	{
+		if(dummy_sockets[i].dummy_sockfd == -1)
+		{
+			dummy_sockets[i].dummy_sockfd = resp -> socket -> dummy_sockfd;
+			sunneed_response__free_unpacked(resp, NULL);
+			return dummy_sockets[i].dummy_sockfd;
+		}
+	}
+
+	//TODO: handle not having enough free sockets
+	sunneed_response__free_unpacked(resp, NULL);
+	return -1;
+
+}
+
+/*
+ * dummy socket table lookup function for convenience
+ * TODO: could probably speed this up a little bit (currently O(n))
+ */
+int
+sunneed_client_is_dummysocket(int sockfd)
+{
+	int i;
+	for(i = 0; i < MAX_TENANT_SOCKETS; i++)
+	{
+		if(dummy_sockets[i].dummy_sockfd == sockfd)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int
+sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+    
+	char host_name[NI_MAXHOST];
+	char address[INET_ADDRSTRLEN];
+	int port = 0;
+	struct hostent *requested_host;
+    struct sockaddr_in *addr_info;
+    struct addrinfo hints;
+    struct addrinfo *result, *rp;
+	void *addr_ptr;
+
+    //need to check that nng is set up via dialer here as well
+    if(nng_dialer_id(sunneed_socket_dialer) == -1)
+    {
+        return -1;
+    }
+
+    
+	/*
+     * get remote address and port from given sockaddr struct
+     * uses AF_INET since we assume IPv4 packets, change to AF_UNSPEC when IPv6 support is added
+     */
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_protocol = 0;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
+
+	getnameinfo(addr, addrlen, host_name, NI_MAXHOST, NULL, 0, 0);
+    if(getaddrinfo(host_name, NULL, &hints, &result))
+    {
+        FATAL(-1, "getaddrinfo\n");
+    }
+
+    //getaddrinfo() returns a list of socket structs, since we only have one socket per address this will give us the address the tenant requested
+    while(result)
+    {
+        inet_ntop(result->ai_family, result->ai_addr->sa_data, address, NI_MAXHOST);  
+        addr_ptr = &((struct sockaddr_in*)result->ai_addr)->sin_addr;
+
+        inet_ntop(result->ai_family, addr_ptr, address, NI_MAXHOST);
+
+        
+        result = result->ai_next;
+    }
+
+    addr_info = (struct sockaddr_in*) addr;
+    port = htons(addr_info->sin_port);
+
+	SunneedRequest req = SUNNEED_REQUEST__INIT;
+	req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_CONNECT;
+
+	ConnectRequest conn = CONNECT_REQUEST__INIT;
+	conn.port = port;
+	conn.address = address;
+	conn.addrlen = sizeof(address);
+    conn.sockfd = sockfd;
+
+	req.connect = &conn;
+	send_request(&req);
+
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
+    if(resp == NULL)
+    {
+        FATAL(-1, "connect response was null\n");
+        return -1;
+    }
+
+    sunneed_response__free_unpacked(resp, NULL);
+
+    return 1;
+}
+
+ssize_t 
+sunneed_client_remote_send(int sockfd, const void *data, size_t len, int flags)
+{
+	
+	SunneedRequest req = SUNNEED_REQUEST__INIT;
+	req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_SEND;
+
+	SendRequest send_req = SEND_REQUEST__INIT;
+	send_req.sockfd = sockfd;
+	send_req.data.data = malloc(len);
+
+    if(!(send_req.data.data))
+    {
+        printf("failed to malloc request data\n");
+        return -1;
+    }
+
+	strncpy(send_req.data.data, data, len);
+	send_req.data.len = len;
+
+	req.send = &send_req;
+	send_request(&req);
+
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC);
+    if(resp == NULL)
+    {
+        FATAL(-1, "send response was null\n");
+        return -1;
+    }
+    free(send_req.data.data);
     sunneed_response__free_unpacked(resp, NULL);
 
     return 0;
