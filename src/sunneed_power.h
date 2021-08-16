@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 #include "log.h"
 #include "shared/sunneed_pip_interface.h"
@@ -14,6 +16,9 @@
 #define MAX_DEVICES 64
 
 #define QUANTUMS_RINGBUF_SZ 16
+
+#define PASSIVE_PWR 458.333// mW draw on battery when sunneed running with no requests */
+
 
 // TODO This is waaaaaaaaaaaaaaaaaaaaay too big.
 #define QUANTUM_DURATION_MS 5000

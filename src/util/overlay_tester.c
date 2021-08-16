@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdlib.h>
 
 // Just to get the CAMERA_PATH.
 #include "../shared/sunneed_device_type.h"
@@ -15,18 +16,13 @@
 int
 main(void) {
     printf("Starting main overlay tester\n");
-
     int fd = open("/tmp/test", O_CREAT | O_RDWR, 0666);
+
     if (fd == -1) {
-        fprintf(stderr, "Failed to open file\n");
-        return -1;
+        exit(1);
     }
-
-    write(fd, "foo", 3);
-
+    printf("wrote %ld bytes\n",write(fd, "foo", 3));
     close(fd);
-
-    printf("Opened and closed file\n");
 
     return 0;
 }

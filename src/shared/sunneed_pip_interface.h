@@ -27,10 +27,13 @@ struct sunneed_pip {
     unsigned int update_interval;
 };
 
+int
+pip_init();
+
 struct sunneed_pip
 pip_info();
 
-unsigned int
+int
 present_power();
 
 #endif

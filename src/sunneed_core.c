@@ -4,7 +4,16 @@ extern struct sunneed_device devices[MAX_DEVICES];
 
 struct sunneed_pip pip;
 
-sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_proc_monitor, sunneed_quantum_worker, NULL};
+sunneed_worker_thread_result_t (*worker_thread_functions[])(void *) = {sunneed_request_servicer, sunneed_proc_monitor, sunneed_quantum_worker, sunneed_stepperMotor_driver, sunneed_camera_driver, NULL};
+
+void
+handle_exit(void) {
+    LOG_I("Sunneed exiting");
+    LOG_I("\tKilling stepper motor");
+    kill(sunneed_stepper_driver_pid, SIGTERM);
+    LOG_I("\tKilling camera driver");
+    kill(sunneed_camera_driver_pid, SIGTERM);
+}
 
 #ifdef TESTING
 
@@ -58,15 +67,31 @@ spawn_worker_threads(void) {
             return 1;
         };
     }
-
+    LOG_I("worker threads launched");
     return 0;
 }
 
 
 void
 sunneed_init(void) {
+    atexit(handle_exit);
+    /* for running on system  with no battery babysitter i2c connection (testing) */
+    /*
+    if (!pip_init()) {
+	    LOG_E("Error initializing power management hardware");
+	    exit(1);
+    }
+    */
+    
+    if (pip_init()) {
+	    LOG_E("Error initializing power management hardware");
+	    exit(1);
+    }
+    
+    SunneedRequest_List_init();
+
     pip = pip_info();
-    last_capacity = present_power();
+    stepperMotor_orientation = -1;
 }
 
 int
@@ -79,21 +104,24 @@ main(int argc, char *argv[]) {
     reqs_since_last_log = 0;
 #endif
 
+#ifdef LOG_PWR
+    logfile_pwr = fopen("sunneed_pwr_log.csv", "w+");
+#endif
+
 #ifdef TESTING
     const char *optstring = ":ht:c";
 #else
     const char *optstring = ":h";
 #endif
-
     // TODO Long-form getopts.
     while ((opt = getopt(argc, argv, optstring)) != -1) {
-        switch (opt) {
+	switch (opt) {
             case 'h':
                 printf(HELP_TEXT, argv[0]);
                 exit(0);
 #ifdef TESTING
             case 't': ;
-                logfile = fopen("sunneed_log.txt", "w+");
+   		logfile = fopen("sunneed_log.txt", "w+");
                 int testcase = strtol(optarg, NULL, 10);
                 if (errno) {
                     LOG_E("Failed to parse testcase index: %s", strerror(errno));
@@ -133,7 +161,6 @@ main(int argc, char *argv[]) {
         ret = 1;
         goto end;
     }
-
     if ((ret = sunneed_listen()) != 0) {
         LOG_E("sunneed listener encountered a fatal error. Exiting.");
         ret = 1;

@@ -8,6 +8,8 @@ extern struct sunneed_device devices[];
 extern struct sunneed_tenant tenants[];
 extern const char *locked_file_paths[];
 
+nng_socket sock;
+
 /** 
  * Maps dummy paths (typically sent by clients during a read or write) to FDs pointing to the real device, held by
  * sunneed.
@@ -15,13 +17,14 @@ extern const char *locked_file_paths[];
 struct {
     char *path;
     int fd;
-} dummy_path_fd_map[MAX_LOCKED_FILES] = { { NULL, 0 } };
+} dummy_path_fd_map[MAX_TENANTS][MAX_LOCKED_FILES] = {{ { NULL, 0 } }};
 
 static int
-get_fd_from_dummy_path(char *path) {
-    for (int i = 0; i < MAX_LOCKED_FILES; i++)
-        if (dummy_path_fd_map[i].path && strncmp(dummy_path_fd_map[i].path, path, strlen(path)) == 0)
-            return dummy_path_fd_map[i].fd;
+get_fd_from_dummy_path(char *path, struct sunneed_tenant *tenant) {
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        if (dummy_path_fd_map[tenant->id][i].path && strncmp(dummy_path_fd_map[tenant->id][i].path, path, strlen(path)) == 0)
+            return dummy_path_fd_map[tenant->id][i].fd;
+    }
     return -1;
 }
 
@@ -142,6 +145,13 @@ serve_unregister_client(SunneedResponse *resp, void *sub_resp_buf, nng_pipe pipe
         //  that handles interacting with tenants).
         return 1;
 
+    /* clear dummy_path -> fd map for when tenant is re-activated */
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        dummy_path_fd_map[tenant->id][i].path = NULL;
+        dummy_path_fd_map[tenant->id][i].fd = 0;
+    }
+
+
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_GENERIC;
     GenericResponse *sub_resp = sub_resp_buf;
     *sub_resp = (GenericResponse)GENERIC_RESPONSE__INIT;
@@ -163,31 +173,27 @@ serve_open_file(
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_OPEN_FILE;
     resp->open_file = sub_resp;
 
-    // TODO Take flags!!
-
-
     struct sunneed_device *locker;
     if ((locker = sunneed_device_file_locker(request->path)) != NULL) {
         // TODO Wait for availability, perform power calcs, etc.
 
         // Open the real file and save its FD.
-//        int real_fd = open(request->path, O_RDWR); // TODO Use flags given by client.
-	int real_fd = open(request->path, request->flags);
-
-	if (real_fd == -1) {
-	    LOG_E("Failed to open file '%s'", request->path);
-	    return 1;
-	}
-
-	char *dummypath = sunneed_device_get_dummy_file(request->path);
+        int real_fd = open(request->path, request->flags, request->mode); // TODO Use flags given by client.
+        
+        if (real_fd == -1) {
+            LOG_E("Failed to open file '%s'", request->path);
+            return 1;
+        }
+        
+        char *dummypath = sunneed_device_get_dummy_file(request->path);
 
         int i;
         for (i = 0; i < MAX_LOCKED_FILES; i++) {
             // Find open slot.
-            if (dummy_path_fd_map[i].path == NULL) {
-                dummy_path_fd_map[i].path = malloc(strlen(dummypath) + 1);
-                strncpy(dummy_path_fd_map[i].path, dummypath, strlen(dummypath) + 1);
-                dummy_path_fd_map[i].fd = real_fd;
+            if (dummy_path_fd_map[tenant->id][i].path == NULL) {
+                dummy_path_fd_map[tenant->id][i].path = malloc(strlen(dummypath) + 1);
+                strncpy(dummy_path_fd_map[tenant->id][i].path, dummypath, strlen(dummypath) + 1);
+                dummy_path_fd_map[tenant->id][i].fd = real_fd;
 
                 LOG_I("Opened locked path '%s' as '%s' (FD %d)", request->path, dummypath, real_fd);
 
@@ -202,7 +208,7 @@ serve_open_file(
         }
         
         // TODO Free this
-        sub_resp->path = malloc(strlen(dummypath));
+        sub_resp->path = malloc(strlen(dummypath) + 1);
         strncpy(sub_resp->path, dummypath, strlen(dummypath) + 1);
     } else {
         // They requested a non-dummy file.
@@ -213,21 +219,123 @@ serve_open_file(
 }
 
 static int
+serve_close(
+        SunneedResponse *resp,
+        void *sub_resp_buf,
+        struct sunneed_tenant *tenant,
+        CloseFileRequest *request) {
+    LOG_D("Got request from %d to close '%s' (real file FD %d)", tenant->id, request->dummy_path, get_fd_from_dummy_path(request->dummy_path, tenant));
+
+    CloseFileResponse *sub_resp = sub_resp_buf;
+    *sub_resp = (CloseFileResponse)CLOSE_FILE_RESPONSE__INIT;
+    resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_CLOSE_FILE;
+    resp->close_file= sub_resp;
+
+    for (int i = 0; i < MAX_LOCKED_FILES; i++) {
+        if (dummy_path_fd_map[tenant->id][i].path && strncmp(dummy_path_fd_map[tenant->id][i].path, request->dummy_path, strlen(request->dummy_path)) == 0) {
+            if (close(dummy_path_fd_map[tenant->id][i].fd) < 0) {
+                int errno_val = errno;
+                sub_resp->errno_value = errno_val;
+                LOG_E("'close' for client %d failed with: %s", tenant->id, strerror(errno));
+                return 1;
+            }
+            /* reset array spot to be reused on future serve_open() calls */
+            dummy_path_fd_map[tenant->id][i].path = NULL;
+            dummy_path_fd_map[tenant->id][i].fd = 0;
+
+            sub_resp->errno_value = 0;
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int
 serve_write(
         SunneedResponse *resp,
         void *sub_resp_buf,
         struct sunneed_tenant *tenant,
         WriteRequest *request) {
-    LOG_D("Got request from %d to write %ld bytes to '%s' (real file FD %d)", tenant->id, request->data.len, request->dummy_path, get_fd_from_dummy_path(request->dummy_path));
+    LOG_D("Got request from %d to write %ld bytes to '%s' (real file FD %d)", tenant->id, request->data.len, request->dummy_path, get_fd_from_dummy_path(request->dummy_path, tenant));
 
     WriteResponse *sub_resp = sub_resp_buf;
     *sub_resp = (WriteResponse)WRITE_RESPONSE__INIT;
     resp->message_type_case = SUNNEED_RESPONSE__MESSAGE_TYPE_CALL_WRITE;
     resp->call_write = sub_resp;
+    #ifdef LOG_PWR
+    char *real_path = get_path_from_dummy_path(request->dummy_path);
+    int num_pwr_readings;
+    float request_n_sec /* how long device was drawing extra power to service request in seconds */;
+    float avg_pwr;
+    float time_since_pwrRead;
+
+    /*
+     * Stepper motor specific
+     */
+    char stepper_sig; /* used in recording pwr used by stepper motor - stepper driver sends signal when request is completed by the device */
+    bool change_dir, from_stop; 
+    int orientation_change;
+    
+    
+    struct timespec *curr_time, *request_start_time, *request_end_time;
+    curr_time  = (struct timespec*) malloc(sizeof(struct timespec));
+    request_start_time = (struct timespec*) malloc(sizeof(struct timespec));
+    request_end_time = (struct timespec*) malloc(sizeof(struct timespec));
+    clock_gettime(CLOCK_BOOTTIME, curr_time);
+    clock_gettime(CLOCK_BOOTTIME, request_start_time);
+    
+    if (strcmp(real_path, "/tmp/stepper") == 0) {
+        char orientation_bytes[request->data.len];
+
+        if (stepperMotor_orientation == -1) {
+            /* TODO: read orientation file */
+            stepperMotor_orientation = 0;
+        }
+
+        change_dir = from_stop = false;
+    
+        if (request->data.data[0] == '+' || request->data.data[0] == '-') {
+            strncpy(orientation_bytes, (char*)(request->data.data + 1), request->data.len - 1);
+            orientation_bytes[request->data.len - 1] = '\0';
+            orientation_change = atoi(orientation_bytes);                
+
+            if (request->data.data[0] == '+') {
+                if (sunneed_stepperDir == COUNTER_CLOCKWISE) {
+                    change_dir = true;
+                }
+                sunneed_stepperDir = CLOCKWISE;
+                stepperMotor_orientation += orientation_change;
+            } else {
+                if (sunneed_stepperDir == CLOCKWISE) {
+                    change_dir = true;
+                }
+                sunneed_stepperDir = COUNTER_CLOCKWISE;
+                stepperMotor_orientation -= orientation_change;
+            }
+        } else {
+            int new_orientation = ((int)request->data.data[1] << 8) | (int) request->data.data[0];
+            orientation_change = abs(stepperMotor_orientation - new_orientation); 
+            stepperMotor_orientation = new_orientation;
+        }
+        if (last_stepperMotor_req_time != NULL) {
+            if ( ((curr_time->tv_sec - last_stepperMotor_req_time->tv_sec) + ((curr_time->tv_nsec - last_stepperMotor_req_time->tv_nsec) / 10e9) ) > 0.5) {
+                from_stop = true;
+                change_dir = false;
+            }
+        } else {
+            /* first request to stepper motor -- initialize variables */
+            last_stepperMotor_req_time = (struct timespec*) malloc(sizeof(struct timespec));
+            clock_gettime(CLOCK_BOOTTIME, last_stepperMotor_req_time);
+            last_stepperMotor_req_time->tv_sec--; /*decrement 1s so we don't wait before first power reading */
+            from_stop = true;
+            change_dir = false;
+        }
+    }
+    #endif
 
     // Perform the write.
     ssize_t bytes_written;
-    if ((bytes_written = write(get_fd_from_dummy_path(request->dummy_path), request->data.data, request->data.len)) 
+    if ((bytes_written = write(get_fd_from_dummy_path(request->dummy_path, tenant), request->data.data, request->data.len)) 
             < 0) {
         int errno_val = errno;
 
@@ -236,12 +344,64 @@ serve_write(
 
         LOG_E("`write` for client %d failed with: %s", tenant->id, strerror(errno_val));
 
+        free(curr_time);
+        free(request_end_time);
+        free(request_start_time);
         return 1;
     }
-
+    
     sub_resp->bytes_written = bytes_written;
     sub_resp->errno_value = 0;
 
+    #ifdef LOG_PWR
+    if (strcmp(real_path, "/tmp/stepper") == 0) {
+        
+
+        LOG_I("Waiting for stepper driver to finish");
+        stepper_sig = 'z';
+        struct timespec *last_pwrRead_time = (struct timespec*) malloc(sizeof(struct timespec));
+        clock_gettime(CLOCK_BOOTTIME, curr_time);
+	    clock_gettime(CLOCK_BOOTTIME, last_pwrRead_time);
+	    time_since_pwrRead = (curr_time->tv_sec - last_stepperMotor_req_time->tv_sec + (10e-9 * (curr_time->tv_nsec - last_stepperMotor_req_time->tv_nsec))); 
+        if (time_since_pwrRead >= 1) {
+            /* need min 1s between reads of battery babysitter power measurement */
+            avg_pwr = present_power() - PASSIVE_PWR;
+        } else {
+            usleep(10e3 * ( 1 - time_since_pwrRead));
+            avg_pwr = present_power() - PASSIVE_PWR;
+            clock_gettime(CLOCK_BOOTTIME, last_pwrRead_time);
+        }
+        
+        num_pwr_readings = 1;
+        
+        do { /* get average power draw from battery while stepper motor served request */
+            clock_gettime(CLOCK_BOOTTIME, curr_time);
+            read(stepper_dataPipe[0], &stepper_sig, 1);
+            if ((curr_time->tv_sec - last_pwrRead_time->tv_sec + (10e-9 * (curr_time->tv_nsec - last_pwrRead_time->tv_nsec))) >= 1 /* poll rate for bq27441_average_power() is 1 s */) {
+                avg_pwr += (present_power() - PASSIVE_PWR);
+                num_pwr_readings++;
+                clock_gettime(CLOCK_BOOTTIME, last_pwrRead_time);
+            }
+        } while (stepper_sig != 'a'); /* wait for stepper motor to finish turning */
+        stepper_sig = 'z';
+
+        avg_pwr = avg_pwr / num_pwr_readings;
+        
+        clock_gettime(CLOCK_BOOTTIME, last_stepperMotor_req_time);
+        clock_gettime(CLOCK_BOOTTIME, request_end_time);
+
+        request_n_sec = ((float)(request_end_time->tv_sec - request_start_time->tv_sec) + ( ((float)request_end_time->tv_nsec - (float)request_start_time->tv_nsec) * 10e-10));
+	    /* I have no idea why this is e-10 and not e-9 ... 1ns = 10e-9s, but this always gives magnitude too high  */
+
+        LOG_D("%d, %d, %d, %f",orientation_change, change_dir, from_stop, avg_pwr * request_n_sec);
+        LOG_P("%d, %d, %d, %f\n",orientation_change, change_dir, from_stop, avg_pwr * request_n_sec);
+    
+        free(curr_time);
+        free(request_end_time);
+        free(request_start_time);
+        free(last_pwrRead_time);
+    }
+    #endif
     return 0;
 }
 
@@ -265,7 +425,6 @@ sunneed_listen(void) {
                                                  .pipe = (nng_pipe)NNG_PIPE_INITIALIZER};
     }
 
-    nng_socket sock;
 
     LOG_I("Starting listener loop...");
 
@@ -273,25 +432,23 @@ sunneed_listen(void) {
     SUNNEED_NNG_TRY_RET(nng_rep0_open, != 0, &sock);
     SUNNEED_NNG_TRY_RET(nng_listen, < 0, sock, SUNNEED_LISTENER_URL, NULL, 0);
 
-    // Buffer for `serve_` methods to write their sub-response to.
-    void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
-    // TODO Check malloc.
-
     // Await messages.
     for (;;) {
         nng_msg *msg;
-
-        SUNNEED_NNG_TRY_RET(nng_recvmsg, != 0, sock, &msg, NNG_FLAG_ALLOC);
-
+	LOG_D("start listener loop");
+  	SUNNEED_NNG_TRY_RET(nng_recvmsg, != 0, sock, &msg, NNG_FLAG_ALLOC);
+	LOG_D("got msg");
         // TODO They claim nng_msg_get_pipe() returns -1 on error, but its return type is nng_pipe, which can't
         //  be compared to an integer.
         nng_pipe pipe = nng_msg_get_pipe(msg);
 
         // Get contents of message.
         size_t msg_len = nng_msg_len(msg);
-        SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+
+
         SunneedRequest *request = sunneed_request__unpack(NULL, msg_len, nng_msg_body(msg));
 
+	LOG_D("unpacked msg");
         if (request == NULL) {
             LOG_W("Received null request from %d", pipe.id);
             goto end;
@@ -305,71 +462,86 @@ sunneed_listen(void) {
             LOG_W("Received message from %d, who is not registered.", pipe.id);
             goto end;
         }
+	LOG_D("got tenant from pipe");
 
-        // Begin setting up our response.
-        SunneedResponse resp = SUNNEED_RESPONSE__INIT;
-        int ret = -1;
-
-        #ifdef LOG_PWR
-            reqs_since_last_log++;
-        #endif
-
-        switch (request->message_type_case) {
-            case SUNNEED_REQUEST__MESSAGE_TYPE__NOT_SET:
-                LOG_W("Request from pipe %d has no message type set.", pipe.id);
-                ret = -1;
-                break;
-            case SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT:
-                ret = serve_register_client(&resp, sub_resp_buf, pipe);
-                break;
-            case SUNNEED_REQUEST__MESSAGE_TYPE_UNREGISTER_CLIENT:
-                ret = serve_unregister_client(&resp, sub_resp_buf, pipe, tenant);
-                break;
-            case SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE:
-		ret = serve_open_file(&resp, sub_resp_buf, tenant, request->open_file);
-                break;
-            case SUNNEED_REQUEST__MESSAGE_TYPE_WRITE:
-                #ifdef LOG_PWR
-                    if (reqs_since_last_log < REQS_PER_LOG) {
-                        LOG_D("%d, ",reqs_since_last_log);
-                        LOG_I("%d\n",capacity_change);
-                    } else if (reqs_since_last_log > REQS_PER_LOG) {
-                        curr_capacity = present_power();
-                        capacity_change = last_capacity - curr_capacity;
-                        last_capacity = curr_capacity;
-                        LOG_D("%d\n",capacity_change);
-                        LOG_D("%d, ",reqs_since_last_log);
-                        reqs_since_last_log = 1;
-                    }
-                #endif
-                ret = serve_write(&resp, sub_resp_buf, tenant, request->write);
-                break;
-            default:
-                LOG_W("Received request with invalid type %d", request->message_type_case);
-                ret = -1;
-                #ifdef LOG_PWR
-                    reqs_since_last_log--;
-                #endif
-                break;
-        }
-
-        resp.status = ret;
-
-        // Create and send the response message.
-        nng_msg *resp_msg;
-        int resp_len = sunneed_response__get_packed_size(&resp);
-        void *resp_buf = malloc(resp_len);
-        sunneed_response__pack(&resp, resp_buf);
-
-        SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, resp_len);
-        SUNNEED_NNG_TRY(nng_msg_insert, != 0, resp_msg, resp_buf, resp_len);
-        SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
+    schedule_request(request, tenant, pipe, 0); /* TODO: insert actual power estimate for request instead of 0 */
 
     end:
-        sunneed_request__free_unpacked(request, NULL);
-        nng_msg_free(resp_msg);
         nng_msg_free(msg);
     }
 
-    free(sub_resp_buf);
+}
+
+sunneed_worker_thread_result_t
+sunneed_request_servicer(__attribute__((unused)) void *args) {
+    struct SunneedRequest_ListNode *requestNode;
+    struct sunneed_tenant *tenant;
+    SunneedRequest *request_to_serve;
+    nng_pipe tenant_pipe;
+    void *sub_resp_buf = malloc(SUB_RESPONSE_BUF_SZ);
+
+    LOG_I("Starting request servicer");
+
+    if (sub_resp_buf == NULL) {
+        LOG_E("Could not allocate subresponse buffer");
+        LOG_I("Sunneed exiting");
+        LOG_I("\tKilling stepper motor");
+        kill(sunneed_stepper_driver_pid, SIGTERM);
+        LOG_I("\tKilling camera driver");
+        kill(sunneed_camera_driver_pid, SIGTERM);
+        abort();
+    }
+    while (true) {
+        if (sunneed_queued_requests.num_active_requests > 0) {
+            requestNode = pop_requestNode();
+            if (requestNode == NULL) continue;
+            request_to_serve = requestNode->request;
+            tenant = requestNode->tenant;
+            tenant_pipe = requestNode->tenant_pipe;
+
+            SunneedResponse resp = SUNNEED_RESPONSE__INIT;
+            int ret = -1;
+            
+            switch (request_to_serve->message_type_case) {
+                case SUNNEED_REQUEST__MESSAGE_TYPE__NOT_SET:
+                    LOG_W("Request from pipe %d has no message type set.", tenant_pipe.id);
+                    ret = -1;
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_REGISTER_CLIENT:
+                    ret = serve_register_client(&resp, sub_resp_buf, tenant_pipe);
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_UNREGISTER_CLIENT:
+                    ret = serve_unregister_client(&resp, sub_resp_buf, tenant_pipe, tenant);
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE:
+                    ret = serve_open_file(&resp, sub_resp_buf, tenant, request_to_serve->open_file);
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_WRITE:
+                    ret = serve_write(&resp, sub_resp_buf, tenant, request_to_serve->write);
+                    break;
+                case SUNNEED_REQUEST__MESSAGE_TYPE_CLOSE_FILE:
+                    ret = serve_close(&resp, sub_resp_buf, tenant, request_to_serve->close_file);
+                    break;
+                default:
+                    LOG_W("Received request with invalid type %d", request_to_serve->message_type_case);
+                    ret = -1;
+                    break;
+            }
+
+            free(requestNode);
+
+            resp.status = ret;
+            // Create and send the response message.
+            nng_msg *resp_msg;
+            int resp_len = sunneed_response__get_packed_size(&resp);
+            void *resp_buf = malloc(resp_len);
+            sunneed_response__pack(&resp, resp_buf);
+
+            SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &resp_msg, 0);
+            SUNNEED_NNG_TRY(nng_msg_append, != 0, resp_msg, resp_buf, resp_len);
+            SUNNEED_NNG_TRY(nng_sendmsg, != 0, sock, resp_msg, 0);
+
+            sunneed_request__free_unpacked(request_to_serve, NULL);
+        }
+    }
 }

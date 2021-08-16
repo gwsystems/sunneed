@@ -25,7 +25,7 @@ sunneed_record_power_usage_event(struct sunneed_power_usage_event ev) {
         LOG_E("Cannot record a power event outside of an active quantum");
         return 1;
     }
-
+    
     struct sunneed_power_usage_event *cur = power_usage_evs;
     if (cur == NULL) {
         LOG_E("Power usage events head node is unallocated!");
@@ -43,6 +43,7 @@ sunneed_record_power_usage_event(struct sunneed_power_usage_event ev) {
         LOG_E("Failed to allocate space for power usage event.");
         return 1;
     }
+
     *cur->next = ev;
 
     current_quantum.has_power_event = true;
@@ -67,11 +68,13 @@ sunneed_quantum_begin(void) {
         cur = next;
     }
 
-    power_usage_evs = malloc(sizeof(struct sunneed_power_usage_event));
+    power_usage_evs = (struct sunneed_power_usage_event*) malloc(sizeof(struct sunneed_power_usage_event));
+
     if (!power_usage_evs) {
         LOG_E("Failed to allocate space for power usage events!");
         return 1;
     }
+    power_usage_evs->next = NULL;
 
     LOG_I("Started quantum %d", current_quantum.id);
     current_quantum.is_active = true;
@@ -131,13 +134,12 @@ sunneed_quantum_end(void) {
 sunneed_worker_thread_result_t
 sunneed_quantum_worker(__attribute__((unused)) void *args) {
     int ret;
+    power_usage_evs = NULL;
     while (true) {
         if ((ret = sunneed_quantum_begin()) != 0) {
             goto end;
         }
-
         usleep(QUANTUM_DURATION_MS * 1000);
-
         if ((ret = sunneed_quantum_end()) != 0) {
             goto end;
         }

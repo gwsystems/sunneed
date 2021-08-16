@@ -9,23 +9,33 @@
 #include <stdio.h>
 #include <time.h>
 
-FILE *logfile, *stepper_pwr_logfile;
+
+FILE *logfile, *logfile_pwr;
+
 
 #define LOGL_DEBUG "D\e[38;5;240m"
 #define LOGL_INFO "I"
 #define LOGL_WARN "W\e[0;33m"
 #define LOGL_ERROR "E\e[0;31m"
 
-#ifndef LOG_PWR
-#define LOG_PWR(LEVEL, MESSAGE, ...)                                                    \
+
+#ifdef LOG_PWR
+
+#ifndef LOG_PWR_EVENT
+#define LOG_PWR_EVENT(LEVEL, MESSAGE, ...)                                          \
     {                                                                               \
-        FILE *_logfile = stepper_pwr_logfile;                                       \
-        if (!logfile) {                                                             \
-            return;                                                                 \
-        }                                                                           \
-        fprintf(_logfile, MESSAGE)                                                  \
+        FILE *_logfile = logfile_pwr;                                               \
+        if (!logfile_pwr) {							    \
+		_logfile = fopen("sunneed_pwr_log.csv", "w+");			    \
+	}									    \
+        fprintf(_logfile, MESSAGE, ##__VA_ARGS__); 			    \
+        fflush(_logfile);							    \
     }
 #endif
+
+#endif
+
+
 #define LOG(LEVEL, MESSAGE, ...)                                                    \
     {                                                                               \
         FILE *_logfile = logfile;                                                   \
@@ -43,6 +53,6 @@ FILE *logfile, *stepper_pwr_logfile;
 #define LOG_I(MESSAGE, ...) LOG(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
 #define LOG_W(MESSAGE, ...) LOG(LOGL_WARN, MESSAGE, ##__VA_ARGS__);
 #define LOG_E(MESSAGE, ...) LOG(LOGL_ERROR, MESSAGE, ##__VA_ARGS__);
-#define LOG_P(MESSAGE, ...) LOG_PWR(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
+#define LOG_P(MESSAGE, ...) LOG_PWR_EVENT(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
 
 #endif

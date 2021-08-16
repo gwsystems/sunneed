@@ -6,8 +6,9 @@
 
 struct {
     char *path;
+    char *dummy_path;
     int fd;
-} locked_paths[MAX_LOCKED_FILES] = { { NULL, 0 } };
+} locked_paths[MAX_LOCKED_FILES] = { { NULL, NULL, 0 } };
 
 nng_socket sunneed_socket;
 
@@ -30,12 +31,13 @@ send_request(SunneedRequest *req) {
         FATAL(-1, "unable to allocate buffer for request");
     sunneed_request__pack(req, buf);                           
 
-    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        
-    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
+//    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, req_len);        
+//    SUNNEED_NNG_TRY(nng_msg_insert, != 0, msg, buf, req_len);   
+    SUNNEED_NNG_TRY(nng_msg_alloc, != 0, &msg, 0);
+    SUNNEED_NNG_TRY(nng_msg_append, != 0, msg, buf, req_len);
     SUNNEED_NNG_TRY(nng_sendmsg, != 0, sunneed_socket, msg, 0);
 
-    free(buf);
-    nng_msg_free(msg);                                         
+    free(buf);                                        
 }
 
 static SunneedResponse *
@@ -44,7 +46,7 @@ receive_response(SunneedResponse__MessageTypeCase message_type) {
     SUNNEED_NNG_TRY(nng_recvmsg, != 0, sunneed_socket, &reply, 0);
 
     size_t msg_len = nng_msg_len(reply);
-    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
+//    SUNNEED_NNG_MSG_LEN_FIX(msg_len);
     SunneedResponse *resp = sunneed_response__unpack(NULL, msg_len, nng_msg_body(reply));
 
     if (resp->status != 0) {
@@ -91,9 +93,8 @@ sunneed_client_init(const char *name) {
 
 /** Allocate a string containing the path of the dummy file corresponding to the given path. */
 char *
-sunneed_client_fetch_locked_file_path(const char *pathname, int flags) {
+sunneed_client_fetch_locked_file_path(const char *pathname, int flags, int mode) {
     // TODO Check socket opened.
-
     SunneedRequest req = SUNNEED_REQUEST__INIT;
     req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_OPEN_FILE;
     OpenFileRequest open_file_req = OPEN_FILE_REQUEST__INIT;
@@ -104,8 +105,13 @@ sunneed_client_fetch_locked_file_path(const char *pathname, int flags) {
     strncpy(open_file_req.path, pathname, strlen(pathname) + 1);
 
     open_file_req.flags = flags;
+    open_file_req.mode = mode;
 
     req.open_file = &open_file_req;
+
+    open_file_req.flags = flags;
+    open_file_req.mode = mode;
+
 
     send_request(&req);
     free(open_file_req.path);
@@ -147,9 +153,8 @@ sunneed_client_on_locked_path_open(int i, char *pathname, int fd) {
     if (pathname == NULL)
         FATAL(-1, "pathname is null");
     if (fd <= 0)
-        FATAL(-1, "illegal FD");
-
-    locked_paths[i].path = pathname;
+	FATAL(-1, "illegal FD");
+    locked_paths[i].dummy_path = pathname;
     locked_paths[i].fd = fd;
 
     return 0;
@@ -163,6 +168,39 @@ sunneed_client_fd_is_locked(int fd) {
     return false;
 }
 
+int
+sunneed_client_remote_close(int fd) {
+    int locked_file_i;
+    char *dummy_path = NULL;
+    for (locked_file_i = 0; locked_file_i < MAX_LOCKED_FILES; locked_file_i++)
+        if (locked_paths[locked_file_i].fd == fd) {
+            dummy_path = locked_paths[locked_file_i].dummy_path;
+            break;
+        }
+
+    if (dummy_path == NULL)
+        FATAL(-1, "cannot remote close a non-dummy file");
+
+    SunneedRequest req = SUNNEED_REQUEST__INIT;
+    req.message_type_case = SUNNEED_REQUEST__MESSAGE_TYPE_CLOSE_FILE;
+
+    CloseFileRequest close_req = CLOSE_FILE_REQUEST__INIT;
+    close_req.dummy_path = dummy_path;
+
+    req.close_file = &close_req;
+    send_request(&req);
+
+    free(close_req.dummy_path);
+
+    SunneedResponse *resp = receive_response(SUNNEED_RESPONSE__MESSAGE_TYPE_CLOSE_FILE);
+    if (resp == NULL) {
+        FATAL(-1, "close response was NULL");
+    }
+    sunneed_response__free_unpacked(resp, NULL);
+
+    return 0;
+}
+
 ssize_t
 sunneed_client_remote_write(int fd, const void *data, size_t n_bytes) {
     // Get the dummy path corresponding to the FD.
@@ -170,7 +208,7 @@ sunneed_client_remote_write(int fd, const void *data, size_t n_bytes) {
     char *dummy_path = NULL;
     for (locked_file_i = 0; locked_file_i < MAX_LOCKED_FILES; locked_file_i++)
         if (locked_paths[locked_file_i].fd == fd) {
-            dummy_path = locked_paths[locked_file_i].path;
+            dummy_path = locked_paths[locked_file_i].dummy_path;
             break;
         }
 
@@ -202,7 +240,7 @@ sunneed_client_remote_write(int fd, const void *data, size_t n_bytes) {
     }
     sunneed_response__free_unpacked(resp, NULL);
 
-    return 0;
+    return resp->call_write->bytes_written;
 }
 
 int
