@@ -24,7 +24,8 @@ struct SunneedRequest_List{
 } sunneed_queued_requests;
 
 void SunneedRequest_List_init(void);
-void insert_request(SunneedRequest *request, struct sunneed_tenant *tenant, nng_pipe tenant_pipe, uint power);
+void schedule_request(SunneedRequest *request, struct sunneed_tenant *tenant, nng_pipe tenant_pipe, uint power);
+void insert_request(struct SunneedRequest_ListNode* request_node);
 int  insert_request_offset(SunneedRequest *request, struct sunneed_tenant *tenant, nng_pipe tenant_pipe, uint power, uint offset);
 struct SunneedRequest_ListNode* pop_requestNode(void);
 #endif

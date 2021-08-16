@@ -5,7 +5,8 @@ void SunneedRequest_List_init(void) {
     sunneed_queued_requests.num_active_requests = 0;
 }
 
-void insert_request(SunneedRequest *request, struct sunneed_tenant *tenant, nng_pipe tenant_pipe, uint power) {
+void
+schedule_request(SunneedRequest *request, struct sunneed_tenant *tenant, nng_pipe tenant_pipe, uint power) {
     struct SunneedRequest_ListNode *new_req;
     new_req = (struct SunneedRequest_ListNode*) malloc(sizeof(struct SunneedRequest_ListNode));
     new_req->request = request;
@@ -13,13 +14,21 @@ void insert_request(SunneedRequest *request, struct sunneed_tenant *tenant, nng_
     new_req->tenant_pipe = tenant_pipe;
     new_req->power = power;
     new_req->next = NULL;
+    
+    
+    /* TODO: actually schedule request instead of just inserting at tail of queued_requests list */
+    insert_request(new_req); 
+}
+
+void insert_request(struct SunneedRequest_ListNode *request_node) {
+    
     if (sunneed_queued_requests.head == NULL) {
-        sunneed_queued_requests.head = sunneed_queued_requests.tail = new_req;
+        sunneed_queued_requests.head = sunneed_queued_requests.tail = request_node;
         ++sunneed_queued_requests.num_active_requests;
         return;
     }
-    sunneed_queued_requests.tail->next = new_req;
-    sunneed_queued_requests.tail = new_req;
+    sunneed_queued_requests.tail->next = request_node;
+    sunneed_queued_requests.tail = request_node;
     ++sunneed_queued_requests.num_active_requests;
 }
 

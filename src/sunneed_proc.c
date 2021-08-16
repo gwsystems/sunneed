@@ -129,10 +129,12 @@ sunneed_stepperMotor_driver(__attribute__((unused)) void *args) {
 	exit(1);
     }
 
+    /* initialize variables used in serve_write for pwr recordings */
     sunneed_stepperDir = STOPPED;
     last_stepperMotor_req_time = NULL;
 
     if ( (sunneed_stepper_driver_pid = fork()) == 0) {
+        /* set new proc's stdin to stepper motor device file, stdout to sunneed's communication pipe */
         close(stepper_dataPipe[0]);
 
 	if (mkfifo(path, S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
@@ -192,6 +194,8 @@ sunneed_camera_driver(__attribute__((unused)) void *args) {
     const char *executable_path = "run_PyDriver";
 
     if ( (sunneed_camera_driver_pid = fork()) == 0) {
+    /* set new proc's stdin to camera device file, stdout to sunneed's communication pipe */
+
         if ( (cam_driver_new_stdin = open(path, O_RDONLY)) == -1) {
             if (mkfifo(path, S_IRUSR | S_IWUSR | S_IWOTH) == -1) {
                 LOG_E("Could not create camera device fd");
