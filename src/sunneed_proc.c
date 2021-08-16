@@ -150,12 +150,16 @@ sunneed_proc_monitor(__attribute__((unused)) void *args) {
         }else if(curr_soc > last_soc){
             battery_state = CHARGING;
         }else if(curr_soc > 50){
+            //51 - 90% charge using power
             battery_state = DISCHARGING;
-        }else if(curr_soc > 20){
+        }else if(curr_soc >= 20){
+            //20 - 49% charge
             battery_state = HALF;
-        }else if(curr_soc){
+        }else if(curr_soc >= 5){
+            //5 - 19% charge
             battery_state = LOW;
         }else{
+            //less than 5 % charge
             battery_state = EMPTY;
         }
         LOG_D("battery state: %s\n", battery_state);
