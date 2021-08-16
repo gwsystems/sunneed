@@ -19,6 +19,11 @@
 
 #define PASSIVE_PWR 458.333// mW draw on battery when sunneed running with no requests */
 
+#ifdef LOG_PWR
+#define REQS_PER_LOG 10
+int16_t last_read, curr_read, last_capacity, curr_capacity, reqs_since_last_log;
+clock_t last_send, time_since_send;
+#endif
 
 // TODO This is waaaaaaaaaaaaaaaaaaaaay too big.
 #define QUANTUM_DURATION_MS 5000

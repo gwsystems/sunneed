@@ -25,7 +25,7 @@ sunneed_record_power_usage_event(struct sunneed_power_usage_event ev) {
         LOG_E("Cannot record a power event outside of an active quantum");
         return 1;
     }
-    
+
     struct sunneed_power_usage_event *cur = power_usage_evs;
     if (cur == NULL) {
         LOG_E("Power usage events head node is unallocated!");
@@ -43,7 +43,6 @@ sunneed_record_power_usage_event(struct sunneed_power_usage_event ev) {
         LOG_E("Failed to allocate space for power usage event.");
         return 1;
     }
-
     *cur->next = ev;
 
     current_quantum.has_power_event = true;
@@ -57,7 +56,11 @@ sunneed_quantum_begin(void) {
 
     // Set quantum metadata.
     current_quantum.id++;
+
+#ifdef LOG_PWR
     current_quantum.present_power = present_power();
+#endif
+
     timespec_get(&current_quantum.begin_time, TIME_UTC);
 
     // Reset power events array.
@@ -68,12 +71,12 @@ sunneed_quantum_begin(void) {
         cur = next;
     }
 
-    power_usage_evs = (struct sunneed_power_usage_event*) malloc(sizeof(struct sunneed_power_usage_event));
-
+    power_usage_evs = malloc(sizeof(struct sunneed_power_usage_event));
     if (!power_usage_evs) {
         LOG_E("Failed to allocate space for power usage events!");
         return 1;
     }
+
     power_usage_evs->next = NULL;
 
     LOG_I("Started quantum %d", current_quantum.id);
@@ -139,7 +142,18 @@ sunneed_quantum_worker(__attribute__((unused)) void *args) {
         if ((ret = sunneed_quantum_begin()) != 0) {
             goto end;
         }
+
+//cant have sleeps when trying to log power usage - will mess with clock() function
+#ifndef LOG_PWR
         usleep(QUANTUM_DURATION_MS * 1000);
+#endif
+
+#ifdef LOG_PWR
+        clock_t delay_start = clock();
+
+        while(((double)(clock() - delay_start) / CLOCKS_PER_SEC) < QUANTUM_DURATION_MS);
+#endif
+
         if ((ret = sunneed_quantum_end()) != 0) {
             goto end;
         }

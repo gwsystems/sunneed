@@ -36,6 +36,15 @@ struct {
     struct tenant_cpu_usage tenants[MAX_TENANTS];
 } cpu_usage;
 
+enum battery_state {
+    FULL,
+    CHARGING,
+    DISCHARGING,
+    HALF,
+    LOW,
+    EMPTY
+};
+
 int sunneed_stepper_driver_pid, sunneed_camera_driver_pid;
 
 int

@@ -6,6 +6,9 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "../client/sunneed_client.h"
 #include "../shared/sunneed_device_type.h"
@@ -38,6 +41,7 @@
     RETVAR = (*_base) ARGS; \
 }
 
+
 // This will be run as soon as the library is linked (program start).
 void __attribute__((constructor)) on_load();
 
@@ -52,3 +56,14 @@ write(int fd, const void *buf, size_t count);
 
 int
 close(int fd);
+
+int
+socket(int domain, int type, int protocol);
+
+int
+connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+
+ssize_t
+send(int sockfd, const void *buf, size_t len, int flags);
+
+
