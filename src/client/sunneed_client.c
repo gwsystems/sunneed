@@ -340,10 +340,10 @@ sunneed_client_connect(int sockfd, const struct sockaddr *addr, socklen_t addrle
 	char host_name[NI_MAXHOST];
 	char address[INET_ADDRSTRLEN];
 	int port = 0;
-	struct hostent *requested_host;
+//	struct hostent *requested_host;
     struct sockaddr_in *addr_info;
     struct addrinfo hints;
-    struct addrinfo *result, *rp;
+    struct addrinfo *result;
 	void *addr_ptr;
 
     //need to check that nng is set up via dialer here as well
@@ -419,6 +419,7 @@ sunneed_client_remote_send(int sockfd, const void *data, size_t len, int flags)
 
 	SendRequest send_req = SEND_REQUEST__INIT;
 	send_req.sockfd = sockfd;
+    send_req.flags = flags;
 	send_req.data.data = malloc(len);
 
     if(!(send_req.data.data))
@@ -427,7 +428,7 @@ sunneed_client_remote_send(int sockfd, const void *data, size_t len, int flags)
         return -1;
     }
 
-	strncpy(send_req.data.data, data, len);
+	memcpy(send_req.data.data, data, len);
 	send_req.data.len = len;
 
 	req.send = &send_req;

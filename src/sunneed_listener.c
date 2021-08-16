@@ -19,6 +19,12 @@ struct {
     int fd;
 } dummy_path_fd_map[MAX_TENANTS][MAX_LOCKED_FILES] = {{ { NULL, 0 } }};
 
+struct {
+    int id;
+    int sockfd;
+    int domain;
+} dummy_socket_map[MAX_TENANT_SOCKETS] = { {-1, -1, 0} };
+
 static int
 get_fd_from_dummy_path(char *path, struct sunneed_tenant *tenant) {
     for (int i = 0; i < MAX_LOCKED_FILES; i++) {
@@ -28,15 +34,6 @@ get_fd_from_dummy_path(char *path, struct sunneed_tenant *tenant) {
     return -1;
 }
 
-// Control flow:
-// When a new pipe connects, we use this struct to make a mapping of its pipe ID to a tenant. Then, when further
-//  requests are made, the pipe ID is used to identify a tenant to the request.
-// The client will have to send some notification in order to unregister; I don't think we can tell if a pipe
-//  closed.
-struct tenant_pipe {
-    struct sunneed_tenant *tenant;
-    nng_pipe pipe;
-} tenant_pipes[SUNNEED_MAX_IPC_CLIENTS];
 
 // TODO This is probably slow -- O(n) lookup for every request made.
 static struct sunneed_tenant *
@@ -344,9 +341,11 @@ serve_write(
 
         LOG_E("`write` for client %d failed with: %s", tenant->id, strerror(errno_val));
 
+        #ifdef LOG_PWR
         free(curr_time);
         free(request_end_time);
         free(request_start_time);
+        #endif
         return 1;
     }
     
@@ -544,12 +543,12 @@ serve_send(SunneedResponse *resp, void* sub_resp_buf, struct sunneed_tenant *ten
 		LOG_D ("first send %f ", (((double) (last_send))/CLOCKS_PER_SEC));
     }else{
         time_since_send = (double)(clock() - last_send) / (double)CLOCKS_PER_SEC;
-        LOG_P("%f ", time_since_send);
-		LOG_D("%f since last send", time_since_send);
+        LOG_P("%ld ", time_since_send);
+		LOG_D("%ld since last send", time_since_send);
     }
     
-    LOG_P("%d ", request->data.len);
-	LOG_D("msg size %d\n", request->data.len);
+    LOG_P("%ld ", request->data.len);
+	LOG_D("msg size %ld\n", request->data.len);
 
 #endif
 
@@ -698,13 +697,13 @@ sunneed_request_servicer(__attribute__((unused)) void *args) {
                     ret = serve_close(&resp, sub_resp_buf, tenant, request_to_serve->close_file);
                     break;
                 case SUNNEED_REQUEST__MESSAGE_TYPE_SOCKET:
-		            ret = serve_socket(&resp, sub_resp_buf, request->socket);
+		            ret = serve_socket(&resp, sub_resp_buf, request_to_serve->socket);
 		            break;
 	            case SUNNEED_REQUEST__MESSAGE_TYPE_CONNECT:
-		            ret = serve_connect(&resp, sub_resp_buf, tenant, request->connect);
+		            ret = serve_connect(&resp, sub_resp_buf, tenant, request_to_serve->connect);
 		            break;
 	            case SUNNEED_REQUEST__MESSAGE_TYPE_SEND:
-		            ret = serve_send(&resp, sub_resp_buf, tenant, request->send);
+		            ret = serve_send(&resp, sub_resp_buf, tenant, request_to_serve->send);
 		            break;
                 default:
                     LOG_W("Received request with invalid type %d", request_to_serve->message_type_case);

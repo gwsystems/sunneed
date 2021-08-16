@@ -18,7 +18,7 @@
 int
 main(void)
 {
-	int remote_fd, read_val;
+	int remote_fd;
 	struct sockaddr_in remote_addr;
 	char *packets[8];
 
