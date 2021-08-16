@@ -66,7 +66,6 @@ run_valgrind: pre-all main overlay util
 run_ASAN: pre-all main_ASAN overlay util
 	./build/sunneed
 
-
 pre-all:
 	@echo "Starting all build..."
 

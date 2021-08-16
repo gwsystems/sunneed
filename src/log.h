@@ -9,12 +9,15 @@
 #include <stdio.h>
 #include <time.h>
 
+
 FILE *logfile, *logfile_pwr;
+
 
 #define LOGL_DEBUG "D\e[38;5;240m"
 #define LOGL_INFO "I"
 #define LOGL_WARN "W\e[0;33m"
 #define LOGL_ERROR "E\e[0;31m"
+
 
 #ifdef LOG_PWR
 
@@ -31,6 +34,7 @@ FILE *logfile, *logfile_pwr;
 #endif
 
 #endif
+
 
 #define LOG(LEVEL, MESSAGE, ...)                                                    \
     {                                                                               \
@@ -50,4 +54,5 @@ FILE *logfile, *logfile_pwr;
 #define LOG_W(MESSAGE, ...) LOG(LOGL_WARN, MESSAGE, ##__VA_ARGS__);
 #define LOG_E(MESSAGE, ...) LOG(LOGL_ERROR, MESSAGE, ##__VA_ARGS__);
 #define LOG_P(MESSAGE, ...) LOG_PWR_EVENT(LOGL_INFO, MESSAGE, ##__VA_ARGS__);
+
 #endif

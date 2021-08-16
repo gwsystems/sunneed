@@ -92,13 +92,17 @@ sunneed_init(void) {
 
     pip = pip_info();
     stepperMotor_orientation = -1;
-
 }
 
 int
 main(int argc, char *argv[]) {
     int opt;
     extern int optopt;
+#ifdef LOG_PWR
+    LOG_D("Recording power\n");
+    stepper_pwr_logfile = fopen("stepper_pwr_log.txt", "w+");
+    reqs_since_last_log = 0;
+#endif
 
 #ifdef LOG_PWR
     logfile_pwr = fopen("sunneed_pwr_log.csv", "w+");

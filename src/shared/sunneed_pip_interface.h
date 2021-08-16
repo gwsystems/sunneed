@@ -1,5 +1,6 @@
 #ifndef _SUNNEED_PIP_H_
 #define _SUNNEED_PIP_H_
+#include "../../ext/libbq27441/bq27441.h"
 
 /*
  * Describes the interface for a power information provider (a PIP).

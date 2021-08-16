@@ -1,0 +1,6 @@
+{
+        "files.associations": {
+                "sunneed_pip_interface.h": "c",
+                "sunneed_listener.h": "c"
+        }
+}

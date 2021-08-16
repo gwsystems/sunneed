@@ -414,6 +414,10 @@ int
 sunneed_listen(void) {
     SUNNEED_NNG_SET_ERROR_REPORT_FUNC(report_nng_error);
 
+    #ifdef LOG_PWR
+        int capacity_change;
+    #endif
+
     // Initialize client states.
     for (int i = 0; i < MAX_TENANTS; i++) {
         tenant_pipes[i] = (struct tenant_pipe){.tenant = NULL,
